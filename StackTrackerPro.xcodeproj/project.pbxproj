@@ -1,0 +1,513 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FAD3C56832ABC0362A2A56 /* StackTrackerProApp.swift */; };
+		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
+		5320A8E9CEA0972EA33D5783 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7982009E333C484553515D /* Theme.swift */; };
+		D4905381184A18BEA671BBEE /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = B14932DF6EB69E66004CFE48 /* Enums.swift */; };
+		E91D0161024547D9BB4F458F /* Tournament.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7450AB8F51603F31BC6348C /* Tournament.swift */; };
+		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
+		1D4C768A8E499FA09FA5165F /* StackEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2246D3C7B55BD60A532FF48 /* StackEntry.swift */; };
+		4D0552939B94B2A0CA2C8E96 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E868BED6E80DA62280F89E /* ChatMessage.swift */; };
+		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
+		24F970FE3E9D3F06AA59D946 /* BountyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */; };
+		BE0350EA415B1F4A2053B229 /* FieldSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 567997920E43C3E11DE68146 /* FieldSnapshot.swift */; };
+		46AD5370A7D959B7B723909E /* Venue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */; };
+		A53518D659EB3A82FBC55299 /* TournamentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */; };
+		DF9551684BF64F293F715890 /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DA5914D561AE928028205F /* ChatManager.swift */; };
+		345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */; };
+		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
+		4E6F71E0F8574A68EEA410CD /* ResponseEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */; };
+		F48405EEA08ECC5BC150B453 /* TournamentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C8CDE38102F8460DA98886 /* TournamentListView.swift */; };
+		684260D0D6D98D5B04B2EA9B /* TournamentSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */; };
+		C5B060D9CBF4503AF8BF9CB9 /* BlindStructureEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */; };
+		000C7BA5DDB9D5D387B3C160 /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */; };
+		B98C73505D56EA40DEDCB0EF /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */; };
+		1D12AB0E92E70596BBC657CD /* StackGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BE4525C7D0D3EBC66A2DB44 /* StackGraphView.swift */; };
+		DB3C28FDCAC697DDBB55A312 /* ChatThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B62E3D5EFC67A262E5F764 /* ChatThreadView.swift */; };
+		B339B3B12F2A4F4D8112DC01 /* ChatBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2042A65BAD0C37F569E8BB29 /* ChatBubbleView.swift */; };
+		543D57B271675427CACA6D14 /* ChatInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D98A08EDB70CA37265C9783 /* ChatInputView.swift */; };
+		E3B8A1D4D7297074F9AADF0C /* MRatioBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */; };
+		5C861C6B087D7C366E5B376E /* StatBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */; };
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* PokerAtlasScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */; };
+		F2E1D0C9A8B7C6D5E4F3A2B1 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */; };
+		E1F145AAF41D1CFEB5562B0A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 529818AED3ED590453EC155B /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B2FAD3C56832ABC0362A2A56 /* StackTrackerProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackTrackerProApp.swift; sourceTree = "<group>"; };
+		01CF7122D121AD978C3265B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		B14932DF6EB69E66004CFE48 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		E7450AB8F51603F31BC6348C /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
+		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
+		B2246D3C7B55BD60A532FF48 /* StackEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackEntry.swift; sourceTree = "<group>"; };
+		07E868BED6E80DA62280F89E /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
+		435A573CAFB0847E59AB2869 /* HandNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandNote.swift; sourceTree = "<group>"; };
+		1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BountyEvent.swift; sourceTree = "<group>"; };
+		567997920E43C3E11DE68146 /* FieldSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldSnapshot.swift; sourceTree = "<group>"; };
+		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
+		33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentManager.swift; sourceTree = "<group>"; };
+		56DA5914D561AE928028205F /* ChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
+		C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPokerParser.swift; sourceTree = "<group>"; };
+		CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegexPokerParser.swift; sourceTree = "<group>"; };
+		C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseEngine.swift; sourceTree = "<group>"; };
+		50C8CDE38102F8460DA98886 /* TournamentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentListView.swift; sourceTree = "<group>"; };
+		D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentSetupView.swift; sourceTree = "<group>"; };
+		4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureEditorView.swift; sourceTree = "<group>"; };
+		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
+		DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
+		1BE4525C7D0D3EBC66A2DB44 /* StackGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackGraphView.swift; sourceTree = "<group>"; };
+		C5B62E3D5EFC67A262E5F764 /* ChatThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadView.swift; sourceTree = "<group>"; };
+		2042A65BAD0C37F569E8BB29 /* ChatBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubbleView.swift; sourceTree = "<group>"; };
+		5D98A08EDB70CA37265C9783 /* ChatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputView.swift; sourceTree = "<group>"; };
+		45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRatioBadge.swift; sourceTree = "<group>"; };
+		5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBlockView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		529818AED3ED590453EC155B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StackTrackerPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2EE5141556C7852B30E87123 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		90B9C057C14993016BDDE174 = {
+			isa = PBXGroup;
+			children = (
+				1C92D8867AE44F55B3275065 /* StackTrackerPro */,
+				D721B1E0647EB8BA7774BBD5 /* Products */,
+				DBD715E0A5F6F2FC5CD76470 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D721B1E0647EB8BA7774BBD5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DBD715E0A5F6F2FC5CD76470 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		1C92D8867AE44F55B3275065 /* StackTrackerPro */ = {
+			isa = PBXGroup;
+			children = (
+				DCD0A979D2BD41A78053BEB8 /* App */,
+				AAC7DC5DCD23638D271D3093 /* Models */,
+				778F8A5CCA605DF481933210 /* Managers */,
+				B3FF000EAD123ECB4835E3AE /* Views */,
+				408FBE2D98A644B78B0C156A /* Resources */,
+			);
+			path = StackTrackerPro;
+			sourceTree = "<group>";
+		};
+		DCD0A979D2BD41A78053BEB8 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B2FAD3C56832ABC0362A2A56 /* StackTrackerProApp.swift */,
+				01CF7122D121AD978C3265B6 /* ContentView.swift */,
+				FA7982009E333C484553515D /* Theme.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AAC7DC5DCD23638D271D3093 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B14932DF6EB69E66004CFE48 /* Enums.swift */,
+				E7450AB8F51603F31BC6348C /* Tournament.swift */,
+				7F833F36634C2BED53572E0D /* BlindLevel.swift */,
+				B2246D3C7B55BD60A532FF48 /* StackEntry.swift */,
+				07E868BED6E80DA62280F89E /* ChatMessage.swift */,
+				435A573CAFB0847E59AB2869 /* HandNote.swift */,
+				1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */,
+				567997920E43C3E11DE68146 /* FieldSnapshot.swift */,
+				FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		778F8A5CCA605DF481933210 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */,
+				56DA5914D561AE928028205F /* ChatManager.swift */,
+				C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */,
+				CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */,
+				C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		B3FF000EAD123ECB4835E3AE /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A4A4961A3FCFC36AEBBBB40A /* Tournament */,
+				5EC39F7F309606F34F39AA68 /* Session */,
+				B2FBC9D96DEBE1CBC41BECAF /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A4A4961A3FCFC36AEBBBB40A /* Tournament */ = {
+			isa = PBXGroup;
+			children = (
+				50C8CDE38102F8460DA98886 /* TournamentListView.swift */,
+				D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */,
+				4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */,
+			);
+			path = Tournament;
+			sourceTree = "<group>";
+		};
+		5EC39F7F309606F34F39AA68 /* Session */ = {
+			isa = PBXGroup;
+			children = (
+				83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */,
+				DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */,
+				1BE4525C7D0D3EBC66A2DB44 /* StackGraphView.swift */,
+				C5B62E3D5EFC67A262E5F764 /* ChatThreadView.swift */,
+				2042A65BAD0C37F569E8BB29 /* ChatBubbleView.swift */,
+				5D98A08EDB70CA37265C9783 /* ChatInputView.swift */,
+			);
+			path = Session;
+			sourceTree = "<group>";
+		};
+		B2FBC9D96DEBE1CBC41BECAF /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */,
+				5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */,
+				1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		408FBE2D98A644B78B0C156A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				529818AED3ED590453EC155B /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8796EC6A87564C187A908CD6 /* StackTrackerPro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 312262D80325CADA70A3272B /* Build configuration list for PBXNativeTarget "StackTrackerPro" */;
+			buildPhases = (
+				2466343B6FD6A9A6B3BC8BEC /* Sources */,
+				2EE5141556C7852B30E87123 /* Frameworks */,
+				B17084E4EC1E2C66BB4538F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = StackTrackerPro;
+			productName = StackTrackerPro;
+			productReference = 66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E6921F438ED91165739C4837 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 46E5A916260DF83493DCF3A2 /* Build configuration list for PBXProject "StackTrackerPro" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 90B9C057C14993016BDDE174;
+			productRefGroup = D721B1E0647EB8BA7774BBD5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8796EC6A87564C187A908CD6 /* StackTrackerPro */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B17084E4EC1E2C66BB4538F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1F145AAF41D1CFEB5562B0A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2466343B6FD6A9A6B3BC8BEC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */,
+				853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */,
+				5320A8E9CEA0972EA33D5783 /* Theme.swift in Sources */,
+				D4905381184A18BEA671BBEE /* Enums.swift in Sources */,
+				E91D0161024547D9BB4F458F /* Tournament.swift in Sources */,
+				8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */,
+				1D4C768A8E499FA09FA5165F /* StackEntry.swift in Sources */,
+				4D0552939B94B2A0CA2C8E96 /* ChatMessage.swift in Sources */,
+				9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */,
+				24F970FE3E9D3F06AA59D946 /* BountyEvent.swift in Sources */,
+				BE0350EA415B1F4A2053B229 /* FieldSnapshot.swift in Sources */,
+				46AD5370A7D959B7B723909E /* Venue.swift in Sources */,
+				A53518D659EB3A82FBC55299 /* TournamentManager.swift in Sources */,
+				DF9551684BF64F293F715890 /* ChatManager.swift in Sources */,
+				345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */,
+				FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */,
+				4E6F71E0F8574A68EEA410CD /* ResponseEngine.swift in Sources */,
+				F48405EEA08ECC5BC150B453 /* TournamentListView.swift in Sources */,
+				684260D0D6D98D5B04B2EA9B /* TournamentSetupView.swift in Sources */,
+				C5B060D9CBF4503AF8BF9CB9 /* BlindStructureEditorView.swift in Sources */,
+				000C7BA5DDB9D5D387B3C160 /* ActiveSessionView.swift in Sources */,
+				B98C73505D56EA40DEDCB0EF /* StatusBarView.swift in Sources */,
+				1D12AB0E92E70596BBC657CD /* StackGraphView.swift in Sources */,
+				DB3C28FDCAC697DDBB55A312 /* ChatThreadView.swift in Sources */,
+				B339B3B12F2A4F4D8112DC01 /* ChatBubbleView.swift in Sources */,
+				543D57B271675427CACA6D14 /* ChatInputView.swift in Sources */,
+				E3B8A1D4D7297074F9AADF0C /* MRatioBadge.swift in Sources */,
+				5C861C6B087D7C366E5B376E /* StatBlockView.swift in Sources */,
+				F2E1D0C9B8A7F6E5D4C3B2A1 /* PokerAtlasScanner.swift in Sources */,
+				F2E1D0C9A8B7C6D5E4F3A2B1 /* CameraView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		044EFCA05EA43619939F1711 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		76A8B94FCFE7B1ECDD6FECC1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C3074A4E02C06B242063A057 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
+				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stacktrackerpro.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		EDDE73F2AA4D1788882F0992 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
+				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stacktrackerpro.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		46E5A916260DF83493DCF3A2 /* Build configuration list for PBXProject "StackTrackerPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				044EFCA05EA43619939F1711 /* Debug */,
+				76A8B94FCFE7B1ECDD6FECC1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		312262D80325CADA70A3272B /* Build configuration list for PBXNativeTarget "StackTrackerPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3074A4E02C06B242063A057 /* Debug */,
+				EDDE73F2AA4D1788882F0992 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = E6921F438ED91165739C4837 /* Project object */;
+}
