@@ -17,7 +17,7 @@ struct BlindStructureEditorView: View {
     @State private var isScanning = false
     @State private var scanError: String?
     @State private var showingScanError = false
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     var sortedLevels: [BlindLevel] {
         tournament.blindLevels.sorted { $0.levelNumber < $1.levelNumber }
@@ -77,20 +77,27 @@ struct BlindStructureEditorView: View {
                 Button("Camera") { showingCamera = true }
                 Button("Cancel", role: .cancel) {}
             }
-            .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoItem, matching: .images)
-            .onChange(of: selectedPhotoItem) { _, newItem in
-                guard let newItem else { return }
+            .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images)
+            .onChange(of: selectedPhotoItems) { _, newItems in
+                guard !newItems.isEmpty else { return }
+                let items = newItems
+                selectedPhotoItems = []
                 Task {
-                    if let data = try? await newItem.loadTransferable(type: Data.self),
-                       let uiImage = UIImage(data: data) {
-                        scanImage(uiImage)
+                    var images: [UIImage] = []
+                    for item in items {
+                        if let data = try? await item.loadTransferable(type: Data.self),
+                           let uiImage = UIImage(data: data) {
+                            images.append(uiImage)
+                        }
+                    }
+                    if !images.isEmpty {
+                        scanImages(images)
                     }
                 }
-                selectedPhotoItem = nil
             }
             .sheet(isPresented: $showingCamera) {
                 CameraView { image in
-                    scanImage(image)
+                    scanImages([image])
                 }
             }
             .alert("Scan Error", isPresented: $showingScanError) {
@@ -263,17 +270,17 @@ struct BlindStructureEditorView: View {
 
     // MARK: - Scanning
 
-    private func scanImage(_ image: UIImage) {
+    private func scanImages(_ images: [UIImage]) {
         isScanning = true
         Task {
             do {
-                let result = try await PokerAtlasScanner.shared.scan(image: image)
+                let result = try await PokerAtlasScanner.shared.scan(images: images)
                 await MainActor.run {
                     if !result.blindLevels.isEmpty {
                         loadScannedLevels(result.blindLevels)
                         HapticFeedback.success()
                     } else {
-                        scanError = "No blind levels found in the image."
+                        scanError = "No blind levels found in the images."
                         showingScanError = true
                         HapticFeedback.error()
                     }
