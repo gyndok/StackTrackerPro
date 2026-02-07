@@ -70,7 +70,7 @@ struct TournamentSetupView: View {
             }
             .sheet(isPresented: $showBlindEditor) {
                 if let t = createdTournament ?? tournament {
-                    BlindStructureEditorView(tournament: t, scannedLevels: scannedBlindLevels)
+                    BlindStructureEditorView(tournament: t)
                 }
             }
             .sheet(isPresented: $showingCamera) {
