@@ -205,7 +205,7 @@ struct TournamentSetupView: View {
         Section {
             numberField("Starting Chips", text: $startingChips)
         } header: {
-            Text("STRUCTURE")
+            Text("STARTING STACK")
                 .font(PokerTypography.sectionHeader)
                 .foregroundColor(.goldAccent)
         }
@@ -253,9 +253,15 @@ struct TournamentSetupView: View {
     // MARK: - Helpers
 
     private func numberField(_ label: String, text: Binding<String>) -> some View {
-        TextField(label, text: text)
-            .keyboardType(.numberPad)
-            .foregroundColor(.textPrimary)
+        HStack {
+            Text(label)
+                .foregroundColor(.textSecondary)
+            Spacer()
+            TextField("0", text: text)
+                .keyboardType(.numberPad)
+                .foregroundColor(.textPrimary)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     private func loadExisting() {
