@@ -22,6 +22,7 @@ struct TournamentSetupView: View {
     @State private var startingBB = "200"
     @State private var reentryPolicy = "None"
     @State private var showBlindEditor = false
+    @State private var createdTournament: Tournament?
 
     // Scanner state
     @State private var showingPhotoSource = false
@@ -68,8 +69,8 @@ struct TournamentSetupView: View {
                 }
             }
             .sheet(isPresented: $showBlindEditor) {
-                if let tournament {
-                    BlindStructureEditorView(tournament: tournament, scannedLevels: scannedBlindLevels)
+                if let t = createdTournament ?? tournament {
+                    BlindStructureEditorView(tournament: t, scannedLevels: scannedBlindLevels)
                 }
             }
             .sheet(isPresented: $showingCamera) {
@@ -222,8 +223,8 @@ struct TournamentSetupView: View {
 
             Button {
                 // Create tournament first if needed, then open editor
-                if tournament == nil {
-                    _ = createTournament()
+                if tournament == nil && createdTournament == nil {
+                    createdTournament = createTournament()
                 }
                 showBlindEditor = true
             } label: {
@@ -370,7 +371,7 @@ struct TournamentSetupView: View {
 
     private func startTournament() {
         let t: Tournament
-        if let existing = tournament {
+        if let existing = tournament ?? createdTournament {
             // Update existing
             existing.name = name.trimmingCharacters(in: .whitespaces)
             existing.gameType = gameType
