@@ -357,13 +357,29 @@ struct TournamentSetupView: View {
         )
         t.venueName = venueName.isEmpty ? nil : venueName
 
-        // Add starting blind level
-        let level1 = BlindLevel(
-            levelNumber: 1,
-            smallBlind: Int(startingSB) ?? 100,
-            bigBlind: Int(startingBB) ?? 200
-        )
-        t.blindLevels.append(level1)
+        if !scannedBlindLevels.isEmpty {
+            // Add all scanned blind levels
+            for scanned in scannedBlindLevels {
+                let level = BlindLevel(
+                    levelNumber: scanned.levelNumber,
+                    smallBlind: scanned.smallBlind,
+                    bigBlind: scanned.bigBlind,
+                    ante: scanned.ante,
+                    durationMinutes: scanned.durationMinutes,
+                    isBreak: scanned.isBreak,
+                    breakLabel: scanned.breakLabel
+                )
+                t.blindLevels.append(level)
+            }
+        } else {
+            // Add starting blind level
+            let level1 = BlindLevel(
+                levelNumber: 1,
+                smallBlind: Int(startingSB) ?? 100,
+                bigBlind: Int(startingBB) ?? 200
+            )
+            t.blindLevels.append(level1)
+        }
 
         modelContext.insert(t)
         return t
