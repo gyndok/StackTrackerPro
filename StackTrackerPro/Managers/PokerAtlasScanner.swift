@@ -13,6 +13,8 @@ struct PokerAtlasScanResult {
     var guarantee: Int?
     var startingChips: Int?
     var reentryPolicy: String?
+    var startingSB: Int?
+    var startingBB: Int?
     var blindLevels: [ScannedBlindLevel] = []
 }
 
@@ -44,6 +46,13 @@ enum ScannerError: LocalizedError {
     }
 }
 
+// MARK: - Text Observation (internal)
+
+private struct TextObservation {
+    let text: String
+    let boundingBox: CGRect // Vision coords: origin bottom-left, y goes up, normalized 0-1
+}
+
 // MARK: - Scanner
 
 final class PokerAtlasScanner: @unchecked Sendable {
@@ -56,9 +65,15 @@ final class PokerAtlasScanner: @unchecked Sendable {
             throw ScannerError.invalidImage
         }
 
-        let lines = try await recognizeText(in: cgImage)
-        guard !lines.isEmpty else {
+        let observations = try await recognizeText(in: cgImage)
+        guard !observations.isEmpty else {
             throw ScannerError.noTextFound
+        }
+
+        // Group observations into rows using bounding box positions
+        let rows = groupIntoRows(observations)
+        let lines = rows.map { row in
+            row.map { $0.text }.joined(separator: " ")
         }
 
         return parse(lines: lines)
@@ -94,6 +109,8 @@ final class PokerAtlasScanner: @unchecked Sendable {
             if merged.guarantee == nil { merged.guarantee = r.guarantee }
             if merged.startingChips == nil { merged.startingChips = r.startingChips }
             if merged.reentryPolicy == nil { merged.reentryPolicy = r.reentryPolicy }
+            if merged.startingSB == nil { merged.startingSB = r.startingSB }
+            if merged.startingBB == nil { merged.startingBB = r.startingBB }
         }
 
         var allLevels: [ScannedBlindLevel] = []
@@ -125,11 +142,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
             }
         }
 
-        // Sort: non-break levels by blind size, breaks keep relative position
-        // Use the original level number for ordering since it reflects position in structure
-        unique.sort { a, b in
-            a.levelNumber < b.levelNumber
-        }
+        unique.sort { $0.levelNumber < $1.levelNumber }
 
         return unique.enumerated().map { index, level in
             var renumbered = level
@@ -140,7 +153,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     // MARK: - OCR
 
-    private func recognizeText(in cgImage: CGImage) async throws -> [String] {
+    private func recognizeText(in cgImage: CGImage) async throws -> [TextObservation] {
         try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
                 if let error {
@@ -153,13 +166,12 @@ final class PokerAtlasScanner: @unchecked Sendable {
                     return
                 }
 
-                let sorted = observations.sorted { $0.boundingBox.origin.y > $1.boundingBox.origin.y }
-
-                let lines = sorted.compactMap { observation in
-                    observation.topCandidates(1).first?.string
+                let textObs = observations.compactMap { obs -> TextObservation? in
+                    guard let candidate = obs.topCandidates(1).first else { return nil }
+                    return TextObservation(text: candidate.string, boundingBox: obs.boundingBox)
                 }
 
-                continuation.resume(returning: lines)
+                continuation.resume(returning: textObs)
             }
 
             request.recognitionLevel = .accurate
@@ -174,6 +186,50 @@ final class PokerAtlasScanner: @unchecked Sendable {
         }
     }
 
+    // MARK: - Row Grouping
+
+    /// Groups text observations into rows by y-coordinate proximity,
+    /// then sorts each row left-to-right by x-coordinate.
+    /// This reconstructs table rows from individual cell observations.
+    private func groupIntoRows(_ observations: [TextObservation]) -> [[TextObservation]] {
+        guard !observations.isEmpty else { return [] }
+
+        // Sort by midY descending (top of image = highest y in Vision coords)
+        let sorted = observations.sorted {
+            ($0.boundingBox.midY) > ($1.boundingBox.midY)
+        }
+
+        var rows: [[TextObservation]] = []
+        var currentRow: [TextObservation] = []
+        var currentMidY: CGFloat = -1
+        let threshold: CGFloat = 0.01 // ~1% of image height
+
+        for obs in sorted {
+            let midY = obs.boundingBox.midY
+            if currentRow.isEmpty {
+                currentRow.append(obs)
+                currentMidY = midY
+            } else if abs(midY - currentMidY) < threshold {
+                currentRow.append(obs)
+                // Update running average midY
+                let sum = currentRow.reduce(CGFloat(0)) { $0 + $1.boundingBox.midY }
+                currentMidY = sum / CGFloat(currentRow.count)
+            } else {
+                // Finalize current row: sort left to right
+                currentRow.sort { $0.boundingBox.origin.x < $1.boundingBox.origin.x }
+                rows.append(currentRow)
+                currentRow = [obs]
+                currentMidY = midY
+            }
+        }
+        if !currentRow.isEmpty {
+            currentRow.sort { $0.boundingBox.origin.x < $1.boundingBox.origin.x }
+            rows.append(currentRow)
+        }
+
+        return rows
+    }
+
     // MARK: - Parser
 
     private func parse(lines: [String]) -> PokerAtlasScanResult {
@@ -181,7 +237,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
         let joined = lines.joined(separator: "\n")
         let lower = joined.lowercased()
 
-        // Build key-value pairs from labeled lines (e.g. "Total Buy-In $400")
+        // Build key-value pairs from reconstructed lines
         let keyValues = buildKeyValues(from: lines)
 
         // Tournament name
@@ -190,16 +246,17 @@ final class PokerAtlasScanner: @unchecked Sendable {
         // Venue
         parseVenue(from: lines, keyValues: keyValues, result: &result)
 
-        // Game type — check key-values first, then full text
+        // Game type
         parseGameType(from: lower, keyValues: keyValues, result: &result)
 
-        // Financials from key-value pairs
+        // Financials
         parseFinancials(from: joined, keyValues: keyValues, result: &result)
 
-        // Re-entry
-        if let reentry = keyValues["re-entry"] {
-            result.reentryPolicy = reentry
-        }
+        // Starting Blinds (from explicit "Starting Blinds 100/200" field)
+        parseStartingBlinds(from: keyValues, result: &result)
+
+        // Re-entry (normalized to picker values)
+        parseReentryPolicy(from: keyValues, result: &result)
 
         // Blind levels
         result.blindLevels = parseBlindLevels(from: lines)
@@ -209,28 +266,34 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     // MARK: - Key-Value Builder
 
-    /// Parses lines like "Total Buy-In $400" or "Starting Chips 30,000" into a dictionary
+    /// Known Poker Atlas labels for key-value extraction
+    private static let knownLabels = [
+        "total buy-in", "entry fee", "deductions", "starting chips",
+        "starting blinds", "re-entry", "rebuys", "addons", "bounties",
+        "bounty amount", "guarantee", "level time", "game type",
+        "event name", "event type", "event number", "start time",
+        "event start date", "length of event", "registration opens",
+        "registration closes"
+    ]
+
+    /// Parses reconstructed lines into key-value pairs.
+    /// With bounding-box row reconstruction, a table row like
+    /// "Total Buy-In $400" is already a single line.
     private func buildKeyValues(from lines: [String]) -> [String: String] {
         var dict: [String: String] = [:]
 
-        // Known Poker Atlas labels
-        let labels = [
-            "total buy-in", "entry fee", "deductions", "starting chips",
-            "starting blinds", "re-entry", "rebuys", "addons", "bounties",
-            "bounty amount", "guarantee", "level time", "game type",
-            "event name", "event type", "event number", "start time",
-            "event start date", "length of event", "registration opens",
-            "registration closes"
-        ]
-
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            let lowerLine = trimmed.lowercased()
+            // Normalize dashes (en-dash, em-dash → hyphen)
+            let normalized = trimmed
+                .replacingOccurrences(of: "\u{2013}", with: "-") // en-dash
+                .replacingOccurrences(of: "\u{2014}", with: "-") // em-dash
+            let lowerLine = normalized.lowercased()
 
-            for label in labels {
+            for label in Self.knownLabels {
                 if lowerLine.hasPrefix(label) {
-                    let valueStart = trimmed.index(trimmed.startIndex, offsetBy: label.count)
-                    let value = String(trimmed[valueStart...])
+                    let valueStart = normalized.index(normalized.startIndex, offsetBy: label.count)
+                    let value = String(normalized[valueStart...])
                         .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ":")))
                     if !value.isEmpty {
                         dict[label] = value
@@ -240,15 +303,24 @@ final class PokerAtlasScanner: @unchecked Sendable {
             }
         }
 
-        // Also try pairing consecutive lines where first is a label and second is a value
+        // Also try pairing consecutive lines where first is a standalone label
         for i in 0..<lines.count - 1 {
-            let possibleLabel = lines[i].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let possibleLabel = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
+                .replacingOccurrences(of: "\u{2013}", with: "-")
+                .replacingOccurrences(of: "\u{2014}", with: "-")
+                .lowercased()
+                .trimmingCharacters(in: CharacterSet(charactersIn: ":"))
             let possibleValue = lines[i + 1].trimmingCharacters(in: .whitespacesAndNewlines)
 
-            for label in labels {
-                if possibleLabel == label || possibleLabel == label + ":" {
+            for label in Self.knownLabels {
+                if possibleLabel == label {
                     if dict[label] == nil && !possibleValue.isEmpty {
-                        dict[label] = possibleValue
+                        // Don't pair if the "value" is itself a known label
+                        let valueLower = possibleValue.lowercased()
+                        let isLabel = Self.knownLabels.contains { valueLower == $0 || valueLower.hasPrefix($0) }
+                        if !isLabel {
+                            dict[label] = possibleValue
+                        }
                     }
                     break
                 }
@@ -280,15 +352,14 @@ final class PokerAtlasScanner: @unchecked Sendable {
     // MARK: - Venue
 
     private func parseVenue(from lines: [String], keyValues: [String: String], result: inout PokerAtlasScanResult) {
-        // Look for known venue patterns in Poker Atlas — venue name often appears
-        // as a standalone line near location (city, state)
+        // Look for "City, ST" pattern — venue name is typically the line above it
+        let cityStatePattern = try! NSRegularExpression(pattern: #"^[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}$"#)
+
         for (i, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // Check if next line looks like "City, ST" pattern
             if i + 1 < lines.count {
                 let nextLine = lines[i + 1].trimmingCharacters(in: .whitespacesAndNewlines)
-                let cityStatePattern = try! NSRegularExpression(pattern: #"^[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}$"#)
                 let range = NSRange(nextLine.startIndex..., in: nextLine)
                 if cityStatePattern.firstMatch(in: nextLine, range: range) != nil {
                     if trimmed.count >= 3, trimmed.count <= 60, !isChromeText(trimmed) {
@@ -317,13 +388,15 @@ final class PokerAtlasScanner: @unchecked Sendable {
     // MARK: - Game Type
 
     private func parseGameType(from lower: String, keyValues: [String: String], result: inout PokerAtlasScanResult) {
-        // Check key-value "Game Type" first
         let gameTypeText = (keyValues["game type"] ?? "").lowercased()
         let searchText = gameTypeText.isEmpty ? lower : gameTypeText
 
-        if searchText.contains("pl omaha") || searchText.contains("plo") || searchText.contains("pot limit omaha") || searchText.contains("pot-limit omaha") {
+        if searchText.contains("pl omaha") || searchText.contains("plo") ||
+            searchText.contains("pot limit omaha") || searchText.contains("pot-limit omaha") {
             result.gameType = .plo
-        } else if searchText.contains("nlh") || searchText.contains("no limit hold") || searchText.contains("no-limit hold") || searchText.contains("nl hold") || searchText.contains("nl texas") {
+        } else if searchText.contains("nlh") || searchText.contains("no limit hold") ||
+                    searchText.contains("no-limit hold") || searchText.contains("nl hold") ||
+                    searchText.contains("nl texas") {
             result.gameType = .nlh
         } else if searchText.contains("mixed") {
             result.gameType = .mixed
@@ -381,7 +454,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
             parseGuaranteeFromText(from: text, result: &result)
         }
 
-        // Bounty
+        // Bounty Amount
         if let bounty = keyValues["bounty amount"] {
             result.bountyAmount = parseDollarValue(bounty)
         }
@@ -389,6 +462,44 @@ final class PokerAtlasScanner: @unchecked Sendable {
             parseBountyFromText(from: text, result: &result)
         }
     }
+
+    // MARK: - Starting Blinds
+
+    private func parseStartingBlinds(from keyValues: [String: String], result: inout PokerAtlasScanResult) {
+        guard let blindsStr = keyValues["starting blinds"] else { return }
+
+        // Parse "100/200" format
+        let pattern = try! NSRegularExpression(pattern: #"(\d[\d,]*)\s*/\s*(\d[\d,]*)"#)
+        let range = NSRange(blindsStr.startIndex..., in: blindsStr)
+        if let match = pattern.firstMatch(in: blindsStr, range: range),
+           let r1 = Range(match.range(at: 1), in: blindsStr),
+           let r2 = Range(match.range(at: 2), in: blindsStr) {
+            result.startingSB = parseNumberFromString(String(blindsStr[r1]))
+            result.startingBB = parseNumberFromString(String(blindsStr[r2]))
+        }
+    }
+
+    // MARK: - Re-entry Policy
+
+    private func parseReentryPolicy(from keyValues: [String: String], result: inout PokerAtlasScanResult) {
+        guard let reentry = keyValues["re-entry"] else { return }
+        let lower = reentry.lowercased().trimmingCharacters(in: .whitespaces)
+
+        // Normalize to match the app's picker values
+        if lower.contains("unlimited") || lower.contains("unlim") {
+            result.reentryPolicy = "Unlimited"
+        } else if lower.contains("none") || lower == "0" || lower == "no" {
+            result.reentryPolicy = "None"
+        } else if lower.contains("2") {
+            result.reentryPolicy = "2 Re-entries"
+        } else if lower.contains("1") {
+            result.reentryPolicy = "1 Re-entry"
+        } else {
+            result.reentryPolicy = reentry
+        }
+    }
+
+    // MARK: - Text Fallback Parsers
 
     private func parseBuyInFromText(from text: String, result: inout PokerAtlasScanResult) {
         let dollarPlusPattern = try! NSRegularExpression(pattern: #"\$\s*(\d[\d,]*)\s*\+\s*\$\s*(\d[\d,]*)"#)
@@ -444,7 +555,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
     private func parseBountyFromText(from text: String, result: inout PokerAtlasScanResult) {
         let range = NSRange(text.startIndex..., in: text)
 
-        let bountyPattern = try! NSRegularExpression(pattern: #"(?i)bounty[:\s]*\$?\s*(\d[\d,]*)"#)
+        let bountyPattern = try! NSRegularExpression(pattern: #"(?i)bounty(?:\s+amount)?[:\s]*\$?\s*(\d[\d,]*)"#)
         if let match = bountyPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text) {
                 result.bountyAmount = parseNumberFromString(String(text[r1]))
@@ -458,11 +569,14 @@ final class PokerAtlasScanner: @unchecked Sendable {
         var levels: [ScannedBlindLevel] = []
         var isPokerAtlasFormat = false
         var levelCounter = 1
+        var pastHeader = false
 
         // Detect Poker Atlas blind structure format by looking for header row
         for line in lines {
             let lower = line.lowercased()
-            if lower.contains("name") && lower.contains("length") && lower.contains("sb") && lower.contains("bb") {
+            if lower.contains("name") && lower.contains("length") &&
+                (lower.contains("sb") || lower.contains("small")) &&
+                (lower.contains("bb") || lower.contains("big")) {
                 isPokerAtlasFormat = true
                 break
             }
@@ -472,25 +586,34 @@ final class PokerAtlasScanner: @unchecked Sendable {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             let lower = trimmed.lowercased()
 
-            // Skip header rows and chrome
-            if lower.contains("name") && lower.contains("sb") && lower.contains("bb") { continue }
-            if isChromeText(trimmed) { continue }
-
-            // Check for break rows: "Break", "Break 15", "Break - End of Reg... 15"
-            if lower.hasPrefix("break") {
-                let breakLabel = extractBreakLabel(from: trimmed)
-                let duration = extractDuration(from: trimmed) ?? 15
-                levels.append(ScannedBlindLevel(
-                    levelNumber: levelCounter,
-                    smallBlind: 0,
-                    bigBlind: 0,
-                    ante: 0,
-                    durationMinutes: duration,
-                    isBreak: true,
-                    breakLabel: breakLabel
-                ))
-                levelCounter += 1
+            // Skip header row
+            if lower.contains("name") && (lower.contains("sb") || lower.contains("small")) &&
+                (lower.contains("bb") || lower.contains("big")) {
+                pastHeader = true
                 continue
+            }
+
+            // Skip chrome and section headers
+            if isChromeText(trimmed) { continue }
+            if isSectionHeader(trimmed) { continue }
+
+            // Check for break rows
+            if lower.hasPrefix("break") || lower.contains("break") && extractNumbers(from: trimmed).count <= 2 {
+                if lower.hasPrefix("break") || lower.contains("break") {
+                    let breakLabel = extractBreakLabel(from: trimmed)
+                    let duration = extractDuration(from: trimmed) ?? 15
+                    levels.append(ScannedBlindLevel(
+                        levelNumber: levelCounter,
+                        smallBlind: 0,
+                        bigBlind: 0,
+                        ante: 0,
+                        durationMinutes: duration,
+                        isBreak: true,
+                        breakLabel: breakLabel
+                    ))
+                    levelCounter += 1
+                    continue
+                }
             }
 
             // Check for "Level N" rows
@@ -498,29 +621,26 @@ final class PokerAtlasScanner: @unchecked Sendable {
                 let numbers = extractNumbers(from: trimmed)
                 guard numbers.count >= 3 else { continue }
 
-                if isPokerAtlasFormat || lower.hasPrefix("level ") {
-                    // Poker Atlas order: Level#, Duration, SB, BB, [Ante]
-                    let parsed = interpretPokerAtlasRow(numbers: numbers, expectedLevel: levelCounter)
-                    if let parsed {
-                        levels.append(parsed)
-                        levelCounter += 1
-                    }
+                // Poker Atlas order: Level#, Duration, SB, BB, [Ante]
+                let parsed = interpretPokerAtlasRow(numbers: numbers, expectedLevel: levelCounter)
+                if let parsed {
+                    levels.append(parsed)
+                    levelCounter += 1
                 }
                 continue
             }
 
-            // Generic row: look for 3-5 numbers that could be blind levels
-            let numbers = extractNumbers(from: trimmed)
-            if numbers.count >= 3 {
-                let parsed: ScannedBlindLevel?
-                if isPokerAtlasFormat {
-                    parsed = interpretPokerAtlasRow(numbers: numbers, expectedLevel: levelCounter)
-                } else {
-                    parsed = interpretGenericRow(numbers: numbers, expectedLevel: levelCounter)
-                }
-                if let parsed {
-                    levels.append(parsed)
-                    levelCounter += 1
+            // Generic row: 3-5 numbers that could be blind levels (only after header)
+            if pastHeader || isPokerAtlasFormat {
+                let numbers = extractNumbers(from: trimmed)
+                if numbers.count >= 3 {
+                    let parsed = isPokerAtlasFormat
+                        ? interpretPokerAtlasRow(numbers: numbers, expectedLevel: levelCounter)
+                        : interpretGenericRow(numbers: numbers, expectedLevel: levelCounter)
+                    if let parsed {
+                        levels.append(parsed)
+                        levelCounter += 1
+                    }
                 }
             }
         }
@@ -535,7 +655,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
         var idx = 0
         var levelNum = expectedLevel
 
-        // First number is level number if it's small and matches expected
+        // First number is level number if it's small and reasonable
         if numbers[0] <= 50 && (numbers[0] == expectedLevel || numbers[0] <= 30) {
             levelNum = numbers[0]
             idx = 1
@@ -624,7 +744,6 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     private func extractDuration(from text: String) -> Int? {
         let numbers = extractNumbers(from: text)
-        // For break lines, the number is typically the duration
         if let dur = numbers.last, dur >= 1, dur <= 60 {
             return dur
         }
@@ -633,8 +752,6 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     private func extractBreakLabel(from text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        // "Break - End of Reg..." → "Break - End of Reg..."
-        // "Break" → "Break"
         // Remove trailing numbers (duration)
         let withoutNumbers = trimmed.replacingOccurrences(
             of: #"\s*\d+\s*$"#,
@@ -650,7 +767,6 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     private func parseDollarValue(_ str: String?) -> Int? {
         guard let str else { return nil }
-        // Extract first number after optional $
         let cleaned = str.replacingOccurrences(of: "$", with: "")
             .trimmingCharacters(in: .whitespaces)
         // Take first number-like token
@@ -674,12 +790,43 @@ final class PokerAtlasScanner: @unchecked Sendable {
     }
 
     private func isChromeText(_ text: String) -> Bool {
-        let chrome = ["back", "home", "search", "menu", "share", "settings",
-                      "notifications", "poker atlas", "pokeratlas", "http", "www",
-                      "cancel", "close", "done", "register", "registration",
-                      "tournament info", "buy-in details", "format", "size",
-                      "structure", "note from"]
         let lower = text.lowercased().trimmingCharacters(in: .whitespaces)
-        return chrome.contains(where: { lower == $0 || lower.hasPrefix($0 + " ") }) || lower.count <= 3
+
+        // Very short strings
+        if lower.count <= 3 { return true }
+
+        // Status bar time patterns: "3:30", "3:30 4", "12:45 PM"
+        let timePattern = try! NSRegularExpression(pattern: #"^\d{1,2}:\d{2}\b"#)
+        if timePattern.firstMatch(in: lower, range: NSRange(lower.startIndex..., in: lower)) != nil {
+            return true
+        }
+
+        // Date patterns: "Today - Thursday, ..." or just a date
+        if lower.hasPrefix("today") { return true }
+
+        // Known chrome / UI elements
+        let chrome = [
+            "back", "home", "search", "menu", "share", "settings",
+            "notifications", "poker atlas", "pokeratlas", "http", "www",
+            "cancel", "close", "done", "register", "note from"
+        ]
+
+        for keyword in chrome {
+            if lower == keyword || lower.hasPrefix(keyword + " ") {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /// Detects Poker Atlas section headers that should be skipped
+    private func isSectionHeader(_ text: String) -> Bool {
+        let lower = text.lowercased().trimmingCharacters(in: .whitespaces)
+        let headers = [
+            "tournament info", "buy-in details", "format", "size",
+            "structure", "registration"
+        ]
+        return headers.contains(lower)
     }
 }

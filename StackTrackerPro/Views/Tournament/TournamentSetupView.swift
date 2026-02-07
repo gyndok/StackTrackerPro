@@ -326,9 +326,16 @@ struct TournamentSetupView: View {
         if let scannedReentry = result.reentryPolicy, !scannedReentry.isEmpty {
             reentryPolicy = scannedReentry
         }
+        // Starting blinds from explicit "Starting Blinds" field
+        if let sb = result.startingSB, sb > 0 {
+            startingSB = "\(sb)"
+        }
+        if let bb = result.startingBB, bb > 0 {
+            startingBB = "\(bb)"
+        }
+        // Blind levels override starting blinds with first level values
         if !result.blindLevels.isEmpty {
             scannedBlindLevels = result.blindLevels
-            // Update starting SB/BB from first scanned level
             if let first = result.blindLevels.first(where: { !$0.isBreak }) {
                 startingSB = "\(first.smallBlind)"
                 startingBB = "\(first.bigBlind)"
