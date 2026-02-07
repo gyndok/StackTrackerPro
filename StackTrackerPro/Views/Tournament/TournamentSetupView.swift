@@ -356,9 +356,10 @@ struct TournamentSetupView: View {
             reentryPolicy: reentryPolicy
         )
         t.venueName = venueName.isEmpty ? nil : venueName
+        modelContext.insert(t)
 
         if !scannedBlindLevels.isEmpty {
-            // Add all scanned blind levels
+            // Add all scanned blind levels via inverse relationship
             for scanned in scannedBlindLevels {
                 let level = BlindLevel(
                     levelNumber: scanned.levelNumber,
@@ -369,7 +370,8 @@ struct TournamentSetupView: View {
                     isBreak: scanned.isBreak,
                     breakLabel: scanned.breakLabel
                 )
-                t.blindLevels.append(level)
+                level.tournament = t
+                modelContext.insert(level)
             }
         } else {
             // Add starting blind level
@@ -378,10 +380,10 @@ struct TournamentSetupView: View {
                 smallBlind: Int(startingSB) ?? 100,
                 bigBlind: Int(startingBB) ?? 200
             )
-            t.blindLevels.append(level1)
+            level1.tournament = t
+            modelContext.insert(level1)
         }
 
-        modelContext.insert(t)
         return t
     }
 
