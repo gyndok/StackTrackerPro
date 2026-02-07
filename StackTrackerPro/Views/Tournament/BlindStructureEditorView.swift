@@ -25,104 +25,97 @@ struct BlindStructureEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.backgroundPrimary.ignoresSafeArea()
+        ZStack {
+            Color.backgroundPrimary.ignoresSafeArea()
 
-                List {
-                    headerRow
+            List {
+                headerRow
 
-                    ForEach(sortedLevels, id: \.persistentModelID) { level in
-                        levelRow(level)
-                    }
-                    .onDelete(perform: deleteLevels)
-
-                    addButtons
+                ForEach(sortedLevels, id: \.persistentModelID) { level in
+                    levelRow(level)
                 }
-                .scrollContentBackground(.hidden)
-                .listStyle(.plain)
+                .onDelete(perform: deleteLevels)
+
+                addButtons
             }
-            .navigationTitle("Blind Structure")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+            .scrollContentBackground(.hidden)
+            .listStyle(.plain)
+        }
+        .navigationTitle("Blind Structure")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button {
+                        showingTemplates = true
+                    } label: {
+                        Label("Load Template", systemImage: "doc.on.clipboard")
+                    }
+                    Button {
+                        showingPhotoSource = true
+                    } label: {
+                        Label("Scan from Screenshot", systemImage: "camera.viewfinder")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                         .foregroundColor(.goldAccent)
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button {
-                            showingTemplates = true
-                        } label: {
-                            Label("Load Template", systemImage: "doc.on.clipboard")
-                        }
-                        Button {
-                            showingPhotoSource = true
-                        } label: {
-                            Label("Scan from Screenshot", systemImage: "camera.viewfinder")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .foregroundColor(.goldAccent)
+            }
+        }
+        .confirmationDialog("Load Template", isPresented: $showingTemplates) {
+            Button("Standard Casino (30 min)") { loadTemplate(.standard) }
+            Button("Turbo (15 min)") { loadTemplate(.turbo) }
+            Button("Deep Stack (40 min)") { loadTemplate(.deepStack) }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Scan Source", isPresented: $showingPhotoSource) {
+            Button("Photo Library") { showingPhotoPicker = true }
+            Button("Camera") { showingCamera = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images)
+        .onChange(of: selectedPhotoItems) { _, newItems in
+            guard !newItems.isEmpty else { return }
+            let items = newItems
+            selectedPhotoItems = []
+            Task {
+                var images: [UIImage] = []
+                for item in items {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let uiImage = UIImage(data: data) {
+                        images.append(uiImage)
                     }
                 }
-            }
-            .confirmationDialog("Load Template", isPresented: $showingTemplates) {
-                Button("Standard Casino (30 min)") { loadTemplate(.standard) }
-                Button("Turbo (15 min)") { loadTemplate(.turbo) }
-                Button("Deep Stack (40 min)") { loadTemplate(.deepStack) }
-                Button("Cancel", role: .cancel) {}
-            }
-            .confirmationDialog("Scan Source", isPresented: $showingPhotoSource) {
-                Button("Photo Library") { showingPhotoPicker = true }
-                Button("Camera") { showingCamera = true }
-                Button("Cancel", role: .cancel) {}
-            }
-            .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images)
-            .onChange(of: selectedPhotoItems) { _, newItems in
-                guard !newItems.isEmpty else { return }
-                let items = newItems
-                selectedPhotoItems = []
-                Task {
-                    var images: [UIImage] = []
-                    for item in items {
-                        if let data = try? await item.loadTransferable(type: Data.self),
-                           let uiImage = UIImage(data: data) {
-                            images.append(uiImage)
-                        }
-                    }
-                    if !images.isEmpty {
-                        scanImages(images)
-                    }
+                if !images.isEmpty {
+                    scanImages(images)
                 }
             }
-            .sheet(isPresented: $showingCamera) {
-                CameraView { image in
-                    scanImages([image])
-                }
+        }
+        .sheet(isPresented: $showingCamera) {
+            CameraView { image in
+                scanImages([image])
             }
-            .alert("Scan Error", isPresented: $showingScanError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(scanError ?? "Unknown error")
+        }
+        .alert("Scan Error", isPresented: $showingScanError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(scanError ?? "Unknown error")
+        }
+        .overlay {
+            if isScanning {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                ProgressView("Scanning...")
+                    .tint(.goldAccent)
+                    .foregroundColor(.textPrimary)
+                    .padding()
+                    .background(Color.cardSurface.cornerRadius(12))
             }
-            .overlay {
-                if isScanning {
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                    ProgressView("Scanning...")
-                        .tint(.goldAccent)
-                        .foregroundColor(.textPrimary)
-                        .padding()
-                        .background(Color.cardSurface.cornerRadius(12))
-                }
-            }
-            .onAppear {
-                if !scannedLevels.isEmpty {
-                    // Defer to next run loop so SwiftData observation is set up
-                    DispatchQueue.main.async {
-                        loadScannedLevels(scannedLevels)
-                    }
+        }
+        .onAppear {
+            if !scannedLevels.isEmpty {
+                DispatchQueue.main.async {
+                    loadScannedLevels(scannedLevels)
                 }
             }
         }
@@ -415,6 +408,8 @@ enum BlindTemplate {
 }
 
 #Preview {
-    BlindStructureEditorView(tournament: Tournament(name: "Preview"))
-        .modelContainer(for: Tournament.self, inMemory: true)
+    NavigationStack {
+        BlindStructureEditorView(tournament: Tournament(name: "Preview"))
+    }
+    .modelContainer(for: Tournament.self, inMemory: true)
 }

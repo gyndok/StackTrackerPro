@@ -68,7 +68,7 @@ struct TournamentSetupView: View {
                         .disabled(!isValid)
                 }
             }
-            .sheet(isPresented: $showBlindEditor) {
+            .navigationDestination(isPresented: $showBlindEditor) {
                 if let t = createdTournament ?? tournament {
                     BlindStructureEditorView(tournament: t, scannedLevels: scannedBlindLevels)
                 }
