@@ -4,6 +4,7 @@ import PhotosUI
 
 struct BlindStructureEditorView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Bindable var tournament: Tournament
 
     var scannedLevels: [ScannedBlindLevel] = []
@@ -118,7 +119,10 @@ struct BlindStructureEditorView: View {
             }
             .onAppear {
                 if !scannedLevels.isEmpty {
-                    loadScannedLevels(scannedLevels)
+                    // Defer to next run loop so SwiftData observation is set up
+                    DispatchQueue.main.async {
+                        loadScannedLevels(scannedLevels)
+                    }
                 }
             }
         }
@@ -298,8 +302,13 @@ struct BlindStructureEditorView: View {
     }
 
     private func loadScannedLevels(_ levels: [ScannedBlindLevel]) {
+        // Delete existing levels from context
+        for existing in tournament.blindLevels {
+            modelContext.delete(existing)
+        }
         tournament.blindLevels.removeAll()
 
+        // Add scanned levels with explicit context insertion
         for scanned in levels {
             let level = BlindLevel(
                 levelNumber: scanned.levelNumber,
@@ -310,9 +319,11 @@ struct BlindStructureEditorView: View {
                 isBreak: scanned.isBreak,
                 breakLabel: scanned.breakLabel
             )
-            tournament.blindLevels.append(level)
+            level.tournament = tournament
+            modelContext.insert(level)
         }
 
+        try? modelContext.save()
         HapticFeedback.success()
     }
 }
