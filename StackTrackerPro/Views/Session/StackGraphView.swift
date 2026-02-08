@@ -5,6 +5,7 @@ struct StackGraphView: View {
     let entries: [StackEntry]
     let averageStack: Int
     let startingChips: Int
+    var displayLevelNumbers: [Int: Int] = [:]
 
     @State private var showBB = false
 
@@ -47,7 +48,7 @@ struct StackGraphView: View {
 
     private var chipsChart: some View {
         let data = latestPerLevel
-        let levelLabels = data.map { "Lvl \($0.blindLevelNumber)" }
+        let levelLabels = data.map { "Lvl \(displayLevelNumbers[$0.blindLevelNumber] ?? $0.blindLevelNumber)" }
         return Chart {
             ForEach(Array(data.enumerated()), id: \.offset) { index, entry in
                 let label = levelLabels[index]
@@ -134,7 +135,7 @@ struct StackGraphView: View {
 
     private var bbChart: some View {
         let data = latestPerLevel
-        let levelLabels = data.map { "Lvl \($0.blindLevelNumber)" }
+        let levelLabels = data.map { "Lvl \(displayLevelNumbers[$0.blindLevelNumber] ?? $0.blindLevelNumber)" }
         return Chart {
             ForEach(Array(data.enumerated()), id: \.offset) { index, entry in
                 let bb = entry.currentBB > 0 ? Double(entry.chipCount) / Double(entry.currentBB) : 0

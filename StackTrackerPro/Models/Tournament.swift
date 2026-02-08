@@ -121,6 +121,22 @@ final class Tournament {
         blindLevels.sorted { $0.levelNumber < $1.levelNumber }
     }
 
+    /// Maps internal levelNumber → display number (1-based, skipping breaks).
+    var displayLevelNumbers: [Int: Int] {
+        var map: [Int: Int] = [:]
+        var displayNum = 1
+        for level in sortedBlindLevels where !level.isBreak {
+            map[level.levelNumber] = displayNum
+            displayNum += 1
+        }
+        return map
+    }
+
+    /// Display level number for the current blind level.
+    var currentDisplayLevel: Int? {
+        displayLevelNumbers[currentBlindLevelNumber]
+    }
+
     var latestStack: StackEntry? {
         sortedStackEntries.last
     }

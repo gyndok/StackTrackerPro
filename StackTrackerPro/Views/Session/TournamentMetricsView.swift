@@ -199,7 +199,8 @@ struct TournamentMetricsView: View {
                     } else {
                         Picker("Level", selection: $editBlindLevel) {
                             ForEach(tournament.sortedBlindLevels.filter { !$0.isBreak }, id: \.levelNumber) { level in
-                                Text("Lvl \(level.levelNumber) — \(level.blindsDisplay)")
+                                let displayNum = tournament.displayLevelNumbers[level.levelNumber] ?? level.levelNumber
+                                Text("Lvl \(displayNum) — \(level.blindsDisplay)")
                                     .tag(level.levelNumber)
                             }
                         }

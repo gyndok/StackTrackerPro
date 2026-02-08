@@ -22,7 +22,7 @@ struct StatusBarView: View {
             // Current blind level
             if let blinds = tournament.currentBlinds, !blinds.isBreak {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("Level \(blinds.levelNumber)")
+                    Text("Level \(tournament.currentDisplayLevel ?? blinds.levelNumber)")
                         .font(PokerTypography.chipLabel)
                         .foregroundColor(.goldAccent)
 

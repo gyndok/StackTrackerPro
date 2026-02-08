@@ -48,14 +48,10 @@ struct BlindLevelsPane: View {
 
     private func blindRow(_ level: BlindLevel) -> some View {
         let isCurrent = level.levelNumber == tournament.currentBlindLevelNumber
+        let displayNum = tournament.displayLevelNumbers[level.levelNumber]
 
         return HStack {
             if level.isBreak {
-                Text("Lvl \(level.levelNumber)")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary.opacity(0.5))
-                    .frame(width: 48, alignment: .leading)
-
                 Image(systemName: "cup.and.saucer.fill")
                     .font(.caption)
                     .foregroundColor(.textSecondary)
@@ -65,7 +61,7 @@ struct BlindLevelsPane: View {
 
                 Spacer()
             } else {
-                Text("Lvl \(level.levelNumber)")
+                Text("Lvl \(displayNum ?? level.levelNumber)")
                     .font(PokerTypography.chipLabel)
                     .foregroundColor(isCurrent ? .goldAccent : .textSecondary)
                     .frame(width: 48, alignment: .leading)
@@ -219,7 +215,7 @@ struct BlindLevelsPane: View {
                     }
                 }
             }
-            .navigationTitle("Edit Level \(editingLevel?.levelNumber ?? 0)")
+            .navigationTitle("Edit Level \(editingLevel.flatMap { tournament.displayLevelNumbers[$0.levelNumber] } ?? 0)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

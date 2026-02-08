@@ -22,7 +22,8 @@ struct ActiveSessionView: View {
                 StackGraphView(
                     entries: tournament.sortedStackEntries,
                     averageStack: tournament.averageStack,
-                    startingChips: tournament.startingChips
+                    startingChips: tournament.startingChips,
+                    displayLevelNumbers: tournament.displayLevelNumbers
                 )
                 .tag(0)
 
