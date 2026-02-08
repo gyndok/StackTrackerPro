@@ -8,6 +8,7 @@ struct ActiveSessionView: View {
     @State private var messageText = ""
     @State private var selectedPage = 0
     @State private var showLiveShare = false
+    @State private var showXShare = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,6 +48,10 @@ struct ActiveSessionView: View {
                 // Chat pane
                 ChatThreadView(messages: tournament.sortedChatMessages)
                     .tag(5)
+
+                // Scouting report pane
+                ScoutingReportView(tournament: tournament)
+                    .tag(6)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -97,9 +102,21 @@ struct ActiveSessionView: View {
                     }
 
                     Button {
+                        selectedPage = 6
+                    } label: {
+                        Label("Scouting Report", systemImage: "doc.text.magnifyingglass")
+                    }
+
+                    Button {
                         showLiveShare = true
                     } label: {
                         Label("Share Stack", systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        showXShare = true
+                    } label: {
+                        Label("Post to X", systemImage: "square.and.arrow.up.fill")
                     }
 
                     Divider()
@@ -119,6 +136,8 @@ struct ActiveSessionView: View {
             tournamentManager.activeTournament = tournament
             if tournament.status == .setup {
                 tournamentManager.startTournament(tournament)
+            } else if tournament.status == .paused {
+                tournamentManager.resumeTournament()
             }
         }
         .sheet(isPresented: Bindable(tournamentManager).showSessionRecap) {
@@ -134,13 +153,19 @@ struct ActiveSessionView: View {
         .sheet(isPresented: $showLiveShare) {
             LiveShareSheet(tournament: tournament)
         }
+        .sheet(isPresented: $showXShare) {
+            XShareComposeView(
+                tournament: tournament,
+                context: tournament.status == .completed ? .completed : .activeLive
+            )
+        }
     }
 
     // MARK: - Page Indicator
 
     private var pageIndicator: some View {
         HStack(spacing: 8) {
-            ForEach(0..<6, id: \.self) { index in
+            ForEach(0..<7, id: \.self) { index in
                 Circle()
                     .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
                     .frame(width: 8, height: 8)

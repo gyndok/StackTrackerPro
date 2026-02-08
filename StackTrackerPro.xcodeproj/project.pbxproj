@@ -55,6 +55,12 @@
 		A8A9A0A1A2A3A4A5A6A7A8A9 /* MilestoneCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */; };
 		A9A0A1A2A3A4A5A6A7A8A9A0 /* SessionRecapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */; };
 		C1C2C3C4C5C6C7C8C9C0C1C2 /* EndTournamentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */; };
+		E1E2E3E4E5E6E7E8E9E0E1E2 /* TournamentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */; };
+		F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */; };
+		D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */; };
+		D2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */; };
+		D3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -107,6 +113,12 @@
 		B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneCardView.swift; sourceTree = "<group>"; };
 		B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRecapSheet.swift; sourceTree = "<group>"; };
 		D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndTournamentSheet.swift; sourceTree = "<group>"; };
+		F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentHistoryView.swift; sourceTree = "<group>"; };
+		F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweetComposer.swift; sourceTree = "<group>"; };
+		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
+		E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportEngine.swift; sourceTree = "<group>"; };
+		E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportView.swift; sourceTree = "<group>"; };
+		E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportCardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -155,6 +167,7 @@
 				BB3344556677889900112233 /* ReceiptCapturePane.swift */,
 				B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */,
 				D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */,
+				E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */,
 			);
 			path = Session;
 			sourceTree = "<group>";
@@ -170,6 +183,8 @@
 				C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */,
 				B1B2B3B4B5B6B7B8B9B0B1B2 /* ShareCardRenderer.swift */,
 				B2B3B4B5B6B7B8B9B0B1B2B3 /* MilestoneTracker.swift */,
+				F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */,
+				E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -187,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				50C8CDE38102F8460DA98886 /* TournamentListView.swift */,
+				F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */,
 				D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */,
 				4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */,
 			);
@@ -230,6 +246,8 @@
 				B7B8B9B0B1B2B3B4B5B6B7B8 /* ChipStackPhotoOverlayView.swift */,
 				D2D3D4D5D6D7D8D9D0D1D2D3 /* ReceiptOverlayView.swift */,
 				B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */,
+				F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */,
+				E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */,
 			);
 			path = Sharing;
 			sourceTree = "<group>";
@@ -379,6 +397,12 @@
 				A8A9A0A1A2A3A4A5A6A7A8A9 /* MilestoneCardView.swift in Sources */,
 				A9A0A1A2A3A4A5A6A7A8A9A0 /* SessionRecapSheet.swift in Sources */,
 				C1C2C3C4C5C6C7C8C9C0C1C2 /* EndTournamentSheet.swift in Sources */,
+				E1E2E3E4E5E6E7E8E9E0E1E2 /* TournamentHistoryView.swift in Sources */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */,
+				F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */,
+				D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */,
+				D2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift in Sources */,
+				D3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

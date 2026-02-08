@@ -34,6 +34,7 @@ struct TournamentSetupView: View {
     @State private var showingScanError = false
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var scannedBlindLevels: [ScannedBlindLevel] = []
+    @State private var showScoutingReport = false
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -72,6 +73,11 @@ struct TournamentSetupView: View {
             .navigationDestination(isPresented: $showBlindEditor) {
                 if let t = createdTournament ?? tournament {
                     BlindStructureEditorView(tournament: t, scannedLevels: scannedBlindLevels)
+                }
+            }
+            .navigationDestination(isPresented: $showScoutingReport) {
+                if let t = createdTournament ?? tournament {
+                    ScoutingReportView(tournament: t)
                 }
             }
             .sheet(isPresented: $showingCamera) {
@@ -243,6 +249,24 @@ struct TournamentSetupView: View {
                         .font(.caption)
                 }
                 .foregroundColor(.goldAccent)
+            }
+
+            if !scannedBlindLevels.isEmpty || (createdTournament ?? tournament)?.blindLevels.isEmpty == false {
+                Button {
+                    if tournament == nil && createdTournament == nil {
+                        createdTournament = createTournament()
+                    }
+                    showScoutingReport = true
+                } label: {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                        Text("View Scouting Report")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.goldAccent)
+                }
             }
         } header: {
             Text("BLINDS")
