@@ -14,32 +14,13 @@ struct ContentView: View {
             }
 
             Tab("Settings", systemImage: "gearshape.fill") {
-                settingsPlaceholder
+                SettingsView()
             }
         }
         .tint(.goldAccent)
         .preferredColorScheme(.dark)
     }
 
-    private var settingsPlaceholder: some View {
-        NavigationStack {
-            ZStack {
-                Color.backgroundPrimary.ignoresSafeArea()
-                VStack(spacing: 12) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.textSecondary.opacity(0.5))
-                    Text("Settings")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(.textPrimary)
-                    Text("Coming in Phase 2")
-                        .font(PokerTypography.chatCaption)
-                        .foregroundColor(.textSecondary)
-                }
-            }
-            .navigationTitle("Settings")
-        }
-    }
 }
 
 #Preview {

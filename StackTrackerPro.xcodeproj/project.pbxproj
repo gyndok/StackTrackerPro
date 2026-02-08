@@ -61,6 +61,7 @@
 		D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */; };
 		D2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */; };
 		D3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */; };
+		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -119,6 +120,7 @@
 		E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportEngine.swift; sourceTree = "<group>"; };
 		E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportView.swift; sourceTree = "<group>"; };
 		E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportCardView.swift; sourceTree = "<group>"; };
+		E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -252,6 +254,14 @@
 			path = Sharing;
 			sourceTree = "<group>";
 		};
+		F6A7B8C9D0E1F2A3B4C5D6E7 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
 		B3FF000EAD123ECB4835E3AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -259,6 +269,7 @@
 				5EC39F7F309606F34F39AA68 /* Session */,
 				C0C1C2C3C4C5C6C7C8C9C0C1 /* Sharing */,
 				B2FBC9D96DEBE1CBC41BECAF /* Components */,
+				F6A7B8C9D0E1F2A3B4C5D6E7 /* Settings */,
 				D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */,
 			);
 			path = Views;
@@ -403,6 +414,7 @@
 				D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */,
 				D2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift in Sources */,
 				D3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift in Sources */,
+				F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

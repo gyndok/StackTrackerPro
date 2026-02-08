@@ -7,6 +7,11 @@ struct TournamentSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(TournamentManager.self) private var tournamentManager
 
+    // Settings defaults
+    @AppStorage(SettingsKeys.defaultGameType) private var savedGameType = GameType.nlh.rawValue
+    @AppStorage(SettingsKeys.defaultStartingChips) private var savedStartingChips = 20000
+    @AppStorage(SettingsKeys.defaultPayoutPercent) private var savedPayoutPercent = 15
+
     // Editing existing or creating new
     var tournament: Tournament?
 
@@ -113,7 +118,15 @@ struct TournamentSetupView: View {
             } message: {
                 Text(scanError ?? "Unknown error")
             }
-            .onAppear(perform: loadExisting)
+            .onAppear {
+                if tournament != nil {
+                    loadExisting()
+                } else {
+                    gameType = GameType(rawValue: savedGameType) ?? .nlh
+                    startingChips = "\(savedStartingChips)"
+                    payoutPercent = "\(savedPayoutPercent)"
+                }
+            }
         }
     }
 

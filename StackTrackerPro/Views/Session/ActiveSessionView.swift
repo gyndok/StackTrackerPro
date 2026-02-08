@@ -4,6 +4,8 @@ struct ActiveSessionView: View {
     @Environment(TournamentManager.self) private var tournamentManager
     @Environment(ChatManager.self) private var chatManager
 
+    @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = true
+
     @Bindable var tournament: Tournament
     @State private var messageText = ""
     @State private var selectedPage = 0
@@ -64,6 +66,12 @@ struct ActiveSessionView: View {
             )
         }
         .background(Color.backgroundPrimary)
+        .onChange(of: keepScreenAwake, initial: true) { _, newValue in
+            UIApplication.shared.isIdleTimerDisabled = newValue
+        }
+        .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {

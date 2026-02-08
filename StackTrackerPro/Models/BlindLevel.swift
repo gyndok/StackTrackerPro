@@ -30,9 +30,10 @@ final class BlindLevel {
         self.breakLabel = breakLabel
     }
 
-    /// Cost of one full orbit (9-handed: SB + BB + 9 × ante)
+    /// Cost of one full orbit (seats-per-table × ante + SB + BB)
     var orbitCost: Int {
-        smallBlind + bigBlind + (9 * ante)
+        let seats = UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
+        return smallBlind + bigBlind + (seats * ante)
     }
 
     var blindsDisplay: String {

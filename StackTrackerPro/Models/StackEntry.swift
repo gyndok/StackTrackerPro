@@ -40,7 +40,8 @@ final class StackEntry {
     }
 
     var mRatio: Double {
-        let orbit = currentSB + currentBB + (9 * currentAnte)
+        let seats = UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
+        let orbit = currentSB + currentBB + (seats * currentAnte)
         guard orbit > 0 else { return 0 }
         return Double(chipCount) / Double(orbit)
     }

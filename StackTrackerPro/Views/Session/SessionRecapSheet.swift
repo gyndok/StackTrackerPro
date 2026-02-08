@@ -5,6 +5,8 @@ struct SessionRecapSheet: View {
     let tournament: Tournament
     let onDismiss: () -> Void
 
+    @AppStorage(SettingsKeys.milestoneCelebrations) private var milestoneCelebrations = true
+
     @State private var selectedSize: ShareCardSize = .stories
     @State private var renderedImage: UIImage?
     @State private var milestones: [MilestoneType] = []
@@ -131,6 +133,7 @@ struct SessionRecapSheet: View {
     // MARK: - Milestones
 
     private func checkMilestones() {
+        guard milestoneCelebrations else { return }
         milestones = MilestoneTracker.shared.checkForNewMilestones(
             completed: tournament,
             allTournaments: allTournaments

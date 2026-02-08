@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatusBarView: View {
     let tournament: Tournament
+    @AppStorage(SettingsKeys.showMRatio) private var showMRatio = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -35,6 +36,11 @@ struct StatusBarView: View {
             // BB badge
             if let latest = tournament.latestStack, latest.bbCount > 0 {
                 BBBadge(bbCount: latest.bbCount)
+            }
+
+            // M-ratio badge
+            if showMRatio, let latest = tournament.latestStack, latest.mRatio > 0 {
+                MRatioBadge(mRatio: latest.mRatio)
             }
         }
         .padding(.horizontal, 16)
