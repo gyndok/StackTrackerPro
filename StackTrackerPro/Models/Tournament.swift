@@ -57,6 +57,9 @@ final class Tournament {
     @Relationship(deleteRule: .cascade, inverse: \ChipStackPhoto.tournament)
     var chipStackPhotos: [ChipStackPhoto] = []
 
+    // End of session
+    var endDate: Date?
+
     // Receipt
     var receiptImageData: Data?
 
@@ -94,6 +97,7 @@ final class Tournament {
         self.payoutPercent = 15.0
         self.venueID = nil
         self.venueName = nil
+        self.endDate = nil
         self.receiptImageData = nil
     }
 
@@ -175,6 +179,27 @@ final class Tournament {
     var profit: Int? {
         guard let payout else { return nil }
         return payout + (bountiesCollected * bountyAmount) - totalInvestment
+    }
+
+    var duration: TimeInterval? {
+        guard let end = endDate else { return nil }
+        return end.timeIntervalSince(startDate)
+    }
+
+    var durationFormatted: String {
+        let elapsed = duration ?? Date.now.timeIntervalSince(startDate)
+        let hours = Int(elapsed) / 3600
+        let minutes = (Int(elapsed) % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
+
+    var hourlyRate: Double? {
+        guard let profit = profit, let dur = duration, dur > 0 else { return nil }
+        let hours = dur / 3600
+        return Double(profit) / hours
     }
 
     // MARK: - Tournament Metrics

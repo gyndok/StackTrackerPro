@@ -8,6 +8,8 @@ struct ChipStackPhotosPane: View {
     @State private var showPhotoPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var fullScreenPhoto: ChipStackPhoto?
+    @State private var showOverlayShare = false
+    @State private var overlayImage: UIImage?
 
     private let columns = [
         GridItem(.flexible(), spacing: 8),
@@ -170,14 +172,34 @@ struct ChipStackPhotosPane: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Close button
-            Button {
-                fullScreenPhoto = nil
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(16)
+            // Top buttons
+            HStack {
+                Spacer()
+
+                // Share button
+                Button {
+                    sharePhoto(photo)
+                } label: {
+                    Image(systemName: "square.and.arrow.up.circle.fill")
+                        .font(.title)
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.trailing, 4)
+                }
+
+                // Close button
+                Button {
+                    fullScreenPhoto = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+            .padding(16)
+        }
+        .sheet(isPresented: $showOverlayShare) {
+            if let image = overlayImage {
+                PhotoOverlayShareSheet(image: image, eventName: tournament.name)
             }
         }
     }
@@ -202,6 +224,42 @@ struct ChipStackPhotosPane: View {
 
             Spacer()
         }
+    }
+
+    // MARK: - Share
+
+    private func sharePhoto(_ photo: ChipStackPhoto) {
+        guard let uiImage = UIImage(data: photo.imageData) else { return }
+
+        let blinds = tournament.currentBlinds
+        let level = tournament.currentDisplayLevel ?? photo.blindLevel
+        var blindText = "Level \(level)"
+        if let b = blinds {
+            blindText += " \u{2014} \(b.smallBlind)/\(b.bigBlind)"
+            if b.ante > 0 { blindText += " ante \(b.ante)" }
+        }
+
+        let stackText = photo.stackAtTime.map { "\($0.formatted()) chips" }
+
+        let overlayView = ChipStackPhotoOverlayView(
+            photo: uiImage,
+            eventName: tournament.name,
+            venueName: tournament.venueName,
+            blindLevel: blindText,
+            stackValue: stackText
+        )
+
+        let photoAspect = uiImage.size.height / uiImage.size.width
+        let renderWidth: CGFloat = 360
+        let renderHeight = renderWidth * photoAspect
+
+        let renderer = ImageRenderer(content:
+            overlayView
+                .frame(width: renderWidth, height: renderHeight)
+        )
+        renderer.scale = 3.0
+        overlayImage = renderer.uiImage
+        showOverlayShare = true
     }
 
     // MARK: - Actions
@@ -241,6 +299,59 @@ struct ChipStackPhotosPane: View {
 // Make ChipStackPhoto identifiable for fullScreenCover
 extension ChipStackPhoto: Identifiable {
     var id: PersistentIdentifier { persistentModelID }
+}
+
+// MARK: - Photo Overlay Share Sheet
+
+struct PhotoOverlayShareSheet: View {
+    let image: UIImage
+    let eventName: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Spacer()
+
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: .black.opacity(0.5), radius: 12, y: 4)
+                    .padding(.horizontal, 24)
+
+                let shareImage = ShareableImage(
+                    image: Image(uiImage: image),
+                    uiImage: image
+                )
+                ShareLink(
+                    item: shareImage,
+                    preview: SharePreview(eventName, image: Image(uiImage: image))
+                ) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
+                    }
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.backgroundPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.goldAccent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+            .background(Color.backgroundPrimary)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(.goldAccent)
+                }
+            }
+        }
+    }
 }
 
 #Preview {

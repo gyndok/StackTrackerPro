@@ -7,6 +7,7 @@ struct ActiveSessionView: View {
     @Bindable var tournament: Tournament
     @State private var messageText = ""
     @State private var selectedPage = 0
+    @State private var showLiveShare = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -94,6 +95,20 @@ struct ActiveSessionView: View {
                     } label: {
                         Label("Session Summary", systemImage: "chart.bar")
                     }
+
+                    Button {
+                        showLiveShare = true
+                    } label: {
+                        Label("Share Stack", systemImage: "square.and.arrow.up")
+                    }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        tournamentManager.showEndTournamentSheet()
+                    } label: {
+                        Label("End Tournament", systemImage: "flag.checkered")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .foregroundColor(.goldAccent)
@@ -105,6 +120,19 @@ struct ActiveSessionView: View {
             if tournament.status == .setup {
                 tournamentManager.startTournament(tournament)
             }
+        }
+        .sheet(isPresented: Bindable(tournamentManager).showSessionRecap) {
+            if let recapTournament = tournamentManager.completedTournamentForRecap {
+                SessionRecapSheet(tournament: recapTournament) {
+                    tournamentManager.dismissRecap()
+                }
+            }
+        }
+        .sheet(isPresented: Bindable(tournamentManager).showEndTournament) {
+            EndTournamentSheet(tournament: tournament)
+        }
+        .sheet(isPresented: $showLiveShare) {
+            LiveShareSheet(tournament: tournament)
         }
     }
 
@@ -133,9 +161,93 @@ struct ActiveSessionView: View {
     }
 
     private func handleQuickAction(_ action: QuickAction) {
+        if action == .share {
+            showLiveShare = true
+            return
+        }
         Task {
             await chatManager.handleQuickAction(action)
         }
+    }
+}
+
+// MARK: - Live Share Sheet
+
+struct LiveShareSheet: View {
+    let tournament: Tournament
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedSize: ShareCardSize = .stories
+    @State private var renderedImage: UIImage?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    Picker("Size", selection: $selectedSize) {
+                        ForEach(ShareCardSize.allCases, id: \.self) { size in
+                            Text(size.rawValue).tag(size)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+
+                    if let image = renderedImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: .black.opacity(0.5), radius: 12, y: 4)
+                            .padding(.horizontal, 24)
+                    } else {
+                        ProgressView()
+                            .frame(height: 300)
+                    }
+
+                    if let uiImage = renderedImage {
+                        let shareImage = ShareableImage(
+                            image: Image(uiImage: uiImage),
+                            uiImage: uiImage
+                        )
+                        ShareLink(
+                            item: shareImage,
+                            preview: SharePreview(
+                                tournament.name,
+                                image: Image(uiImage: uiImage)
+                            )
+                        ) {
+                            HStack {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("Share")
+                            }
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.backgroundPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.goldAccent)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal, 24)
+                    }
+                }
+                .padding(.vertical, 16)
+            }
+            .background(Color.backgroundPrimary)
+            .navigationTitle("Share Stack")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(.goldAccent)
+                }
+            }
+        }
+        .onAppear { renderCard() }
+        .onChange(of: selectedSize) { _, _ in renderCard() }
+    }
+
+    private func renderCard() {
+        let card = LiveStackFlexView(tournament: tournament, size: selectedSize)
+        renderedImage = ShareCardRenderer.render(card, size: selectedSize)
     }
 }
 

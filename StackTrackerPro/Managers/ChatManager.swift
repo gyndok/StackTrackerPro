@@ -70,6 +70,9 @@ final class ChatManager {
             let aiMessage = ChatMessage(sender: .ai, text: summary)
             tournament.chatMessages.append(aiMessage)
             try? tournamentManager.modelContext?.save()
+        case .share:
+            // Handled in ActiveSessionView (needs UI state for sheet presentation)
+            break
         }
     }
 
@@ -147,6 +150,7 @@ enum QuickAction: String, CaseIterable {
     case rebuy = "Rebuy"
     case sameStack = "Same Stack"
     case stats = "Stats"
+    case share = "Share"
 
     var icon: String {
         switch self {
@@ -154,6 +158,7 @@ enum QuickAction: String, CaseIterable {
         case .rebuy: return "arrow.counterclockwise"
         case .sameStack: return "equal.circle"
         case .stats: return "chart.bar"
+        case .share: return "square.and.arrow.up"
         }
     }
 }

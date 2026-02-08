@@ -134,3 +134,39 @@ enum StackEntrySource: String, Codable {
     case manual = "manual"
     case initial = "initial"
 }
+
+// MARK: - Milestone Type
+
+enum MilestoneType: String, CaseIterable {
+    case firstCash = "first_cash"
+    case firstPlace = "first_place"
+    case newPBCash = "new_pb_cash"
+    case finalTable = "final_table"
+
+    var title: String {
+        switch self {
+        case .firstCash: return "FIRST CASH!"
+        case .firstPlace: return "FIRST PLACE!"
+        case .newPBCash: return "NEW PERSONAL BEST!"
+        case .finalTable: return "FINAL TABLE!"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .firstCash: return "You cashed in a tournament for the first time"
+        case .firstPlace: return "You took down the whole thing"
+        case .newPBCash: return "Your biggest cash ever"
+        case .finalTable: return "You made the final table"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .firstCash: return "dollarsign.circle.fill"
+        case .firstPlace: return "trophy.fill"
+        case .newPBCash: return "star.fill"
+        case .finalTable: return "crown.fill"
+        }
+    }
+}

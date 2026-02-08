@@ -44,6 +44,16 @@
 		AA2233445566778899001122 /* ChipStackPhotosPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2233445566778899001122 /* ChipStackPhotosPane.swift */; };
 		AA3344556677889900112233 /* ReceiptCapturePane.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* ReceiptCapturePane.swift */; };
 		C5D4E3F2A1B0C9D8E7F6A5B4 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */; };
+		A1A2A3A4A5A6A7A8A9A0A1A2 /* ShareCardRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1B2B3B4B5B6B7B8B9B0B1B2 /* ShareCardRenderer.swift */; };
+		A2A3A4A5A6A7A8A9A0A1A2A3 /* MilestoneTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B3B4B5B6B7B8B9B0B1B2B3 /* MilestoneTracker.swift */; };
+		A3A4A5A6A7A8A9A0A1A2A3A4 /* ShareCardComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B4B5B6B7B8B9B0B1B2B3B4 /* ShareCardComponents.swift */; };
+		A4A5A6A7A8A9A0A1A2A3A4A5 /* MiniStackChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B5B6B7B8B9B0B1B2B3B4B5 /* MiniStackChartView.swift */; };
+		A5A6A7A8A9A0A1A2A3A4A5A6 /* SessionRecapCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B6B7B8B9B0B1B2B3B4B5B6 /* SessionRecapCardView.swift */; };
+		A6A7A8A9A0A1A2A3A4A5A6A7 /* LiveStackFlexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B7B8B9B0B1B2B3B4B5B6B7 /* LiveStackFlexView.swift */; };
+		A7A8A9A0A1A2A3A4A5A6A7A8 /* ChipStackPhotoOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B8B9B0B1B2B3B4B5B6B7B8 /* ChipStackPhotoOverlayView.swift */; };
+		A8A9A0A1A2A3A4A5A6A7A8A9 /* MilestoneCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */; };
+		A9A0A1A2A3A4A5A6A7A8A9A0 /* SessionRecapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */; };
+		C1C2C3C4C5C6C7C8C9C0C1C2 /* EndTournamentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -85,6 +95,16 @@
 		BB2233445566778899001122 /* ChipStackPhotosPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipStackPhotosPane.swift; sourceTree = "<group>"; };
 		BB3344556677889900112233 /* ReceiptCapturePane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptCapturePane.swift; sourceTree = "<group>"; };
 		D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
+		B1B2B3B4B5B6B7B8B9B0B1B2 /* ShareCardRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardRenderer.swift; sourceTree = "<group>"; };
+		B2B3B4B5B6B7B8B9B0B1B2B3 /* MilestoneTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneTracker.swift; sourceTree = "<group>"; };
+		B3B4B5B6B7B8B9B0B1B2B3B4 /* ShareCardComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardComponents.swift; sourceTree = "<group>"; };
+		B4B5B6B7B8B9B0B1B2B3B4B5 /* MiniStackChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniStackChartView.swift; sourceTree = "<group>"; };
+		B5B6B7B8B9B0B1B2B3B4B5B6 /* SessionRecapCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRecapCardView.swift; sourceTree = "<group>"; };
+		B6B7B8B9B0B1B2B3B4B5B6B7 /* LiveStackFlexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStackFlexView.swift; sourceTree = "<group>"; };
+		B7B8B9B0B1B2B3B4B5B6B7B8 /* ChipStackPhotoOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChipStackPhotoOverlayView.swift; sourceTree = "<group>"; };
+		B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneCardView.swift; sourceTree = "<group>"; };
+		B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRecapSheet.swift; sourceTree = "<group>"; };
+		D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndTournamentSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +151,8 @@
 				18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */,
 				BB2233445566778899001122 /* ChipStackPhotosPane.swift */,
 				BB3344556677889900112233 /* ReceiptCapturePane.swift */,
+				B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */,
+				D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */,
 			);
 			path = Session;
 			sourceTree = "<group>";
@@ -144,6 +166,8 @@
 				CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */,
 				C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */,
+				B1B2B3B4B5B6B7B8B9B0B1B2 /* ShareCardRenderer.swift */,
+				B2B3B4B5B6B7B8B9B0B1B2B3 /* MilestoneTracker.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -194,11 +218,25 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		C0C1C2C3C4C5C6C7C8C9C0C1 /* Sharing */ = {
+			isa = PBXGroup;
+			children = (
+				B3B4B5B6B7B8B9B0B1B2B3B4 /* ShareCardComponents.swift */,
+				B4B5B6B7B8B9B0B1B2B3B4B5 /* MiniStackChartView.swift */,
+				B5B6B7B8B9B0B1B2B3B4B5B6 /* SessionRecapCardView.swift */,
+				B6B7B8B9B0B1B2B3B4B5B6B7 /* LiveStackFlexView.swift */,
+				B7B8B9B0B1B2B3B4B5B6B7B8 /* ChipStackPhotoOverlayView.swift */,
+				B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */,
+			);
+			path = Sharing;
+			sourceTree = "<group>";
+		};
 		B3FF000EAD123ECB4835E3AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
 				A4A4961A3FCFC36AEBBBB40A /* Tournament */,
 				5EC39F7F309606F34F39AA68 /* Session */,
+				C0C1C2C3C4C5C6C7C8C9C0C1 /* Sharing */,
 				B2FBC9D96DEBE1CBC41BECAF /* Components */,
 				D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */,
 			);
@@ -327,6 +365,16 @@
 				AA2233445566778899001122 /* ChipStackPhotosPane.swift in Sources */,
 				AA3344556677889900112233 /* ReceiptCapturePane.swift in Sources */,
 				C5D4E3F2A1B0C9D8E7F6A5B4 /* SplashScreenView.swift in Sources */,
+				A1A2A3A4A5A6A7A8A9A0A1A2 /* ShareCardRenderer.swift in Sources */,
+				A2A3A4A5A6A7A8A9A0A1A2A3 /* MilestoneTracker.swift in Sources */,
+				A3A4A5A6A7A8A9A0A1A2A3A4 /* ShareCardComponents.swift in Sources */,
+				A4A5A6A7A8A9A0A1A2A3A4A5 /* MiniStackChartView.swift in Sources */,
+				A5A6A7A8A9A0A1A2A3A4A5A6 /* SessionRecapCardView.swift in Sources */,
+				A6A7A8A9A0A1A2A3A4A5A6A7 /* LiveStackFlexView.swift in Sources */,
+				A7A8A9A0A1A2A3A4A5A6A7A8 /* ChipStackPhotoOverlayView.swift in Sources */,
+				A8A9A0A1A2A3A4A5A6A7A8A9 /* MilestoneCardView.swift in Sources */,
+				A9A0A1A2A3A4A5A6A7A8A9A0 /* SessionRecapSheet.swift in Sources */,
+				C1C2C3C4C5C6C7C8C9C0C1C2 /* EndTournamentSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

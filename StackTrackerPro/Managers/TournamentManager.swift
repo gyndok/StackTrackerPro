@@ -7,6 +7,11 @@ final class TournamentManager {
     var activeTournament: Tournament?
     var modelContext: ModelContext?
 
+    // Session recap state
+    var showSessionRecap = false
+    var showEndTournament = false
+    private(set) var completedTournamentForRecap: Tournament?
+
     init() {}
 
     func setContext(_ context: ModelContext) {
@@ -51,12 +56,25 @@ final class TournamentManager {
         save()
     }
 
-    func completeTournament(position: Int? = nil, payout: Int? = nil) {
+    func completeTournament(position: Int? = nil, payout: Int? = nil, endDate: Date = .now) {
         guard let tournament = activeTournament else { return }
         tournament.status = .completed
         tournament.finishPosition = position
         tournament.payout = payout
+        tournament.endDate = endDate
         save()
+        // Keep tournament alive for recap — do NOT clear activeTournament yet
+        completedTournamentForRecap = tournament
+        showSessionRecap = true
+    }
+
+    func showEndTournamentSheet() {
+        showEndTournament = true
+    }
+
+    func dismissRecap() {
+        showSessionRecap = false
+        completedTournamentForRecap = nil
         activeTournament = nil
     }
 

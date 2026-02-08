@@ -71,6 +71,11 @@ struct PokerTypography {
     static let blindLevel = Font.system(size: 14, weight: .bold, design: .monospaced)
     static let sectionHeader = Font.system(size: 13, weight: .bold)
     static let chipLabel = Font.system(size: 12, weight: .medium)
+
+    // Share card typography
+    static let shareHero = Font.system(size: 36, weight: .bold, design: .rounded)
+    static let shareValue = Font.system(size: 16, weight: .semibold, design: .monospaced)
+    static let shareLabel = Font.system(size: 10, weight: .medium)
 }
 
 // MARK: - View Modifiers
