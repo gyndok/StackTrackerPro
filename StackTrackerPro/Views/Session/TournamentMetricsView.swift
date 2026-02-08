@@ -48,8 +48,8 @@ struct TournamentMetricsView: View {
             Spacer()
 
             Button {
-                if tournament.payoutPercent > 1 {
-                    tournament.payoutPercent -= 1
+                if tournament.payoutPercent > 0.5 {
+                    tournament.payoutPercent -= 0.5
                 }
             } label: {
                 Image(systemName: "minus.circle.fill")
@@ -57,14 +57,14 @@ struct TournamentMetricsView: View {
                     .foregroundColor(.goldAccent)
             }
 
-            Text(String(format: "%.0f%%", tournament.payoutPercent))
+            Text(String(format: tournament.payoutPercent.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f%%" : "%.1f%%", tournament.payoutPercent))
                 .font(PokerTypography.statValue)
                 .foregroundColor(.textPrimary)
-                .frame(minWidth: 44, alignment: .center)
+                .frame(minWidth: 52, alignment: .center)
 
             Button {
                 if tournament.payoutPercent < 100 {
-                    tournament.payoutPercent += 1
+                    tournament.payoutPercent += 0.5
                 }
             } label: {
                 Image(systemName: "plus.circle.fill")
