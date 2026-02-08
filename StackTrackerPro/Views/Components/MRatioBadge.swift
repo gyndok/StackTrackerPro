@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BBBadge: View {
     let bbCount: Double
+    @State private var previousZone: BBZone?
 
     private var zone: BBZone {
         BBZone.from(bbCount: bbCount)
@@ -20,6 +21,19 @@ struct BBBadge: View {
         .padding(.vertical, 5)
         .background(zone.color.opacity(0.15))
         .clipShape(Capsule())
+        .onChange(of: zone) { oldZone, newZone in
+            guard previousZone != nil else {
+                previousZone = newZone
+                return
+            }
+            if oldZone != newZone {
+                HapticFeedback.notification(newZone.isWorseThan(oldZone) ? .warning : .success)
+                previousZone = newZone
+            }
+        }
+        .onAppear {
+            previousZone = zone
+        }
     }
 }
 

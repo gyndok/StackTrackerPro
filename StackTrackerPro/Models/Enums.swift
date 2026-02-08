@@ -117,6 +117,19 @@ enum BBZone: String {
         }
     }
 
+    private var severity: Int {
+        switch self {
+        case .green: return 0
+        case .yellow: return 1
+        case .orange: return 2
+        case .red: return 3
+        }
+    }
+
+    func isWorseThan(_ other: BBZone) -> Bool {
+        severity > other.severity
+    }
+
     static func from(bbCount: Double) -> BBZone {
         switch bbCount {
         case 30...: return .green
