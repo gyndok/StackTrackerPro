@@ -335,8 +335,12 @@ struct TournamentMetricsView: View {
     private var bubbleDisplayValue: String {
         guard tournament.fieldSize > 0, tournament.payoutPercent > 0 else { return "---" }
         guard tournament.playersRemaining > 0 else { return "---" }
+        let paid = Int(ceil(Double(tournament.fieldSize) * tournament.payoutPercent / 100.0))
         let distance = tournament.estimatedBubbleDistance
-        return distance > 0 ? "\(distance)" : "ITM!"
+        if distance > 0 {
+            return "\(distance) (\(paid) paid)"
+        }
+        return "ITM! (\(paid) paid)"
     }
 
     // MARK: - Formatters
