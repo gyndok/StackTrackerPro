@@ -4,7 +4,9 @@ import SwiftData
 struct TournamentListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(TournamentManager.self) private var tournamentManager
-    @Query(sort: \Tournament.startDate, order: .reverse) private var tournaments: [Tournament]
+    @Query(filter: #Predicate<Tournament> { $0.statusRaw != "completed" },
+           sort: \Tournament.startDate, order: .reverse)
+    private var tournaments: [Tournament]
 
     @State private var showingSetup = false
 
@@ -46,7 +48,7 @@ struct TournamentListView: View {
                 .font(.title2.weight(.semibold))
                 .foregroundColor(.textPrimary)
 
-            Text("Tap + to start tracking your first tournament")
+            Text("Tap + to start tracking today's tournament")
                 .font(PokerTypography.chatBody)
                 .foregroundColor(.textSecondary)
                 .multilineTextAlignment(.center)
@@ -69,7 +71,23 @@ struct TournamentListView: View {
                 NavigationLink {
                     destinationView(for: tournament)
                 } label: {
-                    tournamentRow(tournament)
+                    VStack(spacing: 0) {
+                        tournamentRow(tournament)
+
+                        if tournament.status == .paused {
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.fill")
+                                Text("Resume Tournament")
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.backgroundPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.goldAccent)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .padding(.top, 8)
+                        }
+                    }
                 }
                 .listRowBackground(Color.cardSurface)
             }

@@ -10,7 +10,7 @@ struct ContentView: View {
             }
 
             Tab("History", systemImage: "clock.fill") {
-                historyPlaceholder
+                TournamentHistoryView()
             }
 
             Tab("Settings", systemImage: "gearshape.fill") {
@@ -19,26 +19,6 @@ struct ContentView: View {
         }
         .tint(.goldAccent)
         .preferredColorScheme(.dark)
-    }
-
-    private var historyPlaceholder: some View {
-        NavigationStack {
-            ZStack {
-                Color.backgroundPrimary.ignoresSafeArea()
-                VStack(spacing: 12) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.textSecondary.opacity(0.5))
-                    Text("Tournament History")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(.textPrimary)
-                    Text("Coming in Phase 2")
-                        .font(PokerTypography.chatCaption)
-                        .foregroundColor(.textSecondary)
-                }
-            }
-            .navigationTitle("History")
-        }
     }
 
     private var settingsPlaceholder: some View {

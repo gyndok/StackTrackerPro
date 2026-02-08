@@ -10,6 +10,7 @@ struct SessionRecapSheet: View {
     @State private var milestones: [MilestoneType] = []
     @State private var showMilestone = false
     @State private var currentMilestone: MilestoneType?
+    @State private var showXShare = false
 
     @Query private var allTournaments: [Tournament]
 
@@ -67,6 +68,27 @@ struct SessionRecapSheet: View {
                         }
                         .padding(.horizontal, 24)
                     }
+
+                    // Post to X button
+                    Button {
+                        showXShare = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up.fill")
+                            Text("Post to X")
+                        }
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.goldAccent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.goldAccent.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.goldAccent.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 24)
                 }
                 .padding(.vertical, 16)
             }
@@ -93,6 +115,9 @@ struct SessionRecapSheet: View {
             if let milestone = currentMilestone {
                 milestoneSheet(milestone)
             }
+        }
+        .sheet(isPresented: $showXShare) {
+            XShareComposeView(tournament: tournament, context: .completed)
         }
     }
 
