@@ -97,7 +97,8 @@ final class ChatManager {
                 levelNumber: entities.levelNumber,
                 sb: entities.smallBlind,
                 bb: entities.bigBlind,
-                ante: entities.ante
+                ante: entities.ante,
+                isDisplayLevel: true
             )
         }
 

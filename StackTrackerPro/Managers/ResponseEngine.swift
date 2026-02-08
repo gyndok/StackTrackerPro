@@ -21,7 +21,7 @@ final class ResponseEngine: @unchecked Sendable {
         // Level change
         if entities.levelNumber != nil || entities.smallBlind != nil {
             if let blinds = tournament.currentBlinds {
-                sections.append(levelChangeResponse(blinds: blinds))
+                sections.append(levelChangeResponse(blinds: blinds, tournament: tournament))
             }
         }
 
@@ -124,13 +124,14 @@ final class ResponseEngine: @unchecked Sendable {
 
     // MARK: - Level Change
 
-    func levelChangeResponse(blinds: BlindLevel) -> String {
+    func levelChangeResponse(blinds: BlindLevel, tournament: Tournament) -> String {
         if blinds.isBreak {
             return "Break time! Good time to stretch and reset."
         }
 
+        let displayLevel = tournament.displayLevelNumbers[blinds.levelNumber] ?? blinds.levelNumber
         var lines: [String] = []
-        lines.append("Level \(blinds.levelNumber): \(blinds.blindsDisplay)")
+        lines.append("Level \(displayLevel): \(blinds.blindsDisplay)")
         lines.append("Orbit cost: \(formatChips(blinds.orbitCost))")
         return lines.joined(separator: "\n")
     }

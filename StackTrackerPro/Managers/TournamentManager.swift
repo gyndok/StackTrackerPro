@@ -78,11 +78,13 @@ final class TournamentManager {
         save()
     }
 
-    func updateBlinds(levelNumber: Int? = nil, sb: Int? = nil, bb: Int? = nil, ante: Int? = nil) {
+    func updateBlinds(levelNumber: Int? = nil, sb: Int? = nil, bb: Int? = nil, ante: Int? = nil, isDisplayLevel: Bool = false) {
         guard let tournament = activeTournament else { return }
 
         if let levelNumber {
-            let resolvedLevel = skipBreaks(from: levelNumber, in: tournament)
+            // Convert display level to internal level if needed (e.g. user says "level 4" in chat)
+            let mapped = isDisplayLevel ? (tournament.internalLevelNumbers[levelNumber] ?? levelNumber) : levelNumber
+            let resolvedLevel = skipBreaks(from: mapped, in: tournament)
             tournament.currentBlindLevelNumber = resolvedLevel
 
             // If we have this level in blind structure, update from it

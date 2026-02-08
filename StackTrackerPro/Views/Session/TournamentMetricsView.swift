@@ -265,8 +265,8 @@ struct TournamentMetricsView: View {
 
     private func saveStackEdit() {
         guard let chips = Int(editChipCount), chips > 0 else { return }
-        tournamentManager.updateStack(chipCount: chips)
         tournamentManager.updateBlinds(levelNumber: editBlindLevel)
+        tournamentManager.updateStack(chipCount: chips)
         HapticFeedback.success()
         showStackEditor = false
     }

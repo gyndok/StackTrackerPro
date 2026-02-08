@@ -132,6 +132,15 @@ final class Tournament {
         return map
     }
 
+    /// Reverse map: display level number → internal level number.
+    var internalLevelNumbers: [Int: Int] {
+        var map: [Int: Int] = [:]
+        for (internal_, display) in displayLevelNumbers {
+            map[display] = internal_
+        }
+        return map
+    }
+
     /// Display level number for the current blind level.
     var currentDisplayLevel: Int? {
         displayLevelNumbers[currentBlindLevelNumber]
