@@ -82,10 +82,11 @@ final class TournamentManager {
         guard let tournament = activeTournament else { return }
 
         if let levelNumber {
-            tournament.currentBlindLevelNumber = levelNumber
+            let resolvedLevel = skipBreaks(from: levelNumber, in: tournament)
+            tournament.currentBlindLevelNumber = resolvedLevel
 
             // If we have this level in blind structure, update from it
-            if let existing = tournament.blindLevels.first(where: { $0.levelNumber == levelNumber }) {
+            if let existing = tournament.blindLevels.first(where: { $0.levelNumber == resolvedLevel }) {
                 // Level exists — apply overrides if provided, otherwise keep structure values
                 if let sb { existing.smallBlind = sb }
                 if let bb { existing.bigBlind = bb }
@@ -203,8 +204,24 @@ final class TournamentManager {
 
     func setCurrentLevel(_ levelNumber: Int) {
         guard let tournament = activeTournament else { return }
-        tournament.currentBlindLevelNumber = levelNumber
+        tournament.currentBlindLevelNumber = skipBreaks(from: levelNumber, in: tournament)
         save()
+    }
+
+    /// If the target level is a break, advance to the next non-break level.
+    private func skipBreaks(from levelNumber: Int, in tournament: Tournament) -> Int {
+        let sorted = tournament.sortedBlindLevels
+        guard let idx = sorted.firstIndex(where: { $0.levelNumber == levelNumber }),
+              sorted[idx].isBreak else {
+            return levelNumber
+        }
+        // Walk forward past consecutive breaks
+        for i in (idx + 1)..<sorted.count {
+            if !sorted[i].isBreak {
+                return sorted[i].levelNumber
+            }
+        }
+        return levelNumber
     }
 
     func addBlindLevel(smallBlind: Int, bigBlind: Int, ante: Int = 0, durationMinutes: Int = 30) {

@@ -51,12 +51,19 @@ struct BlindLevelsPane: View {
 
         return HStack {
             if level.isBreak {
+                Text("Lvl \(level.levelNumber)")
+                    .font(PokerTypography.chipLabel)
+                    .foregroundColor(.textSecondary.opacity(0.5))
+                    .frame(width: 48, alignment: .leading)
+
                 Image(systemName: "cup.and.saucer.fill")
                     .font(.caption)
                     .foregroundColor(.textSecondary)
                 Text(level.breakLabel ?? "Break")
                     .font(PokerTypography.chatBody)
                     .foregroundColor(.textSecondary)
+
+                Spacer()
             } else {
                 Text("Lvl \(level.levelNumber)")
                     .font(PokerTypography.chipLabel)
