@@ -5,6 +5,7 @@ import SwiftData
 struct StackTrackerProApp: App {
     @State private var tournamentManager = TournamentManager()
     @State private var chatManager: ChatManager?
+    @State private var showSplash = true
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -43,15 +44,31 @@ struct StackTrackerProApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .onAppear {
-                    tournamentManager.setContext(sharedModelContainer.mainContext)
-                    if chatManager == nil {
-                        chatManager = ChatManager(tournamentManager: tournamentManager)
+            ZStack {
+                ContentView()
+                    .onAppear {
+                        tournamentManager.setContext(sharedModelContainer.mainContext)
+                        if chatManager == nil {
+                            chatManager = ChatManager(tournamentManager: tournamentManager)
+                        }
+                    }
+                    .environment(tournamentManager)
+                    .environment(chatManager ?? ChatManager(tournamentManager: tournamentManager))
+
+                if showSplash {
+                    SplashScreenView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .preferredColorScheme(.dark)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        showSplash = false
                     }
                 }
-                .environment(tournamentManager)
-                .environment(chatManager ?? ChatManager(tournamentManager: tournamentManager))
+            }
         }
         .modelContainer(sharedModelContainer)
     }
