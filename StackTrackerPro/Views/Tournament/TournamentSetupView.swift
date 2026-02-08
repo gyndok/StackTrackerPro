@@ -21,6 +21,7 @@ struct TournamentSetupView: View {
     @State private var startingSB = "100"
     @State private var startingBB = "200"
     @State private var reentryPolicy = "None"
+    @State private var payoutPercent = "15"
     @State private var showBlindEditor = false
     @State private var createdTournament: Tournament?
 
@@ -185,6 +186,7 @@ struct TournamentSetupView: View {
             numberField("Entry Fee ($)", text: $entryFee)
             numberField("Bounty Amount ($)", text: $bountyAmount)
             numberField("Guarantee ($)", text: $guarantee)
+            numberField("Payout % of Field", text: $payoutPercent)
 
             Picker("Re-entry Policy", selection: $reentryPolicy) {
                 Text("None").tag("None")
@@ -275,6 +277,7 @@ struct TournamentSetupView: View {
         guarantee = tournament.guarantee > 0 ? "\(tournament.guarantee)" : ""
         startingChips = "\(tournament.startingChips)"
         reentryPolicy = tournament.reentryPolicy
+        payoutPercent = "\(Int(tournament.payoutPercent))"
 
         if let firstBlind = tournament.sortedBlindLevels.first {
             startingSB = "\(firstBlind.smallBlind)"
@@ -362,6 +365,7 @@ struct TournamentSetupView: View {
             reentryPolicy: reentryPolicy
         )
         t.venueName = venueName.isEmpty ? nil : venueName
+        t.payoutPercent = Double(payoutPercent) ?? 15.0
         modelContext.insert(t)
 
         if !scannedBlindLevels.isEmpty {
@@ -406,6 +410,7 @@ struct TournamentSetupView: View {
             existing.startingChips = Int(startingChips) ?? 20000
             existing.reentryPolicy = reentryPolicy
             existing.venueName = venueName.isEmpty ? nil : venueName
+            existing.payoutPercent = Double(payoutPercent) ?? 15.0
             t = existing
         } else {
             t = createTournament()

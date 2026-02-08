@@ -6,30 +6,49 @@ struct ActiveSessionView: View {
 
     @Bindable var tournament: Tournament
     @State private var messageText = ""
+    @State private var selectedPage = 0
 
     var body: some View {
         VStack(spacing: 0) {
             // Status bar (fixed top)
             StatusBarView(tournament: tournament)
 
-            // Stack graph (~38% of available height)
-            StackGraphView(
-                entries: tournament.sortedStackEntries,
-                averageStack: tournament.averageStack,
-                startingChips: tournament.startingChips
-            )
-            .frame(maxHeight: .infinity, alignment: .top)
-            .layoutPriority(0.38)
+            // Custom page indicator
+            pageIndicator
 
-            Divider()
-                .background(Color.borderSubtle)
+            // Swipeable pager
+            TabView(selection: $selectedPage) {
+                // Chart pane
+                StackGraphView(
+                    entries: tournament.sortedStackEntries,
+                    averageStack: tournament.averageStack,
+                    startingChips: tournament.startingChips
+                )
+                .tag(0)
 
-            // Chat thread (fills remaining space)
-            ChatThreadView(messages: tournament.sortedChatMessages)
-                .frame(maxHeight: .infinity)
-                .layoutPriority(0.62)
+                // Metrics pane
+                TournamentMetricsView(tournament: tournament)
+                    .tag(1)
 
-            // Chat input (fixed bottom)
+                // Blind levels pane
+                BlindLevelsPane(tournament: tournament)
+                    .tag(2)
+
+                // Photos pane
+                ChipStackPhotosPane(tournament: tournament)
+                    .tag(3)
+
+                // Receipt pane
+                ReceiptCapturePane(tournament: tournament)
+                    .tag(4)
+
+                // Chat pane
+                ChatThreadView(messages: tournament.sortedChatMessages)
+                    .tag(5)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            // Chat input (fixed bottom, all panes)
             ChatInputView(
                 text: $messageText,
                 isProcessing: chatManager.isProcessing,
@@ -87,6 +106,22 @@ struct ActiveSessionView: View {
             }
         }
     }
+
+    // MARK: - Page Indicator
+
+    private var pageIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<6, id: \.self) { index in
+                Circle()
+                    .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
+                    .frame(width: 8, height: 8)
+                    .animation(.spring(response: 0.3), value: selectedPage)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Actions
 
     private func sendMessage() {
         let text = messageText

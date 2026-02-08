@@ -85,31 +85,52 @@ final class TournamentManager {
             tournament.currentBlindLevelNumber = levelNumber
 
             // If we have this level in blind structure, update from it
-            if tournament.blindLevels.contains(where: { $0.levelNumber == levelNumber }) {
-                // Level exists in structure, use its values (unless overridden)
-                if sb == nil && bb == nil {
-                    return // Values come from the structure
-                }
-            }
-        }
-
-        // If blinds provided but no matching level in structure, create/update
-        if let sb, let bb {
-            let levelNum = levelNumber ?? tournament.currentBlindLevelNumber
-            if let existing = tournament.blindLevels.first(where: { $0.levelNumber == levelNum }) {
-                existing.smallBlind = sb
-                existing.bigBlind = bb
+            if let existing = tournament.blindLevels.first(where: { $0.levelNumber == levelNumber }) {
+                // Level exists — apply overrides if provided, otherwise keep structure values
+                if let sb { existing.smallBlind = sb }
+                if let bb { existing.bigBlind = bb }
                 if let ante { existing.ante = ante }
-            } else {
+                save()
+                return
+            }
+
+            // Level doesn't exist in structure — create it with provided or zero values
+            if let sb, let bb {
                 let newLevel = BlindLevel(
-                    levelNumber: levelNum,
+                    levelNumber: levelNumber,
                     smallBlind: sb,
                     bigBlind: bb,
                     ante: ante ?? 0
                 )
                 tournament.blindLevels.append(newLevel)
             }
-            tournament.currentBlindLevelNumber = levelNum
+            save()
+            return
+        }
+
+        // No level number provided — only blinds values
+        guard let sb, let bb else {
+            save()
+            return
+        }
+
+        // Check if any existing level already matches these blinds
+        if let matchingLevel = tournament.sortedBlindLevels.first(where: {
+            $0.smallBlind == sb && $0.bigBlind == bb && !$0.isBreak
+        }) {
+            tournament.currentBlindLevelNumber = matchingLevel.levelNumber
+            if let ante { matchingLevel.ante = ante }
+        } else {
+            // Create a new level at the next available level number
+            let nextLevelNum = (tournament.blindLevels.map(\.levelNumber).max() ?? 0) + 1
+            let newLevel = BlindLevel(
+                levelNumber: nextLevelNum,
+                smallBlind: sb,
+                bigBlind: bb,
+                ante: ante ?? 0
+            )
+            tournament.blindLevels.append(newLevel)
+            tournament.currentBlindLevelNumber = nextLevelNum
         }
 
         save()
@@ -177,6 +198,33 @@ final class TournamentManager {
             stackAfter: nil
         )
         tournament.handNotes.append(note)
+        save()
+    }
+
+    func setCurrentLevel(_ levelNumber: Int) {
+        guard let tournament = activeTournament else { return }
+        tournament.currentBlindLevelNumber = levelNumber
+        save()
+    }
+
+    func addBlindLevel(smallBlind: Int, bigBlind: Int, ante: Int = 0, durationMinutes: Int = 30) {
+        guard let tournament = activeTournament else { return }
+        let nextNum = (tournament.blindLevels.map(\.levelNumber).max() ?? 0) + 1
+        let level = BlindLevel(
+            levelNumber: nextNum,
+            smallBlind: smallBlind,
+            bigBlind: bigBlind,
+            ante: ante,
+            durationMinutes: durationMinutes
+        )
+        tournament.blindLevels.append(level)
+        save()
+    }
+
+    func deleteBlindLevel(_ level: BlindLevel) {
+        guard let tournament = activeTournament else { return }
+        tournament.blindLevels.removeAll { $0.persistentModelID == level.persistentModelID }
+        modelContext?.delete(level)
         save()
     }
 

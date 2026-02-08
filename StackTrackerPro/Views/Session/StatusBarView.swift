@@ -32,9 +32,9 @@ struct StatusBarView: View {
                 }
             }
 
-            // M-ratio badge
-            if let latest = tournament.latestStack, latest.mRatio > 0 {
-                MRatioBadge(mRatio: latest.mRatio)
+            // BB badge
+            if let latest = tournament.latestStack, latest.bbCount > 0 {
+                BBBadge(bbCount: latest.bbCount)
             }
         }
         .padding(.horizontal, 16)

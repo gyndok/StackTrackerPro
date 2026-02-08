@@ -100,6 +100,33 @@ enum GameType: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - BB Zone
+
+enum BBZone: String {
+    case green = "Green Zone"
+    case yellow = "Yellow Zone"
+    case orange = "Orange Zone"
+    case red = "Red Zone"
+
+    var color: Color {
+        switch self {
+        case .green: return .mZoneGreen
+        case .yellow: return .mZoneYellow
+        case .orange: return .mZoneOrange
+        case .red: return .mZoneRed
+        }
+    }
+
+    static func from(bbCount: Double) -> BBZone {
+        switch bbCount {
+        case 30...: return .green
+        case 15..<30: return .yellow
+        case 8..<15: return .orange
+        default: return .red
+        }
+    }
+}
+
 // MARK: - Stack Entry Source
 
 enum StackEntrySource: String, Codable {

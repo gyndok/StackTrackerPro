@@ -29,6 +29,7 @@ final class Tournament {
     var currentBlindLevelNumber: Int
     var fieldSize: Int
     var playersRemaining: Int
+    var payoutPercent: Double
 
     // Venue (soft reference)
     var venueID: UUID?
@@ -52,6 +53,12 @@ final class Tournament {
 
     @Relationship(deleteRule: .cascade, inverse: \FieldSnapshot.tournament)
     var fieldSnapshots: [FieldSnapshot] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \ChipStackPhoto.tournament)
+    var chipStackPhotos: [ChipStackPhoto] = []
+
+    // Receipt
+    var receiptImageData: Data?
 
     init(
         name: String,
@@ -84,8 +91,10 @@ final class Tournament {
         self.currentBlindLevelNumber = 1
         self.fieldSize = 0
         self.playersRemaining = 0
+        self.payoutPercent = 15.0
         self.venueID = nil
         self.venueName = nil
+        self.receiptImageData = nil
     }
 
     // MARK: - Computed Properties
@@ -141,5 +150,41 @@ final class Tournament {
     var profit: Int? {
         guard let payout else { return nil }
         return payout + (bountiesCollected * bountyAmount) - totalInvestment
+    }
+
+    // MARK: - Tournament Metrics
+
+    var prizePool: Int {
+        buyIn * fieldSize
+    }
+
+    var houseRake: Int {
+        entryFee * fieldSize
+    }
+
+    var overlay: Int {
+        guard guarantee > 0 else { return 0 }
+        return max(0, guarantee - prizePool)
+    }
+
+    var playersNeededForGuarantee: Int {
+        guard guarantee > 0, buyIn > 0 else { return 0 }
+        let needed = Int(ceil(Double(guarantee) / Double(buyIn))) - fieldSize
+        return max(0, needed)
+    }
+
+    var totalChipsInPlay: Int {
+        fieldSize * startingChips
+    }
+
+    var estimatedBubbleDistance: Int {
+        guard fieldSize > 0, payoutPercent > 0 else { return 0 }
+        let itm = Int(ceil(Double(fieldSize) * payoutPercent / 100.0))
+        return playersRemaining - itm
+    }
+
+    var averageStackInBB: Double {
+        guard let blinds = currentBlinds, blinds.bigBlind > 0 else { return 0 }
+        return Double(averageStack) / Double(blinds.bigBlind)
     }
 }

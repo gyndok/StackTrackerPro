@@ -16,6 +16,7 @@ struct StackTrackerProApp: App {
             BountyEvent.self,
             FieldSnapshot.self,
             Venue.self,
+            ChipStackPhoto.self,
         ])
 
         do {

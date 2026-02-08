@@ -5,8 +5,22 @@ struct StatBlockView: View {
     let value: String
     var trend: TrendDirection?
     var valueColor: Color = .textPrimary
+    var isEditable: Bool = false
+    var onTap: (() -> Void)? = nil
 
+    @ViewBuilder
     var body: some View {
+        if let onTap {
+            Button(action: onTap) {
+                cardContent
+            }
+            .buttonStyle(.plain)
+        } else {
+            cardContent
+        }
+    }
+
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(PokerTypography.chipLabel)
@@ -28,6 +42,25 @@ struct StatBlockView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            ZStack {
+                if isEditable {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.goldAccent.opacity(0.3), lineWidth: 1)
+
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "pencil")
+                                .font(.system(size: 10))
+                                .foregroundColor(.goldAccent.opacity(0.5))
+                                .padding(6)
+                        }
+                        Spacer()
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -53,7 +86,7 @@ enum TrendDirection {
 
 #Preview {
     HStack {
-        StatBlockView(label: "Stack", value: "18k", trend: .down, valueColor: .mZoneYellow)
+        StatBlockView(label: "Stack", value: "18k", trend: .down, valueColor: .mZoneYellow, isEditable: true, onTap: {})
         StatBlockView(label: "BB", value: "45", trend: .up)
     }
     .padding()

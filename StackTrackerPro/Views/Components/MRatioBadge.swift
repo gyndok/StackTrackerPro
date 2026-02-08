@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct MRatioBadge: View {
-    let mRatio: Double
+struct BBBadge: View {
+    let bbCount: Double
 
-    private var zone: MZone {
-        MZone.from(mRatio: mRatio)
+    private var zone: BBZone {
+        BBZone.from(bbCount: bbCount)
     }
 
     var body: some View {
@@ -12,7 +12,7 @@ struct MRatioBadge: View {
             Circle()
                 .fill(zone.color)
                 .frame(width: 8, height: 8)
-            Text(String(format: "M: %.0f", mRatio))
+            Text(String(format: "BB: %.1f", bbCount))
                 .font(PokerTypography.chipLabel)
                 .foregroundColor(zone.color)
         }
@@ -25,10 +25,10 @@ struct MRatioBadge: View {
 
 #Preview {
     VStack(spacing: 12) {
-        MRatioBadge(mRatio: 25)
-        MRatioBadge(mRatio: 15)
-        MRatioBadge(mRatio: 7)
-        MRatioBadge(mRatio: 3)
+        BBBadge(bbCount: 34.0)
+        BBBadge(bbCount: 20.0)
+        BBBadge(bbCount: 10.0)
+        BBBadge(bbCount: 5.0)
     }
     .padding()
     .background(Color.backgroundPrimary)
