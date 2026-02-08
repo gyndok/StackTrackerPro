@@ -6,6 +6,8 @@ struct ReceiptCapturePane: View {
     @State private var showCamera = false
     @State private var showFullScreen = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showReceiptShare = false
+    @State private var receiptShareImage: UIImage?
 
     var body: some View {
         ScrollView {
@@ -29,6 +31,18 @@ struct ReceiptCapturePane: View {
 
                         // Re-capture buttons
                         VStack(spacing: 8) {
+                            Button {
+                                shareReceipt()
+                            } label: {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(Color.goldAccent.opacity(0.9))
+                                    .clipShape(Circle())
+                                    .shadow(radius: 4)
+                            }
+
                             Button {
                                 showCamera = true
                             } label: {
@@ -147,15 +161,63 @@ struct ReceiptCapturePane: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            Button {
-                showFullScreen = false
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(16)
+            HStack {
+                Spacer()
+                Button { shareReceipt() } label: {
+                    Image(systemName: "square.and.arrow.up.circle.fill")
+                        .font(.title)
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.trailing, 4)
+                }
+                Button { showFullScreen = false } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+            }
+            .padding(16)
+        }
+        .sheet(isPresented: $showReceiptShare) {
+            if let image = receiptShareImage {
+                PhotoOverlayShareSheet(image: image, eventName: tournament.name)
             }
         }
+    }
+
+    // MARK: - Share
+
+    private func shareReceipt() {
+        guard let imageData = tournament.receiptImageData,
+              let uiImage = UIImage(data: imageData) else { return }
+
+        let buyInText = "$\(tournament.totalInvestment.formatted())"
+
+        var resultText: String? = nil
+        var resultColor: Color = .green
+        if let profit = tournament.profit {
+            resultText = profit >= 0 ? "+$\(profit.formatted())" : "-$\(abs(profit).formatted())"
+            resultColor = profit >= 0 ? .green : .red
+        }
+
+        let overlayView = ReceiptOverlayView(
+            photo: uiImage,
+            eventName: tournament.name,
+            venueName: tournament.venueName,
+            buyIn: buyInText,
+            result: resultText,
+            resultColor: resultColor
+        )
+
+        let photoAspect = uiImage.size.height / uiImage.size.width
+        let renderWidth: CGFloat = 360
+        let renderHeight = renderWidth * photoAspect
+
+        let renderer = ImageRenderer(content:
+            overlayView.frame(width: renderWidth, height: renderHeight)
+        )
+        renderer.scale = 3.0
+        receiptShareImage = renderer.uiImage
+        showReceiptShare = true
     }
 
     // MARK: - Actions
