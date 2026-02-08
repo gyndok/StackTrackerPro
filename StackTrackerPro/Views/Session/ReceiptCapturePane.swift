@@ -1,9 +1,11 @@
 import SwiftUI
+import PhotosUI
 
 struct ReceiptCapturePane: View {
     @Bindable var tournament: Tournament
     @State private var showCamera = false
     @State private var showFullScreen = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         ScrollView {
@@ -25,17 +27,29 @@ struct ReceiptCapturePane: View {
                                 )
                         }
 
-                        // Re-capture button
-                        Button {
-                            showCamera = true
-                        } label: {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white)
-                                .padding(8)
-                                .background(Color.goldAccent.opacity(0.9))
-                                .clipShape(Circle())
-                                .shadow(radius: 4)
+                        // Re-capture buttons
+                        VStack(spacing: 8) {
+                            Button {
+                                showCamera = true
+                            } label: {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(Color.goldAccent.opacity(0.9))
+                                    .clipShape(Circle())
+                                    .shadow(radius: 4)
+                            }
+
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(Color.goldAccent.opacity(0.9))
+                                    .clipShape(Circle())
+                                    .shadow(radius: 4)
+                            }
                         }
                         .padding(12)
                     }
@@ -44,29 +58,50 @@ struct ReceiptCapturePane: View {
                     VStack(spacing: 16) {
                         Spacer().frame(height: 60)
 
-                        Button {
-                            showCamera = true
-                        } label: {
-                            VStack(spacing: 12) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 48))
-                                    .foregroundColor(.goldAccent.opacity(0.6))
-
-                                Text("Capture Receipt")
-                                    .font(PokerTypography.chatBody)
-                                    .foregroundColor(.textSecondary)
+                        // Camera + Library buttons
+                        HStack(spacing: 12) {
+                            Button {
+                                showCamera = true
+                            } label: {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.goldAccent.opacity(0.6))
+                                    Text("Camera")
+                                        .font(PokerTypography.chipLabel)
+                                        .foregroundColor(.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 30)
+                                .background(Color.cardSurface.opacity(0.5))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.goldAccent.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [8, 4]))
+                                )
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                            .background(Color.cardSurface.opacity(0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.goldAccent.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [8, 4]))
-                            )
+
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "photo.on.rectangle")
+                                        .font(.system(size: 32))
+                                        .foregroundColor(.goldAccent.opacity(0.6))
+                                    Text("Library")
+                                        .font(PokerTypography.chipLabel)
+                                        .foregroundColor(.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 30)
+                                .background(Color.cardSurface.opacity(0.5))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.goldAccent.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [8, 4]))
+                                )
+                            }
                         }
 
-                        Text("Take a photo of your buy-in receipt")
+                        Text("Capture your buy-in receipt")
                             .font(PokerTypography.chatCaption)
                             .foregroundColor(.textSecondary.opacity(0.7))
 
@@ -84,6 +119,17 @@ struct ReceiptCapturePane: View {
         }
         .fullScreenCover(isPresented: $showFullScreen) {
             receiptFullScreen
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            if let newItem {
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        saveReceipt(image)
+                    }
+                }
+                selectedPhotoItem = nil
+            }
         }
     }
 
