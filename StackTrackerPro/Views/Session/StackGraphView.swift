@@ -47,10 +47,12 @@ struct StackGraphView: View {
 
     private var chipsChart: some View {
         let data = latestPerLevel
+        let levelLabels = data.map { "Lvl \($0.blindLevelNumber)" }
         return Chart {
-            ForEach(Array(data.enumerated()), id: \.offset) { _, entry in
+            ForEach(Array(data.enumerated()), id: \.offset) { index, entry in
+                let label = levelLabels[index]
                 AreaMark(
-                    x: .value("Level", entry.blindLevelNumber),
+                    x: .value("Level", label),
                     y: .value("Chips", entry.chipCount)
                 )
                 .foregroundStyle(
@@ -63,9 +65,10 @@ struct StackGraphView: View {
                 .interpolationMethod(.catmullRom)
             }
 
-            ForEach(Array(data.enumerated()), id: \.offset) { _, entry in
+            ForEach(Array(data.enumerated()), id: \.offset) { index, entry in
+                let label = levelLabels[index]
                 LineMark(
-                    x: .value("Level", entry.blindLevelNumber),
+                    x: .value("Level", label),
                     y: .value("Chips", entry.chipCount)
                 )
                 .foregroundStyle(Color.goldAccent)
@@ -73,7 +76,7 @@ struct StackGraphView: View {
                 .interpolationMethod(.catmullRom)
 
                 PointMark(
-                    x: .value("Level", entry.blindLevelNumber),
+                    x: .value("Level", label),
                     y: .value("Chips", entry.chipCount)
                 )
                 .foregroundStyle(entry.mZone.color)
@@ -95,6 +98,7 @@ struct StackGraphView: View {
                 .foregroundStyle(Color.goldAccent.opacity(0.2))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
         }
+        .chartXScale(domain: levelLabels)
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisValueLabel {
@@ -111,8 +115,8 @@ struct StackGraphView: View {
         .chartXAxis {
             AxisMarks { value in
                 AxisValueLabel {
-                    if let level = value.as(Int.self) {
-                        Text("Lvl \(level)")
+                    if let label = value.as(String.self) {
+                        Text(label)
                             .font(.caption2)
                             .foregroundColor(.textSecondary)
                     }
@@ -130,12 +134,14 @@ struct StackGraphView: View {
 
     private var bbChart: some View {
         let data = latestPerLevel
+        let levelLabels = data.map { "Lvl \($0.blindLevelNumber)" }
         return Chart {
-            ForEach(Array(data.enumerated()), id: \.offset) { _, entry in
+            ForEach(Array(data.enumerated()), id: \.offset) { index, entry in
                 let bb = entry.currentBB > 0 ? Double(entry.chipCount) / Double(entry.currentBB) : 0
+                let label = levelLabels[index]
 
                 AreaMark(
-                    x: .value("Level", entry.blindLevelNumber),
+                    x: .value("Level", label),
                     y: .value("BB", bb)
                 )
                 .foregroundStyle(
@@ -148,12 +154,13 @@ struct StackGraphView: View {
                 .interpolationMethod(.catmullRom)
             }
 
-            ForEach(Array(data.enumerated()), id: \.offset) { _, entry in
+            ForEach(Array(data.enumerated()), id: \.offset) { index, entry in
                 let bb = entry.currentBB > 0 ? Double(entry.chipCount) / Double(entry.currentBB) : 0
                 let zone = BBZone.from(bbCount: bb)
+                let label = levelLabels[index]
 
                 LineMark(
-                    x: .value("Level", entry.blindLevelNumber),
+                    x: .value("Level", label),
                     y: .value("BB", bb)
                 )
                 .foregroundStyle(Color.goldAccent)
@@ -161,7 +168,7 @@ struct StackGraphView: View {
                 .interpolationMethod(.catmullRom)
 
                 PointMark(
-                    x: .value("Level", entry.blindLevelNumber),
+                    x: .value("Level", label),
                     y: .value("BB", bb)
                 )
                 .foregroundStyle(zone.color)
@@ -180,6 +187,7 @@ struct StackGraphView: View {
                     }
             }
         }
+        .chartXScale(domain: levelLabels)
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisValueLabel {
@@ -196,8 +204,8 @@ struct StackGraphView: View {
         .chartXAxis {
             AxisMarks { value in
                 AxisValueLabel {
-                    if let level = value.as(Int.self) {
-                        Text("Lvl \(level)")
+                    if let label = value.as(String.self) {
+                        Text(label)
                             .font(.caption2)
                             .foregroundColor(.textSecondary)
                     }

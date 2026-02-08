@@ -170,7 +170,7 @@ struct TournamentMetricsView: View {
             StatBlockView(
                 label: "Total Chips",
                 value: tournament.fieldSize > 0
-                    ? formatChipsShort(tournament.totalChipsInPlay)
+                    ? formatNumber(tournament.totalChipsInPlay)
                     : "---"
             )
 
@@ -355,6 +355,13 @@ struct TournamentMetricsView: View {
             return String(format: "%.0fk", Double(value) / 1000)
         }
         return "\(value)"
+    }
+
+    private func formatNumber(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 }
 
