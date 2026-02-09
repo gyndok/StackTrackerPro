@@ -213,14 +213,16 @@ final class CloudKitService: @unchecked Sendable {
         let maxLon = longitude + lonRadiusDegrees
 
         let today = Calendar.current.startOfDay(for: Date())
+        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: today)!
 
         let predicate = NSPredicate(
-            format: "%K >= %@ AND %K <= %@ AND %K >= %@ AND %K <= %@ AND %K >= %@",
+            format: "%K >= %@ AND %K <= %@ AND %K >= %@ AND %K <= %@ AND %K >= %@ AND %K < %@",
             Fields.latitude, NSNumber(value: minLat),
             Fields.latitude, NSNumber(value: maxLat),
             Fields.longitude, NSNumber(value: minLon),
             Fields.longitude, NSNumber(value: maxLon),
-            Fields.eventDate, today as NSDate
+            Fields.eventDate, today as NSDate,
+            Fields.eventDate, endOfToday as NSDate
         )
 
         let query = CKQuery(recordType: recordType, predicate: predicate)
