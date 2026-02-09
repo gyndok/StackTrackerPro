@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import CoreLocation
 
 struct TournamentSetupView: View {
     @Environment(\.modelContext) private var modelContext
@@ -40,6 +41,10 @@ struct TournamentSetupView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var scannedBlindLevels: [ScannedBlindLevel] = []
     @State private var showScoutingReport = false
+
+    // CloudKit sharing
+    @State private var showingBrowser = false
+    @State private var shareToCloudKit = false
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -90,6 +95,11 @@ struct TournamentSetupView: View {
                     scanImages([image])
                 }
             }
+            .sheet(isPresented: $showingBrowser) {
+                TournamentBrowserView { scanResult in
+                    applyScannedResult(scanResult)
+                }
+            }
             .photosPicker(isPresented: $showingPhotoPicker, selection: $selectedPhotoItems, maxSelectionCount: 10, matching: .images)
             .onChange(of: selectedPhotoItems) { _, newItems in
                 guard !newItems.isEmpty else { return }
@@ -130,6 +140,23 @@ struct TournamentSetupView: View {
         }
     }
 
+    private func buildCurrentScanResult() -> PokerAtlasScanResult {
+        var result = PokerAtlasScanResult()
+        result.tournamentName = name.trimmingCharacters(in: .whitespaces)
+        result.venueName = venueName.trimmingCharacters(in: .whitespaces)
+        result.gameType = gameType
+        result.buyIn = Int(buyIn)
+        result.entryFee = Int(entryFee)
+        result.bountyAmount = Int(bountyAmount)
+        result.guarantee = Int(guarantee)
+        result.startingChips = Int(startingChips)
+        result.reentryPolicy = reentryPolicy
+        result.startingSB = Int(startingSB)
+        result.startingBB = Int(startingBB)
+        result.blindLevels = scannedBlindLevels
+        return result
+    }
+
     // MARK: - Sections
 
     private var scanSection: some View {
@@ -160,6 +187,36 @@ struct TournamentSetupView: View {
                 .foregroundColor(.goldAccent)
             }
             .disabled(isScanning)
+
+            Button {
+                showingBrowser = true
+            } label: {
+                HStack {
+                    Image(systemName: "map")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Browse Nearby Events")
+                            .fontWeight(.semibold)
+                        Text("Find tournaments shared by other players")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+                .foregroundColor(.goldAccent)
+            }
+
+            if !name.trimmingCharacters(in: .whitespaces).isEmpty && !venueName.trimmingCharacters(in: .whitespaces).isEmpty {
+                HStack {
+                    Image(systemName: "icloud.and.arrow.up")
+                        .foregroundColor(.goldAccent)
+                    Toggle("Share This Event", isOn: $shareToCloudKit)
+                        .tint(.goldAccent)
+                }
+            }
         } header: {
             Text("QUICK SETUP")
                 .font(PokerTypography.sectionHeader)
@@ -352,6 +409,10 @@ struct TournamentSetupView: View {
         if let scannedVenue = result.venueName, !scannedVenue.isEmpty {
             venueName = scannedVenue
         }
+        // Auto-enable sharing when populated from scan/browse (data is already public)
+        if result.tournamentName != nil && result.venueName != nil {
+            shareToCloudKit = true
+        }
         if let scannedGameType = result.gameType {
             gameType = scannedGameType
         }
@@ -455,6 +516,38 @@ struct TournamentSetupView: View {
 
         tournamentManager.startTournament(t)
         HapticFeedback.success()
+
+        if shareToCloudKit {
+            let scanResult = buildCurrentScanResult()
+            let venue = venueName
+            Task {
+                do {
+                    let location: CLLocation
+                    if let geocoded = await LocationManager.shared.geocodeVenue(
+                        name: venue,
+                        city: "",
+                        state: ""
+                    ) {
+                        location = geocoded
+                    } else if let userLoc = try? await LocationManager.shared.requestLocationOnce() {
+                        location = userLoc
+                    } else {
+                        return
+                    }
+                    try await CloudKitService.shared.saveTournament(
+                        scanResult: scanResult,
+                        eventDate: Date(),
+                        latitude: location.coordinate.latitude,
+                        longitude: location.coordinate.longitude,
+                        venueCity: "",
+                        venueState: ""
+                    )
+                } catch {
+                    // Sharing is best-effort — silently handle errors
+                }
+            }
+        }
+
         dismiss()
     }
 }

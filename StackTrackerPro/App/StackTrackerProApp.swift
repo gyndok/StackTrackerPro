@@ -23,13 +23,17 @@ struct StackTrackerProApp: App {
         do {
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: false
+                isStoredInMemoryOnly: false,
+                cloudKitDatabase: .none
             )
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            // If store is incompatible (schema migration), delete and retry
-            let url = URL.applicationSupportDirectory.appending(path: "default.store")
-            try? FileManager.default.removeItem(at: url)
+            // If store is incompatible (schema migration), delete all DB files and retry
+            let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
+            for suffix in ["", "-wal", "-shm"] {
+                let fileURL = URL(filePath: storeURL.path() + suffix)
+                try? FileManager.default.removeItem(at: fileURL)
+            }
             do {
                 let modelConfiguration = ModelConfiguration(
                     schema: schema,
