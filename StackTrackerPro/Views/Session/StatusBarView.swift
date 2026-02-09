@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StatusBarView: View {
     let tournament: Tournament
+    @Environment(TournamentManager.self) private var tournamentManager
     @AppStorage(SettingsKeys.showMRatio) private var showMRatio = false
 
     var body: some View {
@@ -20,8 +21,22 @@ struct StatusBarView: View {
 
             Spacer()
 
-            // Current blind level
-            if let blinds = tournament.currentBlinds, !blinds.isBreak {
+            // Break countdown or blind level
+            if tournamentManager.isOnBreak, let endTime = tournamentManager.breakEndTime {
+                TimelineView(.periodic(from: .now, by: 1.0)) { context in
+                    let remaining = max(0, endTime.timeIntervalSince(context.date))
+                    let minutes = Int(remaining) / 60
+                    let seconds = Int(remaining) % 60
+                    HStack(spacing: 4) {
+                        Image(systemName: "cup.and.saucer.fill")
+                            .foregroundColor(remaining <= 120 ? .mZoneRed : .goldAccent)
+                        Text(String(format: "%d:%02d", minutes, seconds))
+                            .font(PokerTypography.statValue)
+                            .foregroundColor(remaining <= 120 ? .mZoneRed : .goldAccent)
+                            .monospacedDigit()
+                    }
+                }
+            } else if let blinds = tournament.currentBlinds, !blinds.isBreak {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("Level \(tournament.currentDisplayLevel ?? blinds.levelNumber)")
                         .font(PokerTypography.chipLabel)

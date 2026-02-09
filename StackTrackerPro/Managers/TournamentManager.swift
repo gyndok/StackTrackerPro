@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Observation
+import UserNotifications
 
 @MainActor @Observable
 final class TournamentManager {
@@ -11,6 +12,10 @@ final class TournamentManager {
     var showSessionRecap = false
     var showEndTournament = false
     private(set) var completedTournamentForRecap: Tournament?
+
+    // Break timer state (transient — not persisted)
+    var isOnBreak = false
+    var breakEndTime: Date?
 
     init() {}
 
@@ -292,6 +297,86 @@ final class TournamentManager {
         tournament.blindLevels?.removeAll { $0.persistentModelID == level.persistentModelID }
         modelContext?.delete(level)
         save()
+    }
+
+    // MARK: - Break Timer
+
+    func startBreak(tableNumber: String, seatNumber: String, chipCount: Int, duration: Int, photoData: Data? = nil) {
+        guard let tournament = activeTournament else { return }
+
+        let blinds = tournament.currentBlinds
+        let entry = BreakEntry(
+            tableNumber: tableNumber,
+            seatNumber: seatNumber,
+            chipCount: chipCount,
+            breakDurationSeconds: duration,
+            blindLevelNumber: tournament.currentBlindLevelNumber,
+            blindsDisplay: blinds?.blindsDisplay ?? "",
+            chipPhotoData: photoData
+        )
+        tournament.breakEntries?.append(entry)
+
+        isOnBreak = true
+        breakEndTime = Date.now.addingTimeInterval(TimeInterval(duration))
+
+        scheduleBreakNotifications(tableNumber: tableNumber, seatNumber: seatNumber, chipCount: chipCount, duration: duration)
+        save()
+    }
+
+    func endBreak() {
+        isOnBreak = false
+        breakEndTime = nil
+        cancelBreakNotifications()
+        save()
+    }
+
+    func deleteBreakEntry(_ entry: BreakEntry) {
+        guard let tournament = activeTournament else { return }
+        tournament.breakEntries?.removeAll { $0.persistentModelID == entry.persistentModelID }
+        modelContext?.delete(entry)
+        save()
+    }
+
+    private func scheduleBreakNotifications(tableNumber: String, seatNumber: String, chipCount: Int, duration: Int) {
+        let center = UNUserNotificationCenter.current()
+
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+
+        // 2-minute warning (only if break is longer than 2 minutes)
+        if duration > 120 {
+            let warningContent = UNMutableNotificationContent()
+            warningContent.title = "Break ending soon"
+            warningContent.body = "2 minutes remaining — Table \(tableNumber), Seat \(seatNumber)"
+            warningContent.sound = .default
+
+            let warningTrigger = UNTimeIntervalNotificationTrigger(
+                timeInterval: TimeInterval(duration - 120), repeats: false
+            )
+            let warningRequest = UNNotificationRequest(
+                identifier: "break-2min-warning", content: warningContent, trigger: warningTrigger
+            )
+            center.add(warningRequest)
+        }
+
+        // Break over
+        let overContent = UNMutableNotificationContent()
+        overContent.title = "Break is over!"
+        overContent.body = "Return to Table \(tableNumber), Seat \(seatNumber) — \(chipCount.formatted()) chips"
+        overContent.sound = .default
+
+        let overTrigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: TimeInterval(duration), repeats: false
+        )
+        let overRequest = UNNotificationRequest(
+            identifier: "break-over", content: overContent, trigger: overTrigger
+        )
+        center.add(overRequest)
+    }
+
+    private func cancelBreakNotifications() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: ["break-2min-warning", "break-over"]
+        )
     }
 
     // MARK: - Persistence

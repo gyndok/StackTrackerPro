@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CC1122334455667788990011 /* BreakEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1122334455667788990011 /* BreakEntry.swift */; };
+		CC2233445566778899001122 /* BreakTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD2233445566778899001122 /* BreakTimerSheet.swift */; };
 		000C7BA5DDB9D5D387B3C160 /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */; };
 		1D12AB0E92E70596BBC657CD /* StackGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BE4525C7D0D3EBC66A2DB44 /* StackGraphView.swift */; };
 		1D4C768A8E499FA09FA5165F /* StackEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2246D3C7B55BD60A532FF48 /* StackEntry.swift */; };
@@ -70,6 +72,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		DD1122334455667788990011 /* BreakEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakEntry.swift; sourceTree = "<group>"; };
+		DD2233445566778899001122 /* BreakTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerSheet.swift; sourceTree = "<group>"; };
 		01CF7122D121AD978C3265B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		07E868BED6E80DA62280F89E /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevelsPane.swift; sourceTree = "<group>"; };
@@ -183,6 +187,7 @@
 				B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */,
 				D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */,
 				E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */,
+				DD2233445566778899001122 /* BreakTimerSheet.swift */,
 			);
 			path = Session;
 			sourceTree = "<group>";
@@ -241,6 +246,7 @@
 				567997920E43C3E11DE68146 /* FieldSnapshot.swift */,
 				FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */,
 				BB1122334455667788990011 /* ChipStackPhoto.swift */,
+				DD1122334455667788990011 /* BreakEntry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -439,6 +445,8 @@
 				A0B1C2D3E4F5A6B7C8D9E0F1 /* LocationManager.swift in Sources */,
 				A0B2C3D4E5F6A7B8C9D0E1F2 /* CloudKitService.swift in Sources */,
 				A0B3C4D5E6F7A8B9C0D1E2F3 /* TournamentBrowserView.swift in Sources */,
+				CC1122334455667788990011 /* BreakEntry.swift in Sources */,
+				CC2233445566778899001122 /* BreakTimerSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

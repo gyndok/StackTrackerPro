@@ -11,6 +11,7 @@ struct ActiveSessionView: View {
     @State private var selectedPage = 0
     @State private var showLiveShare = false
     @State private var showXShare = false
+    @State private var showBreakTimer = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,6 +115,15 @@ struct ActiveSessionView: View {
                     }
 
                     Button {
+                        showBreakTimer = true
+                    } label: {
+                        Label(
+                            tournamentManager.isOnBreak ? "Break Timer" : "Take a Break",
+                            systemImage: "cup.and.saucer"
+                        )
+                    }
+
+                    Button {
                         selectedPage = 5
                     } label: {
                         Label("Hand Notes", systemImage: "note.text")
@@ -176,6 +186,9 @@ struct ActiveSessionView: View {
                 tournament: tournament,
                 context: tournament.status == .completed ? .completed : .activeLive
             )
+        }
+        .sheet(isPresented: $showBreakTimer) {
+            BreakTimerSheet(tournament: tournament)
         }
     }
 

@@ -48,6 +48,9 @@ final class Tournament {
     @Relationship(deleteRule: .cascade, inverse: \HandNote.tournament)
     var handNotes: [HandNote]? = []
 
+    @Relationship(deleteRule: .cascade, inverse: \BreakEntry.tournament)
+    var breakEntries: [BreakEntry]? = []
+
     @Relationship(deleteRule: .cascade, inverse: \BountyEvent.tournament)
     var bountyEvents: [BountyEvent]? = []
 
@@ -123,6 +126,10 @@ final class Tournament {
 
     var sortedHandNotes: [HandNote] {
         (handNotes ?? []).sorted { $0.timestamp < $1.timestamp }
+    }
+
+    var sortedBreakEntries: [BreakEntry] {
+        (breakEntries ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     var sortedBlindLevels: [BlindLevel] {
