@@ -321,7 +321,7 @@ struct TournamentSetupView: View {
                 .foregroundColor(.goldAccent)
             }
 
-            if !scannedBlindLevels.isEmpty || (createdTournament ?? tournament)?.blindLevels.isEmpty == false {
+            if !scannedBlindLevels.isEmpty || (createdTournament ?? tournament)?.blindLevels?.isEmpty == false {
                 Button {
                     if tournament == nil && createdTournament == nil {
                         createdTournament = createTournament()

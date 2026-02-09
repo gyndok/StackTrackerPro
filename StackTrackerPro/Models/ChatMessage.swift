@@ -3,10 +3,10 @@ import SwiftData
 
 @Model
 final class ChatMessage {
-    var timestamp: Date
-    var senderRaw: String
-    var text: String
-    var isProactive: Bool
+    var timestamp: Date = Date.now
+    var senderRaw: String = "system"
+    var text: String = ""
+    var isProactive: Bool = false
     var parsedEntitiesData: Data?
     var tournament: Tournament?
 

@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class BountyEvent {
-    var timestamp: Date
-    var amount: Int
+    var timestamp: Date = Date.now
+    var amount: Int = 0
     var tournament: Tournament?
 
     init(timestamp: Date = .now, amount: Int) {

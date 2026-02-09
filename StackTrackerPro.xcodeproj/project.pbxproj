@@ -12,6 +12,7 @@
 		1D4C768A8E499FA09FA5165F /* StackEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2246D3C7B55BD60A532FF48 /* StackEntry.swift */; };
 		24F970FE3E9D3F06AA59D946 /* BountyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */; };
 		345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */; };
+		44F697F82F3A5D1F008DDBFF /* AnalyticsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */; };
 		46AD5370A7D959B7B723909E /* Venue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */; };
 		4D0552939B94B2A0CA2C8E96 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E868BED6E80DA62280F89E /* ChatMessage.swift */; };
 		4E6F71E0F8574A68EEA410CD /* ResponseEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */; };
@@ -77,6 +78,7 @@
 		2042A65BAD0C37F569E8BB29 /* ChatBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubbleView.swift; sourceTree = "<group>"; };
 		33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentManager.swift; sourceTree = "<group>"; };
 		435A573CAFB0847E59AB2869 /* HandNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandNote.swift; sourceTree = "<group>"; };
+		44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsDashboardView.swift; sourceTree = "<group>"; };
 		45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRatioBadge.swift; sourceTree = "<group>"; };
 		4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureEditorView.swift; sourceTree = "<group>"; };
 		5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBlockView.swift; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 				D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */,
 				4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */,
 				B0C3D4E5F6A7B8C9D0E1F2A3 /* TournamentBrowserView.swift */,
+				44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */,
 			);
 			path = Tournament;
 			sourceTree = "<group>";
@@ -396,6 +399,7 @@
 				C5B060D9CBF4503AF8BF9CB9 /* BlindStructureEditorView.swift in Sources */,
 				000C7BA5DDB9D5D387B3C160 /* ActiveSessionView.swift in Sources */,
 				B98C73505D56EA40DEDCB0EF /* StatusBarView.swift in Sources */,
+				44F697F82F3A5D1F008DDBFF /* AnalyticsDashboardView.swift in Sources */,
 				1D12AB0E92E70596BBC657CD /* StackGraphView.swift in Sources */,
 				DB3C28FDCAC697DDBB55A312 /* ChatThreadView.swift in Sources */,
 				B339B3B12F2A4F4D8112DC01 /* ChatBubbleView.swift in Sources */,

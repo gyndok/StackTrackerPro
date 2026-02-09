@@ -2,6 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct TournamentHistoryView: View {
+    enum ViewMode: String, CaseIterable {
+        case list = "List"
+        case analytics = "Analytics"
+    }
+
     @Environment(\.modelContext) private var modelContext
     @Environment(TournamentManager.self) private var tournamentManager
     @Query(filter: #Predicate<Tournament> { $0.statusRaw == "completed" },
@@ -9,18 +14,35 @@ struct TournamentHistoryView: View {
     private var completedTournaments: [Tournament]
 
     @State private var tournamentForXShare: Tournament?
+    @State private var viewMode: ViewMode = .list
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.backgroundPrimary.ignoresSafeArea()
+            VStack(spacing: 0) {
+                if !completedTournaments.isEmpty {
+                    Picker("View", selection: $viewMode) {
+                        ForEach(ViewMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
 
-                if completedTournaments.isEmpty {
-                    emptyState
-                } else {
-                    tournamentList
+                ZStack {
+                    Color.backgroundPrimary.ignoresSafeArea()
+
+                    if completedTournaments.isEmpty {
+                        emptyState
+                    } else if viewMode == .analytics {
+                        AnalyticsDashboardView(tournaments: completedTournaments)
+                    } else {
+                        tournamentList
+                    }
                 }
             }
+            .background(Color.backgroundPrimary)
             .navigationTitle("History")
             .sheet(item: $tournamentForXShare) { tournament in
                 XShareComposeView(tournament: tournament, context: .completed)

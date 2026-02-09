@@ -4,58 +4,58 @@ import SwiftData
 @Model
 final class Tournament {
     // Basic info
-    var name: String
-    var gameTypeRaw: String
-    var buyIn: Int
-    var entryFee: Int
-    var deductions: Int
-    var bountyAmount: Int
-    var guarantee: Int
-    var startDate: Date
+    var name: String = ""
+    var gameTypeRaw: String = "NLH"
+    var buyIn: Int = 0
+    var entryFee: Int = 0
+    var deductions: Int = 0
+    var bountyAmount: Int = 0
+    var guarantee: Int = 0
+    var startDate: Date = Date.now
     var regCloseTime: Date?
-    var startingChips: Int
+    var startingChips: Int = 20000
 
     // Re-entry
-    var reentryPolicy: String
-    var rebuysUsed: Int
+    var reentryPolicy: String = "None"
+    var rebuysUsed: Int = 0
 
     // Status
-    var statusRaw: String
+    var statusRaw: String = "setup"
     var finishPosition: Int?
     var payout: Int?
-    var bountiesCollected: Int
+    var bountiesCollected: Int = 0
 
     // Current state
-    var currentBlindLevelNumber: Int
-    var fieldSize: Int
-    var playersRemaining: Int
-    var payoutPercent: Double
+    var currentBlindLevelNumber: Int = 1
+    var fieldSize: Int = 0
+    var playersRemaining: Int = 0
+    var payoutPercent: Double = 15.0
 
     // Venue (soft reference)
     var venueID: UUID?
     var venueName: String?
 
-    // Relationships
+    // Relationships (optional for CloudKit compatibility)
     @Relationship(deleteRule: .cascade, inverse: \BlindLevel.tournament)
-    var blindLevels: [BlindLevel] = []
+    var blindLevels: [BlindLevel]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \StackEntry.tournament)
-    var stackEntries: [StackEntry] = []
+    var stackEntries: [StackEntry]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \ChatMessage.tournament)
-    var chatMessages: [ChatMessage] = []
+    var chatMessages: [ChatMessage]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \HandNote.tournament)
-    var handNotes: [HandNote] = []
+    var handNotes: [HandNote]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \BountyEvent.tournament)
-    var bountyEvents: [BountyEvent] = []
+    var bountyEvents: [BountyEvent]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \FieldSnapshot.tournament)
-    var fieldSnapshots: [FieldSnapshot] = []
+    var fieldSnapshots: [FieldSnapshot]? = []
 
     @Relationship(deleteRule: .cascade, inverse: \ChipStackPhoto.tournament)
-    var chipStackPhotos: [ChipStackPhoto] = []
+    var chipStackPhotos: [ChipStackPhoto]? = []
 
     // End of session
     var endDate: Date?
@@ -114,15 +114,15 @@ final class Tournament {
     }
 
     var sortedStackEntries: [StackEntry] {
-        stackEntries.sorted { $0.timestamp < $1.timestamp }
+        (stackEntries ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     var sortedChatMessages: [ChatMessage] {
-        chatMessages.sorted { $0.timestamp < $1.timestamp }
+        (chatMessages ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     var sortedBlindLevels: [BlindLevel] {
-        blindLevels.sorted { $0.levelNumber < $1.levelNumber }
+        (blindLevels ?? []).sorted { $0.levelNumber < $1.levelNumber }
     }
 
     /// Maps internal levelNumber → display number (1-based, skipping breaks).
@@ -155,7 +155,7 @@ final class Tournament {
     }
 
     var currentBlinds: BlindLevel? {
-        blindLevels.first { $0.levelNumber == currentBlindLevelNumber }
+        (blindLevels ?? []).first { $0.levelNumber == currentBlindLevelNumber }
     }
 
     var currentMRatio: Double {

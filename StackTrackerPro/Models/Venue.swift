@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class Venue {
-    @Attribute(.unique) var id: UUID
-    var name: String
+    var id: UUID = UUID()
+    var name: String = ""
     var city: String?
     var state: String?
 

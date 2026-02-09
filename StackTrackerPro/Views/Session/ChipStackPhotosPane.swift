@@ -96,7 +96,7 @@ struct ChipStackPhotosPane: View {
     }
 
     private var sortedPhotos: [ChipStackPhoto] {
-        tournament.chipStackPhotos.sorted { $0.timestamp < $1.timestamp }
+        (tournament.chipStackPhotos ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     // MARK: - Thumbnail
@@ -271,11 +271,11 @@ struct ChipStackPhotosPane: View {
             blindLevel: tournament.currentBlindLevelNumber,
             stackAtTime: tournament.latestStack?.chipCount
         )
-        tournament.chipStackPhotos.append(photo)
+        tournament.chipStackPhotos?.append(photo)
     }
 
     private func deletePhoto(_ photo: ChipStackPhoto) {
-        tournament.chipStackPhotos.removeAll { $0.persistentModelID == photo.persistentModelID }
+        tournament.chipStackPhotos?.removeAll { $0.persistentModelID == photo.persistentModelID }
     }
 
     private func compressImage(_ image: UIImage) -> Data? {

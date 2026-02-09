@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class HandNote {
-    var timestamp: Date
-    var descriptionText: String
+    var timestamp: Date = Date.now
+    var descriptionText: String = ""
     var stackBefore: Int?
     var stackAfter: Int?
     var tournament: Tournament?

@@ -3,9 +3,9 @@ import SwiftData
 
 @Model
 final class FieldSnapshot {
-    var timestamp: Date
-    var totalEntries: Int
-    var playersRemaining: Int
+    var timestamp: Date = Date.now
+    var totalEntries: Int = 0
+    var playersRemaining: Int = 0
     var avgStack: Int?
     var tournament: Tournament?
 

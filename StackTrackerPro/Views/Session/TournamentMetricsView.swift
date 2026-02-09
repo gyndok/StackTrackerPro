@@ -309,7 +309,7 @@ struct TournamentMetricsView: View {
     }
 
     private var playersTrend: TrendDirection? {
-        let snapshots = tournament.fieldSnapshots.sorted { $0.timestamp < $1.timestamp }
+        let snapshots = (tournament.fieldSnapshots ?? []).sorted { $0.timestamp < $1.timestamp }
         guard snapshots.count >= 2 else { return nil }
         let last = snapshots[snapshots.count - 1].playersRemaining
         let prev = snapshots[snapshots.count - 2].playersRemaining

@@ -24,7 +24,7 @@ struct StackTrackerProApp: App {
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabase: .private
+                cloudKitDatabase: .private("iCloud.com.gyndok.stacktrackerpro")
             )
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {

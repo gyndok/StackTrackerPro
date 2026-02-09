@@ -34,7 +34,7 @@ final class ChatManager {
 
         // 1. Save user message
         let userMessage = ChatMessage(sender: .user, text: text)
-        tournament.chatMessages.append(userMessage)
+        tournament.chatMessages?.append(userMessage)
 
         // 2. Parse (AI with regex fallback)
         let entities = await parseMessage(text)
@@ -47,7 +47,7 @@ final class ChatManager {
 
         // 5. Save AI response
         let aiMessage = ChatMessage(sender: .ai, text: responseText)
-        tournament.chatMessages.append(aiMessage)
+        tournament.chatMessages?.append(aiMessage)
 
         try? tournamentManager.modelContext?.save()
         HapticFeedback.impact(.light)
@@ -68,7 +68,7 @@ final class ChatManager {
         case .stats:
             let summary = responseEngine.sessionSummaryResponse(tournament: tournament)
             let aiMessage = ChatMessage(sender: .ai, text: summary)
-            tournament.chatMessages.append(aiMessage)
+            tournament.chatMessages?.append(aiMessage)
             try? tournamentManager.modelContext?.save()
         case .share:
             // Handled in ActiveSessionView (needs UI state for sheet presentation)

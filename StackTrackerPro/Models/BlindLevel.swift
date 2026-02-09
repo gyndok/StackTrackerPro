@@ -3,12 +3,12 @@ import SwiftData
 
 @Model
 final class BlindLevel {
-    var levelNumber: Int
-    var smallBlind: Int
-    var bigBlind: Int
-    var ante: Int
-    var durationMinutes: Int
-    var isBreak: Bool
+    var levelNumber: Int = 0
+    var smallBlind: Int = 0
+    var bigBlind: Int = 0
+    var ante: Int = 0
+    var durationMinutes: Int = 30
+    var isBreak: Bool = false
     var breakLabel: String?
     var tournament: Tournament?
 

@@ -34,13 +34,13 @@ final class TournamentManager {
                 currentAnte: blinds.ante,
                 source: .initial
             )
-            tournament.stackEntries.append(entry)
+            tournament.stackEntries?.append(entry)
         } else {
             let entry = StackEntry(
                 chipCount: tournament.startingChips,
                 source: .initial
             )
-            tournament.stackEntries.append(entry)
+            tournament.stackEntries?.append(entry)
         }
 
         save()
@@ -92,7 +92,7 @@ final class TournamentManager {
             currentAnte: blinds?.ante ?? 0,
             source: .chat
         )
-        tournament.stackEntries.append(entry)
+        tournament.stackEntries?.append(entry)
         save()
     }
 
@@ -106,7 +106,7 @@ final class TournamentManager {
             tournament.currentBlindLevelNumber = resolvedLevel
 
             // If we have this level in blind structure, update from it
-            if let existing = tournament.blindLevels.first(where: { $0.levelNumber == resolvedLevel }) {
+            if let existing = (tournament.blindLevels ?? []).first(where: { $0.levelNumber == resolvedLevel }) {
                 // Level exists — apply overrides if provided, otherwise keep structure values
                 if let sb { existing.smallBlind = sb }
                 if let bb { existing.bigBlind = bb }
@@ -123,7 +123,7 @@ final class TournamentManager {
                     bigBlind: bb,
                     ante: ante ?? 0
                 )
-                tournament.blindLevels.append(newLevel)
+                tournament.blindLevels?.append(newLevel)
             }
             save()
             return
@@ -143,14 +143,14 @@ final class TournamentManager {
             if let ante { matchingLevel.ante = ante }
         } else {
             // Create a new level at the next available level number
-            let nextLevelNum = (tournament.blindLevels.map(\.levelNumber).max() ?? 0) + 1
+            let nextLevelNum = ((tournament.blindLevels ?? []).map(\.levelNumber).max() ?? 0) + 1
             let newLevel = BlindLevel(
                 levelNumber: nextLevelNum,
                 smallBlind: sb,
                 bigBlind: bb,
                 ante: ante ?? 0
             )
-            tournament.blindLevels.append(newLevel)
+            tournament.blindLevels?.append(newLevel)
             tournament.currentBlindLevelNumber = nextLevelNum
         }
 
@@ -175,7 +175,7 @@ final class TournamentManager {
             playersRemaining: tournament.playersRemaining,
             avgStack: avgStack > 0 ? avgStack : nil
         )
-        tournament.fieldSnapshots.append(snapshot)
+        tournament.fieldSnapshots?.append(snapshot)
 
         save()
     }
@@ -187,7 +187,7 @@ final class TournamentManager {
         let event = BountyEvent(
             amount: tournament.bountyAmount
         )
-        tournament.bountyEvents.append(event)
+        tournament.bountyEvents?.append(event)
 
         save()
     }
@@ -206,7 +206,7 @@ final class TournamentManager {
             currentAnte: blinds?.ante ?? 0,
             source: .chat
         )
-        tournament.stackEntries.append(entry)
+        tournament.stackEntries?.append(entry)
 
         save()
     }
@@ -218,7 +218,7 @@ final class TournamentManager {
             stackBefore: tournament.latestStack?.chipCount,
             stackAfter: nil
         )
-        tournament.handNotes.append(note)
+        tournament.handNotes?.append(note)
         save()
     }
 
@@ -246,7 +246,7 @@ final class TournamentManager {
 
     func addBlindLevel(smallBlind: Int, bigBlind: Int, ante: Int = 0, durationMinutes: Int = 30) {
         guard let tournament = activeTournament else { return }
-        let nextNum = (tournament.blindLevels.map(\.levelNumber).max() ?? 0) + 1
+        let nextNum = ((tournament.blindLevels ?? []).map(\.levelNumber).max() ?? 0) + 1
         let level = BlindLevel(
             levelNumber: nextNum,
             smallBlind: smallBlind,
@@ -254,13 +254,13 @@ final class TournamentManager {
             ante: ante,
             durationMinutes: durationMinutes
         )
-        tournament.blindLevels.append(level)
+        tournament.blindLevels?.append(level)
         save()
     }
 
     func deleteBlindLevel(_ level: BlindLevel) {
         guard let tournament = activeTournament else { return }
-        tournament.blindLevels.removeAll { $0.persistentModelID == level.persistentModelID }
+        tournament.blindLevels?.removeAll { $0.persistentModelID == level.persistentModelID }
         modelContext?.delete(level)
         save()
     }

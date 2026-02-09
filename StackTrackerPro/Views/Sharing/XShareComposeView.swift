@@ -163,7 +163,7 @@ struct XShareComposeView: View {
         }
 
         // Add chip stack photos (latest first, up to 3)
-        let sortedPhotos = tournament.chipStackPhotos
+        let sortedPhotos = (tournament.chipStackPhotos ?? [])
             .sorted { $0.timestamp > $1.timestamp }
             .prefix(3)
 

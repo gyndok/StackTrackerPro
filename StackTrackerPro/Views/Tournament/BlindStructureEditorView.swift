@@ -21,7 +21,7 @@ struct BlindStructureEditorView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     var sortedLevels: [BlindLevel] {
-        tournament.blindLevels.sorted { $0.levelNumber < $1.levelNumber }
+        (tournament.blindLevels ?? []).sorted { $0.levelNumber < $1.levelNumber }
     }
 
     var body: some View {
@@ -228,7 +228,7 @@ struct BlindStructureEditorView: View {
             ante: ante,
             durationMinutes: duration
         )
-        tournament.blindLevels.append(level)
+        tournament.blindLevels?.append(level)
     }
 
     private func addBreak() {
@@ -242,24 +242,24 @@ struct BlindStructureEditorView: View {
             isBreak: true,
             breakLabel: "Break"
         )
-        tournament.blindLevels.append(breakLevel)
+        tournament.blindLevels?.append(breakLevel)
     }
 
     private func deleteLevels(at offsets: IndexSet) {
         let sorted = sortedLevels
         for index in offsets {
             let level = sorted[index]
-            tournament.blindLevels.removeAll { $0.persistentModelID == level.persistentModelID }
+            tournament.blindLevels?.removeAll { $0.persistentModelID == level.persistentModelID }
         }
     }
 
     private func loadTemplate(_ template: BlindTemplate) {
         // Clear existing
-        tournament.blindLevels.removeAll()
+        tournament.blindLevels?.removeAll()
 
         // Load template levels
         for level in template.levels {
-            tournament.blindLevels.append(level)
+            tournament.blindLevels?.append(level)
         }
 
         HapticFeedback.success()
@@ -296,10 +296,10 @@ struct BlindStructureEditorView: View {
 
     private func loadScannedLevels(_ levels: [ScannedBlindLevel]) {
         // Delete existing levels from context
-        for existing in tournament.blindLevels {
+        for existing in tournament.blindLevels ?? [] {
             modelContext.delete(existing)
         }
-        tournament.blindLevels.removeAll()
+        tournament.blindLevels?.removeAll()
 
         // Add scanned levels with explicit context insertion
         for scanned in levels {

@@ -3,13 +3,13 @@ import SwiftData
 
 @Model
 final class StackEntry {
-    var timestamp: Date
-    var chipCount: Int
-    var blindLevelNumber: Int
-    var currentSB: Int
-    var currentBB: Int
-    var currentAnte: Int
-    var sourceRaw: String
+    var timestamp: Date = Date.now
+    var chipCount: Int = 0
+    var blindLevelNumber: Int = 1
+    var currentSB: Int = 0
+    var currentBB: Int = 0
+    var currentAnte: Int = 0
+    var sourceRaw: String = "chat"
     var tournament: Tournament?
 
     init(
