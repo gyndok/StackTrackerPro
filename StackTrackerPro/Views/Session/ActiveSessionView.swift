@@ -47,13 +47,17 @@ struct ActiveSessionView: View {
                 ReceiptCapturePane(tournament: tournament)
                     .tag(4)
 
+                // Hand notes pane
+                HandNotesPane(tournament: tournament)
+                    .tag(5)
+
                 // Chat pane
                 ChatThreadView(messages: tournament.sortedChatMessages)
-                    .tag(5)
+                    .tag(6)
 
                 // Scouting report pane
                 ScoutingReportView(tournament: tournament)
-                    .tag(6)
+                    .tag(7)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -110,7 +114,13 @@ struct ActiveSessionView: View {
                     }
 
                     Button {
-                        selectedPage = 6
+                        selectedPage = 5
+                    } label: {
+                        Label("Hand Notes", systemImage: "note.text")
+                    }
+
+                    Button {
+                        selectedPage = 7
                     } label: {
                         Label("Scouting Report", systemImage: "doc.text.magnifyingglass")
                     }
@@ -173,7 +183,7 @@ struct ActiveSessionView: View {
 
     private var pageIndicator: some View {
         HStack(spacing: 8) {
-            ForEach(0..<7, id: \.self) { index in
+            ForEach(0..<8, id: \.self) { index in
                 Circle()
                     .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
                     .frame(width: 8, height: 8)

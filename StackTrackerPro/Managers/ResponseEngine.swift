@@ -56,8 +56,8 @@ final class ResponseEngine: @unchecked Sendable {
         }
 
         // Hand note
-        if entities.handNote != nil {
-            sections.append("Hand noted.")
+        if let noteText = entities.handNote {
+            sections.append(handNoteResponse(noteText: noteText, tournament: tournament))
         }
 
         if sections.isEmpty {
@@ -199,6 +199,27 @@ final class ResponseEngine: @unchecked Sendable {
         }
         lines.append("Total return: $\(totalReturn)")
         lines.append(profit >= 0 ? "Profit: +$\(profit)" : "Loss: -$\(abs(profit))")
+
+        return lines.joined(separator: "\n")
+    }
+
+    // MARK: - Hand Note
+
+    func handNoteResponse(noteText: String, tournament: Tournament) -> String {
+        let preview = noteText.count > 60 ? String(noteText.prefix(60)) + "..." : noteText
+        var lines: [String] = []
+        lines.append("Hand noted: \"\(preview)\"")
+
+        var context: [String] = []
+        if let displayLevel = tournament.currentDisplayLevel {
+            context.append("Level \(displayLevel)")
+        }
+        if let stack = tournament.latestStack {
+            context.append("Stack: \(stack.formattedChipCount)")
+        }
+        if !context.isEmpty {
+            lines.append(context.joined(separator: " | "))
+        }
 
         return lines.joined(separator: "\n")
     }

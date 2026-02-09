@@ -85,9 +85,17 @@ final class RegexPokerParser: @unchecked Sendable {
             entities.playersRemaining = Int(match.1)
         }
 
+        // Hand note: "hand note: ...", "noted: ...", "HN: ...", "note: ..."
+        if let match = input.firstMatch(of: /(?:hand\s*note|noted|hn|note)\s*:\s*(.+)/) {
+            entities.handNote = String(match.1).trimmingCharacters(in: .whitespaces)
+        }
+
         // Stack/chip count: "18k", "45,000", "I have 32k", "stack is 45000"
         // Must be parsed AFTER blinds to avoid conflicts
-        entities.chipCount = extractStackValue(from: input, entities: entities)
+        // Skip if message is a hand note to prevent false stack updates
+        if entities.handNote == nil {
+            entities.chipCount = extractStackValue(from: input, entities: entities)
+        }
 
         return entities
     }

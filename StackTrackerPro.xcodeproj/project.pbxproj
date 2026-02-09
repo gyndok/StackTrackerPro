@@ -63,6 +63,7 @@
 		F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */; };
 		F48405EEA08ECC5BC150B453 /* TournamentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C8CDE38102F8460DA98886 /* TournamentListView.swift */; };
 		F4C74639839441BC35FF00D8 /* BlindLevelsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */; };
+		F4D85740940552CD46001EA9 /* HandNotesPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E49A7F1758A57220FF4F31 /* HandNotesPane.swift */; };
 		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
 		FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C122E458D953010331B7239C /* TournamentMetricsView.swift */; };
@@ -72,6 +73,7 @@
 		01CF7122D121AD978C3265B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		07E868BED6E80DA62280F89E /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevelsPane.swift; sourceTree = "<group>"; };
+		19E49A7F1758A57220FF4F31 /* HandNotesPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandNotesPane.swift; sourceTree = "<group>"; };
 		1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		1BE4525C7D0D3EBC66A2DB44 /* StackGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackGraphView.swift; sourceTree = "<group>"; };
 		1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BountyEvent.swift; sourceTree = "<group>"; };
@@ -175,6 +177,7 @@
 				5D98A08EDB70CA37265C9783 /* ChatInputView.swift */,
 				C122E458D953010331B7239C /* TournamentMetricsView.swift */,
 				18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */,
+				19E49A7F1758A57220FF4F31 /* HandNotesPane.swift */,
 				BB2233445566778899001122 /* ChipStackPhotosPane.swift */,
 				BB3344556677889900112233 /* ReceiptCapturePane.swift */,
 				B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */,
@@ -406,6 +409,7 @@
 				543D57B271675427CACA6D14 /* ChatInputView.swift in Sources */,
 				FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */,
 				F4C74639839441BC35FF00D8 /* BlindLevelsPane.swift in Sources */,
+				F4D85740940552CD46001EA9 /* HandNotesPane.swift in Sources */,
 				E3B8A1D4D7297074F9AADF0C /* MRatioBadge.swift in Sources */,
 				5C861C6B087D7C366E5B376E /* StatBlockView.swift in Sources */,
 				F2E1D0C9B8A7F6E5D4C3B2A1 /* PokerAtlasScanner.swift in Sources */,

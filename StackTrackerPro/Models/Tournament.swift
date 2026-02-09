@@ -121,6 +121,10 @@ final class Tournament {
         (chatMessages ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
+    var sortedHandNotes: [HandNote] {
+        (handNotes ?? []).sorted { $0.timestamp < $1.timestamp }
+    }
+
     var sortedBlindLevels: [BlindLevel] {
         (blindLevels ?? []).sorted { $0.levelNumber < $1.levelNumber }
     }

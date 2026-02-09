@@ -213,12 +213,41 @@ final class TournamentManager {
 
     func recordHandNote(_ text: String) {
         guard let tournament = activeTournament else { return }
+        let blinds = tournament.currentBlinds
         let note = HandNote(
             descriptionText: text,
             stackBefore: tournament.latestStack?.chipCount,
-            stackAfter: nil
+            stackAfter: nil,
+            blindLevelNumber: tournament.currentBlindLevelNumber,
+            blindsDisplay: blinds?.blindsDisplay ?? ""
         )
         tournament.handNotes?.append(note)
+        save()
+    }
+
+    func addHandNote(text: String, stackBefore: Int? = nil) {
+        guard let tournament = activeTournament else { return }
+        let blinds = tournament.currentBlinds
+        let note = HandNote(
+            descriptionText: text,
+            stackBefore: stackBefore ?? tournament.latestStack?.chipCount,
+            stackAfter: nil,
+            blindLevelNumber: tournament.currentBlindLevelNumber,
+            blindsDisplay: blinds?.blindsDisplay ?? ""
+        )
+        tournament.handNotes?.append(note)
+        save()
+    }
+
+    func updateHandNote(_ note: HandNote, text: String) {
+        note.descriptionText = text
+        save()
+    }
+
+    func deleteHandNote(_ note: HandNote) {
+        guard let tournament = activeTournament else { return }
+        tournament.handNotes?.removeAll { $0.persistentModelID == note.persistentModelID }
+        modelContext?.delete(note)
         save()
     }
 
