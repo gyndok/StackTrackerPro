@@ -61,7 +61,7 @@ final class Tournament {
     var endDate: Date?
 
     // Receipt
-    var receiptImageData: Data?
+    @Attribute(.externalStorage) var receiptImageData: Data?
 
     init(
         name: String,

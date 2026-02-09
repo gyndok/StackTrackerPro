@@ -4,7 +4,7 @@ import SwiftData
 @Model
 final class ChipStackPhoto {
     var timestamp: Date
-    var imageData: Data
+    @Attribute(.externalStorage) var imageData: Data
     var blindLevel: Int
     var stackAtTime: Int?
     var tournament: Tournament?

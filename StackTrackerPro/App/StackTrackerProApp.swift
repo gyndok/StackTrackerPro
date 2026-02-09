@@ -24,7 +24,7 @@ struct StackTrackerProApp: App {
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabase: .none
+                cloudKitDatabase: .private
             )
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
