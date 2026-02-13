@@ -13,6 +13,7 @@ enum SettingsKeys {
     static let hapticFeedback = "settings.display.hapticFeedback"
     static let showMRatio = "settings.display.showMRatio"
     static let milestoneCelebrations = "settings.display.milestoneCelebrations"
+    static let defaultStakes = "settings.defaults.stakes"
 }
 
 // MARK: - Settings View
@@ -26,6 +27,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.defaultStartingChips) private var defaultStartingChips = 20000
     @AppStorage(SettingsKeys.defaultPayoutPercent) private var defaultPayoutPercent = 15
     @AppStorage(SettingsKeys.defaultSeatsPerTable) private var defaultSeatsPerTable = 9
+    @AppStorage(SettingsKeys.defaultStakes) private var defaultStakes = "1/2"
 
     // Display & Appearance
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = true
@@ -85,6 +87,15 @@ struct SettingsView: View {
                 }
             }
             .tint(.goldAccent)
+
+            HStack {
+                Text("Default Stakes")
+                    .foregroundColor(.textSecondary)
+                Spacer()
+                TextField("1/2", text: $defaultStakes)
+                    .foregroundColor(.textPrimary)
+                    .multilineTextAlignment(.trailing)
+            }
 
             HStack {
                 Text("Starting Chips")
