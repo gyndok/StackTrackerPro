@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 // MARK: - Settings Keys
 
@@ -41,6 +42,9 @@ struct SettingsView: View {
     @State private var showDeleteFinalAlert = false
     @State private var photoCount = 0
     @State private var photoSizeMB = 0.0
+    @State private var showFileImporter = false
+    @State private var importResult: CSVImportResult?
+    @State private var showImportResult = false
 
     private var gameTypeBinding: Binding<GameType> {
         Binding(
@@ -57,6 +61,7 @@ struct SettingsView: View {
                 Form {
                     sessionDefaultsSection
                     displaySection
+                    importSection
                     dataSection
                     aboutSection
                 }
@@ -123,6 +128,50 @@ struct SettingsView: View {
                 .foregroundColor(.goldAccent)
         }
         .listRowBackground(Color.cardSurface)
+    }
+
+    // MARK: - Import
+
+    private var importSection: some View {
+        Section {
+            Button {
+                showFileImporter = true
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.down")
+                    Text("Import Session History (CSV)")
+                }
+                .foregroundColor(.goldAccent)
+            }
+        } header: {
+            Text("IMPORT")
+                .font(PokerTypography.sectionHeader)
+                .foregroundColor(.goldAccent)
+        }
+        .listRowBackground(Color.cardSurface)
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.commaSeparatedText],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                guard url.startAccessingSecurityScopedResource() else { return }
+                defer { url.stopAccessingSecurityScopedResource() }
+                importResult = CSVImporter.importCSV(from: url, into: modelContext)
+                showImportResult = true
+            case .failure:
+                break
+            }
+        }
+        .alert("Import Complete", isPresented: $showImportResult) {
+            Button("OK") {}
+        } message: {
+            if let r = importResult {
+                Text("Imported \(r.cashSessionsCreated) cash session\(r.cashSessionsCreated == 1 ? "" : "s") and \(r.tournamentsCreated) tournament\(r.tournamentsCreated == 1 ? "" : "s").\(r.rowsSkipped > 0 ? " \(r.rowsSkipped) row\(r.rowsSkipped == 1 ? "" : "s") skipped." : "")")
+            }
+        }
     }
 
     // MARK: - Data & Privacy
@@ -225,6 +274,14 @@ struct SettingsView: View {
         for tournament in allTournaments {
             modelContext.delete(tournament)
         }
+
+        // Delete all cash sessions
+        do {
+            let cashSessions = try modelContext.fetch(FetchDescriptor<CashSession>())
+            for session in cashSessions {
+                modelContext.delete(session)
+            }
+        } catch {}
 
         // Delete all venues
         do {
