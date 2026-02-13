@@ -49,6 +49,9 @@ struct SettingsView: View {
     @State private var showFileImporter = false
     @State private var importResult: CSVImportResult?
     @State private var showImportResult = false
+    @State private var exportResult: CSVExportResult?
+    @State private var showExportShare = false
+    @State private var exportFileURL: URL?
 
     private var gameTypeRawBinding: Binding<String> {
         Binding(
@@ -197,8 +200,18 @@ struct SettingsView: View {
                 }
                 .foregroundColor(.goldAccent)
             }
+
+            Button {
+                exportCSV()
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Export Session History (CSV)")
+                }
+                .foregroundColor(.goldAccent)
+            }
         } header: {
-            Text("IMPORT")
+            Text("IMPORT & EXPORT")
                 .font(PokerTypography.sectionHeader)
                 .foregroundColor(.goldAccent)
         }
@@ -224,6 +237,12 @@ struct SettingsView: View {
         } message: {
             if let r = importResult {
                 Text("Imported \(r.cashSessionsCreated) cash session\(r.cashSessionsCreated == 1 ? "" : "s") and \(r.tournamentsCreated) tournament\(r.tournamentsCreated == 1 ? "" : "s").\(r.rowsSkipped > 0 ? " \(r.rowsSkipped) row\(r.rowsSkipped == 1 ? "" : "s") skipped." : "")")
+            }
+        }
+        .sheet(isPresented: $showExportShare) {
+            if let url = exportFileURL {
+                ShareSheetView(items: [url])
+                    .presentationDetents([.medium])
             }
         }
     }
@@ -320,6 +339,24 @@ struct SettingsView: View {
         photoSizeMB = Double(totalBytes) / (1024 * 1024)
     }
 
+    private func exportCSV() {
+        let result = CSVExporter.exportCSV(from: modelContext)
+        exportResult = result
+
+        if result.totalRows == 0 {
+            return
+        }
+
+        let fileName = "StackTrackerPro_Export_\(DateFormatter.exportDateFormatter.string(from: Date())).csv"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+
+        do {
+            try result.csvString.write(to: tempURL, atomically: true, encoding: .utf8)
+            exportFileURL = tempURL
+            showExportShare = true
+        } catch {}
+    }
+
     private func deleteAllData() {
         // Clear active tournament reference
         tournamentManager.activeTournament = nil
@@ -357,6 +394,29 @@ struct SettingsView: View {
 
         HapticFeedback.notification(.success)
     }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheetView: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - Export Date Formatter
+
+extension DateFormatter {
+    static let exportDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 }
 
 #Preview {

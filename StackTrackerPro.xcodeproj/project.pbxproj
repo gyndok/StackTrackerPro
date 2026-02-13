@@ -72,6 +72,7 @@
 		CA5H000000000000000101 /* CashSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000001 /* CashSession.swift */; };
 		CA5H000000000000000102 /* CashSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000002 /* CashSessionManager.swift */; };
 		CA5H000000000000000103 /* CSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000003 /* CSVImporter.swift */; };
+		CA5H000000000000000113 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000013 /* CSVExporter.swift */; };
 		CA5H000000000000000104 /* CashSessionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000004 /* CashSessionSetupView.swift */; };
 		CA5H000000000000000105 /* CashSessionStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000005 /* CashSessionStatusBar.swift */; };
 		CA5H000000000000000106 /* EndCashSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000006 /* EndCashSessionSheet.swift */; };
@@ -154,6 +155,7 @@
 		CA5H000000000000000001 /* CashSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSession.swift; sourceTree = "<group>"; };
 		CA5H000000000000000002 /* CashSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionManager.swift; sourceTree = "<group>"; };
 		CA5H000000000000000003 /* CSVImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVImporter.swift; sourceTree = "<group>"; };
+		CA5H000000000000000013 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
 		CA5H000000000000000004 /* CashSessionSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionSetupView.swift; sourceTree = "<group>"; };
 		CA5H000000000000000005 /* CashSessionStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionStatusBar.swift; sourceTree = "<group>"; };
 		CA5H000000000000000006 /* EndCashSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndCashSessionSheet.swift; sourceTree = "<group>"; };
@@ -239,6 +241,7 @@
 				B0C1D2E3F4A5B6C7D8E9F0A1 /* LocationManager.swift */,
 				B0C2D3E4F5A6B7C8D9E0F1A2 /* CloudKitService.swift */,
 				CA5H000000000000000003 /* CSVImporter.swift */,
+				CA5H000000000000000013 /* CSVExporter.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -511,6 +514,7 @@
 				CA5H000000000000000101 /* CashSession.swift in Sources */,
 				CA5H000000000000000102 /* CashSessionManager.swift in Sources */,
 				CA5H000000000000000103 /* CSVImporter.swift in Sources */,
+				CA5H000000000000000113 /* CSVExporter.swift in Sources */,
 				CA5H000000000000000104 /* CashSessionSetupView.swift in Sources */,
 				CA5H000000000000000105 /* CashSessionStatusBar.swift in Sources */,
 				CA5H000000000000000106 /* EndCashSessionSheet.swift in Sources */,
