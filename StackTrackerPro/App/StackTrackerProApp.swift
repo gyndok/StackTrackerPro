@@ -10,6 +10,7 @@ struct StackTrackerProApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Tournament.self,
+            CashSession.self,
             BlindLevel.self,
             StackEntry.self,
             ChatMessage.self,
