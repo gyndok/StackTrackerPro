@@ -183,6 +183,8 @@ struct ResultsView: View {
                 } label: {
                     Text(filter.rawValue)
                         .font(PokerTypography.chipLabel)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                         .foregroundColor(selectedFilter == filter ? .backgroundPrimary : .goldAccent)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)

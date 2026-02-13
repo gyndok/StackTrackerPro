@@ -171,7 +171,7 @@ struct CashActiveSessionView: View {
                 } label: {
                     Text("Add Chips")
                 }
-                .buttonStyle(PokerButtonStyle(isEnabled: Int(addOnText) ?? 0 > 0))
+                .buttonStyle(PokerButtonStyle(isEnabled: (Int(addOnText) ?? 0) > 0))
                 .disabled((Int(addOnText) ?? 0) <= 0)
 
                 Spacer()
