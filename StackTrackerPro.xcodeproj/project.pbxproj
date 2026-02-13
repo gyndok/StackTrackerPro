@@ -69,6 +69,20 @@
 		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
 		FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C122E458D953010331B7239C /* TournamentMetricsView.swift */; };
+		CA5H000000000000000101 /* CashSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000001 /* CashSession.swift */; };
+		CA5H000000000000000102 /* CashSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000002 /* CashSessionManager.swift */; };
+		CA5H000000000000000103 /* CSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000003 /* CSVImporter.swift */; };
+		CA5H000000000000000104 /* CashSessionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000004 /* CashSessionSetupView.swift */; };
+		CA5H000000000000000105 /* CashSessionStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000005 /* CashSessionStatusBar.swift */; };
+		CA5H000000000000000106 /* EndCashSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000006 /* EndCashSessionSheet.swift */; };
+		CA5H000000000000000107 /* CashActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000007 /* CashActiveSessionView.swift */; };
+		CA5H000000000000000108 /* CashStackGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000008 /* CashStackGraphView.swift */; };
+		CA5H000000000000000109 /* CashSessionStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000009 /* CashSessionStatsView.swift */; };
+		CA5H00000000000000010A /* CashChatInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000A /* CashChatInputView.swift */; };
+		CA5H00000000000000010B /* CashSessionRecapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000B /* CashSessionRecapSheet.swift */; };
+		CA5H00000000000000010C /* CashSessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000C /* CashSessionListView.swift */; };
+		CA5H00000000000000010D /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000D /* ResultsView.swift */; };
+		CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000E /* ResultsAnalyticsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -136,6 +150,20 @@
 		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
 		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
 		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		CA5H000000000000000001 /* CashSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSession.swift; sourceTree = "<group>"; };
+		CA5H000000000000000002 /* CashSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionManager.swift; sourceTree = "<group>"; };
+		CA5H000000000000000003 /* CSVImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVImporter.swift; sourceTree = "<group>"; };
+		CA5H000000000000000004 /* CashSessionSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionSetupView.swift; sourceTree = "<group>"; };
+		CA5H000000000000000005 /* CashSessionStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionStatusBar.swift; sourceTree = "<group>"; };
+		CA5H000000000000000006 /* EndCashSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndCashSessionSheet.swift; sourceTree = "<group>"; };
+		CA5H000000000000000007 /* CashActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashActiveSessionView.swift; sourceTree = "<group>"; };
+		CA5H000000000000000008 /* CashStackGraphView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashStackGraphView.swift; sourceTree = "<group>"; };
+		CA5H000000000000000009 /* CashSessionStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionStatsView.swift; sourceTree = "<group>"; };
+		CA5H00000000000000000A /* CashChatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashChatInputView.swift; sourceTree = "<group>"; };
+		CA5H00000000000000000B /* CashSessionRecapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionRecapSheet.swift; sourceTree = "<group>"; };
+		CA5H00000000000000000C /* CashSessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionListView.swift; sourceTree = "<group>"; };
+		CA5H00000000000000000D /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
+		CA5H00000000000000000E /* ResultsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsAnalyticsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -196,6 +224,7 @@
 			isa = PBXGroup;
 			children = (
 				33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */,
+				CA5H000000000000000002 /* CashSessionManager.swift */,
 				56DA5914D561AE928028205F /* ChatManager.swift */,
 				C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */,
 				CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */,
@@ -207,6 +236,7 @@
 				E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */,
 				B0C1D2E3F4A5B6C7D8E9F0A1 /* LocationManager.swift */,
 				B0C2D3E4F5A6B7C8D9E0F1A2 /* CloudKitService.swift */,
+				CA5H000000000000000003 /* CSVImporter.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -238,6 +268,7 @@
 			children = (
 				B14932DF6EB69E66004CFE48 /* Enums.swift */,
 				E7450AB8F51603F31BC6348C /* Tournament.swift */,
+				CA5H000000000000000001 /* CashSession.swift */,
 				7F833F36634C2BED53572E0D /* BlindLevel.swift */,
 				B2246D3C7B55BD60A532FF48 /* StackEntry.swift */,
 				07E868BED6E80DA62280F89E /* ChatMessage.swift */,
@@ -265,7 +296,9 @@
 			isa = PBXGroup;
 			children = (
 				A4A4961A3FCFC36AEBBBB40A /* Tournament */,
+				CA5H000000000000000201 /* CashGame */,
 				5EC39F7F309606F34F39AA68 /* Session */,
+				CA5H000000000000000202 /* Results */,
 				C0C1C2C3C4C5C6C7C8C9C0C1 /* Sharing */,
 				B2FBC9D96DEBE1CBC41BECAF /* Components */,
 				F6A7B8C9D0E1F2A3B4C5D6E7 /* Settings */,
@@ -321,6 +354,31 @@
 				E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		CA5H000000000000000201 /* CashGame */ = {
+			isa = PBXGroup;
+			children = (
+				CA5H000000000000000004 /* CashSessionSetupView.swift */,
+				CA5H000000000000000005 /* CashSessionStatusBar.swift */,
+				CA5H000000000000000006 /* EndCashSessionSheet.swift */,
+				CA5H000000000000000007 /* CashActiveSessionView.swift */,
+				CA5H000000000000000008 /* CashStackGraphView.swift */,
+				CA5H000000000000000009 /* CashSessionStatsView.swift */,
+				CA5H00000000000000000A /* CashChatInputView.swift */,
+				CA5H00000000000000000B /* CashSessionRecapSheet.swift */,
+				CA5H00000000000000000C /* CashSessionListView.swift */,
+			);
+			path = CashGame;
+			sourceTree = "<group>";
+		};
+		CA5H000000000000000202 /* Results */ = {
+			isa = PBXGroup;
+			children = (
+				CA5H00000000000000000D /* ResultsView.swift */,
+				CA5H00000000000000000E /* ResultsAnalyticsView.swift */,
+			);
+			path = Results;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -447,6 +505,20 @@
 				A0B3C4D5E6F7A8B9C0D1E2F3 /* TournamentBrowserView.swift in Sources */,
 				CC1122334455667788990011 /* BreakEntry.swift in Sources */,
 				CC2233445566778899001122 /* BreakTimerSheet.swift in Sources */,
+				CA5H000000000000000101 /* CashSession.swift in Sources */,
+				CA5H000000000000000102 /* CashSessionManager.swift in Sources */,
+				CA5H000000000000000103 /* CSVImporter.swift in Sources */,
+				CA5H000000000000000104 /* CashSessionSetupView.swift in Sources */,
+				CA5H000000000000000105 /* CashSessionStatusBar.swift in Sources */,
+				CA5H000000000000000106 /* EndCashSessionSheet.swift in Sources */,
+				CA5H000000000000000107 /* CashActiveSessionView.swift in Sources */,
+				CA5H000000000000000108 /* CashStackGraphView.swift in Sources */,
+				CA5H000000000000000109 /* CashSessionStatsView.swift in Sources */,
+				CA5H00000000000000010A /* CashChatInputView.swift in Sources */,
+				CA5H00000000000000010B /* CashSessionRecapSheet.swift in Sources */,
+				CA5H00000000000000010C /* CashSessionListView.swift in Sources */,
+				CA5H00000000000000010D /* ResultsView.swift in Sources */,
+				CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
