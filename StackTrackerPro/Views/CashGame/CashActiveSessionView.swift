@@ -30,8 +30,8 @@ struct CashActiveSessionView: View {
                 CashSessionStatsView(session: session)
                     .tag(1)
 
-                // Hand notes placeholder (Task 9 will update HandNotesPane)
-                handNotesPlaceholder
+                // Hand notes pane
+                HandNotesPane(cashSession: session)
                     .tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -135,57 +135,6 @@ struct CashActiveSessionView: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Hand Notes Placeholder
-
-    private var handNotesPlaceholder: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "note.text")
-                .font(.system(size: 40))
-                .foregroundColor(.textSecondary.opacity(0.5))
-            Text("Hand Notes")
-                .font(.headline)
-                .foregroundColor(.textSecondary)
-            Text("Record notable hands during your session")
-                .font(PokerTypography.chatCaption)
-                .foregroundColor(.textSecondary.opacity(0.7))
-                .multilineTextAlignment(.center)
-
-            Button {
-                cashSessionManager.addHandNote(text: "")
-                HapticFeedback.impact(.light)
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                    Text("Add Hand Note")
-                }
-                .quickChip()
-            }
-
-            if !session.sortedHandNotes.isEmpty {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(session.sortedHandNotes, id: \.persistentModelID) { note in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(note.descriptionText)
-                                    .font(PokerTypography.chatBody)
-                                    .foregroundColor(.textPrimary)
-                                Text(note.timestamp, style: .time)
-                                    .font(PokerTypography.chatCaption)
-                                    .foregroundColor(.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .pokerCard()
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-    }
 
     // MARK: - Add-On Sheet
 
