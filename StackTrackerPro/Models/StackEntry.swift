@@ -11,6 +11,7 @@ final class StackEntry {
     var currentAnte: Int = 0
     var sourceRaw: String = "chat"
     var tournament: Tournament?
+    var cashSession: CashSession?
 
     init(
         timestamp: Date = .now,

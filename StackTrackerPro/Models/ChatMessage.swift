@@ -9,6 +9,7 @@ final class ChatMessage {
     var isProactive: Bool = false
     var parsedEntitiesData: Data?
     var tournament: Tournament?
+    var cashSession: CashSession?
 
     init(
         timestamp: Date = .now,
