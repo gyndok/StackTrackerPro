@@ -36,6 +36,42 @@ enum TournamentStatus: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - Session Status (shared by cash games)
+
+enum SessionStatus: String, Codable, CaseIterable {
+    case setup = "setup"
+    case active = "active"
+    case paused = "paused"
+    case completed = "completed"
+
+    var label: String {
+        switch self {
+        case .setup: return "Setup"
+        case .active: return "Active"
+        case .paused: return "Paused"
+        case .completed: return "Completed"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .setup: return "gear"
+        case .active: return "play.circle.fill"
+        case .paused: return "pause.circle.fill"
+        case .completed: return "checkmark.circle.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .setup: return .textSecondary
+        case .active: return .mZoneGreen
+        case .paused: return .mZoneYellow
+        case .completed: return .goldAccent
+        }
+    }
+}
+
 // MARK: - Message Sender
 
 enum MessageSender: String, Codable {
