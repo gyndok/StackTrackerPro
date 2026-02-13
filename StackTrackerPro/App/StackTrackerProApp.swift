@@ -5,6 +5,7 @@ import SwiftData
 struct StackTrackerProApp: App {
     @State private var tournamentManager = TournamentManager()
     @State private var chatManager: ChatManager?
+    @State private var cashSessionManager = CashSessionManager()
     @State private var showSplash = true
 
     var sharedModelContainer: ModelContainer = {
@@ -53,12 +54,14 @@ struct StackTrackerProApp: App {
                 ContentView()
                     .onAppear {
                         tournamentManager.setContext(sharedModelContainer.mainContext)
+                        cashSessionManager.setContext(sharedModelContainer.mainContext)
                         if chatManager == nil {
                             chatManager = ChatManager(tournamentManager: tournamentManager)
                         }
                     }
                     .environment(tournamentManager)
                     .environment(chatManager ?? ChatManager(tournamentManager: tournamentManager))
+                    .environment(cashSessionManager)
 
                 if showSplash {
                     SplashScreenView()
