@@ -46,9 +46,34 @@ final class CashSession {
         self.isImported = false
     }
 
+    init(
+        stakes: String = "",
+        gameTypeRaw: String,
+        buyInTotal: Int = 0,
+        venueName: String? = nil,
+        date: Date = .now
+    ) {
+        self.date = date
+        self.startTime = date
+        self.endTime = nil
+        self.stakes = stakes
+        self.gameTypeRaw = gameTypeRaw
+        self.buyInTotal = buyInTotal
+        self.cashOut = nil
+        self.venueName = venueName
+        self.venueID = nil
+        self.statusRaw = SessionStatus.setup.rawValue
+        self.notes = nil
+        self.isImported = false
+    }
+
     var gameType: GameType {
         get { GameType(rawValue: gameTypeRaw) ?? .nlh }
         set { gameTypeRaw = newValue.rawValue }
+    }
+
+    var gameTypeLabel: String {
+        GameType.label(for: gameTypeRaw)
     }
 
     var status: SessionStatus {
@@ -98,6 +123,6 @@ final class CashSession {
     }
 
     var displayName: String {
-        "\(stakes) \(gameType.label)"
+        "\(stakes) \(gameTypeLabel)"
     }
 }

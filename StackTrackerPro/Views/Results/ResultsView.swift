@@ -10,6 +10,44 @@ enum ResultsFilter: String, CaseIterable {
     case tournaments = "Tournaments"
 }
 
+// MARK: - Date Range Preset
+
+enum DateRangePreset: String, CaseIterable {
+    case allTime = "All Time"
+    case thisWeek = "This Week"
+    case thisMonth = "This Month"
+    case last30Days = "Last 30 Days"
+    case last90Days = "Last 90 Days"
+    case thisYear = "This Year"
+    case custom = "Custom"
+
+    func dateRange() -> (start: Date, end: Date)? {
+        let calendar = Calendar.current
+        let now = Date.now
+        switch self {
+        case .allTime:
+            return nil
+        case .thisWeek:
+            let start = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+            return (start, now)
+        case .thisMonth:
+            let start = calendar.dateInterval(of: .month, for: now)?.start ?? now
+            return (start, now)
+        case .last30Days:
+            let start = calendar.date(byAdding: .day, value: -30, to: now) ?? now
+            return (start, now)
+        case .last90Days:
+            let start = calendar.date(byAdding: .day, value: -90, to: now) ?? now
+            return (start, now)
+        case .thisYear:
+            let start = calendar.dateInterval(of: .year, for: now)?.start ?? now
+            return (start, now)
+        case .custom:
+            return nil
+        }
+    }
+}
+
 // MARK: - View Mode
 
 private enum ResultsViewMode: String, CaseIterable {
@@ -24,6 +62,8 @@ private struct SessionItem: Identifiable {
     let date: Date
     let name: String
     let venue: String?
+    let stakes: String?
+    let gameTypeRaw: String
     let duration: String
     let detailLine: String
     let profit: Int
@@ -51,12 +91,73 @@ struct ResultsView: View {
     @State private var selectedFilter: ResultsFilter = .all
     @State private var viewMode: ResultsViewMode = .list
 
+    // Advanced filters
+    @State private var selectedGameTypeRaw: String?
+    @State private var selectedStakes: String?
+    @State private var selectedVenue: String?
+    @State private var selectedDatePreset: DateRangePreset = .allTime
+    @State private var customDateStart: Date = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
+    @State private var customDateEnd: Date = .now
+    @State private var showFilterSheet = false
+
+    // MARK: - Available Filter Options (derived from data)
+
+    private var availableGameTypes: [(rawValue: String, label: String)] {
+        var types = Set<String>()
+        if selectedFilter != .cash {
+            completedTournaments.forEach { types.insert($0.gameTypeRaw) }
+        }
+        if selectedFilter != .tournaments {
+            completedCashSessions.forEach { types.insert($0.gameTypeRaw) }
+        }
+        return types.map { ($0, GameType.label(for: $0)) }.sorted { $0.label < $1.label }
+    }
+
+    private var availableStakes: [String] {
+        guard selectedFilter != .tournaments else { return [] }
+        let stakes = Set(completedCashSessions.map(\.stakes)).filter { !$0.isEmpty }
+        return stakes.sorted()
+    }
+
+    private var availableVenues: [String] {
+        var venues = Set<String>()
+        if selectedFilter != .cash {
+            completedTournaments.compactMap(\.venueName).forEach { venues.insert($0) }
+        }
+        if selectedFilter != .tournaments {
+            completedCashSessions.compactMap(\.venueName).forEach { venues.insert($0) }
+        }
+        return venues.sorted()
+    }
+
+    private var hasActiveFilters: Bool {
+        selectedGameTypeRaw != nil || selectedStakes != nil || selectedVenue != nil || selectedDatePreset != .allTime
+    }
+
+    private var activeFilterCount: Int {
+        var count = 0
+        if selectedGameTypeRaw != nil { count += 1 }
+        if selectedStakes != nil { count += 1 }
+        if selectedVenue != nil { count += 1 }
+        if selectedDatePreset != .allTime { count += 1 }
+        return count
+    }
+
+    // MARK: - Date Range
+
+    private var activeDateRange: (start: Date, end: Date)? {
+        if selectedDatePreset == .custom {
+            return (customDateStart, Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: customDateEnd) ?? customDateEnd)
+        }
+        return selectedDatePreset.dateRange()
+    }
+
     // MARK: - Computed Properties
 
     private var filteredTournaments: [Tournament] {
         switch selectedFilter {
         case .all, .tournaments:
-            return completedTournaments
+            return completedTournaments.filter { matchesAdvancedFilters(gameType: $0.gameTypeRaw, venue: $0.venueName, stakes: nil, date: $0.endDate ?? $0.startDate) }
         case .cash:
             return []
         }
@@ -65,23 +166,43 @@ struct ResultsView: View {
     private var filteredCashSessions: [CashSession] {
         switch selectedFilter {
         case .all, .cash:
-            return completedCashSessions
+            return completedCashSessions.filter { matchesAdvancedFilters(gameType: $0.gameTypeRaw, venue: $0.venueName, stakes: $0.stakes, date: $0.endTime ?? $0.startTime) }
         case .tournaments:
             return []
         }
+    }
+
+    private func matchesAdvancedFilters(gameType: String, venue: String?, stakes: String?, date: Date) -> Bool {
+        if let gt = selectedGameTypeRaw, gameType != gt {
+            return false
+        }
+        if let sv = selectedVenue, venue != sv {
+            return false
+        }
+        if let ss = selectedStakes, stakes != ss {
+            return false
+        }
+        if let range = activeDateRange {
+            if date < range.start || date > range.end {
+                return false
+            }
+        }
+        return true
     }
 
     private var allSessions: [SessionItem] {
         var items: [SessionItem] = []
 
         if selectedFilter != .cash {
-            for t in completedTournaments {
+            for t in filteredTournaments {
                 let detail = buildTournamentDetail(t)
                 items.append(SessionItem(
                     id: "t-\(t.persistentModelID.hashValue)",
                     date: t.endDate ?? t.startDate,
                     name: t.name,
                     venue: t.venueName,
+                    stakes: nil,
+                    gameTypeRaw: t.gameTypeRaw,
                     duration: t.durationFormatted,
                     detailLine: detail,
                     profit: t.profit ?? 0,
@@ -93,13 +214,15 @@ struct ResultsView: View {
         }
 
         if selectedFilter != .tournaments {
-            for c in completedCashSessions {
+            for c in filteredCashSessions {
                 let detail = buildCashDetail(c)
                 items.append(SessionItem(
                     id: "c-\(c.persistentModelID.hashValue)",
                     date: c.endTime ?? c.startTime,
                     name: c.displayName,
                     venue: c.venueName,
+                    stakes: c.stakes,
+                    gameTypeRaw: c.gameTypeRaw,
                     duration: c.durationFormatted,
                     detailLine: detail,
                     profit: c.profit ?? 0,
@@ -148,6 +271,9 @@ struct ResultsView: View {
             VStack(spacing: 0) {
                 if hasCompletedSessions {
                     filterBar
+                    if hasActiveFilters {
+                        activeFilterChips
+                    }
                 }
 
                 ZStack {
@@ -168,6 +294,32 @@ struct ResultsView: View {
             }
             .background(Color.backgroundPrimary)
             .navigationTitle("Results")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Picker("View", selection: $viewMode) {
+                        ForEach(ResultsViewMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 140)
+                }
+            }
+            .sheet(isPresented: $showFilterSheet) {
+                ResultsFilterSheet(
+                    selectedGameTypeRaw: $selectedGameTypeRaw,
+                    selectedStakes: $selectedStakes,
+                    selectedVenue: $selectedVenue,
+                    selectedDatePreset: $selectedDatePreset,
+                    customDateStart: $customDateStart,
+                    customDateEnd: $customDateEnd,
+                    availableGameTypes: availableGameTypes,
+                    availableStakes: availableStakes,
+                    availableVenues: availableVenues
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
         }
     }
 
@@ -179,6 +331,10 @@ struct ResultsView: View {
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         selectedFilter = filter
+                        // Clear stakes filter when switching to tournaments-only
+                        if filter == .tournaments {
+                            selectedStakes = nil
+                        }
                     }
                 } label: {
                     Text(filter.rawValue)
@@ -198,16 +354,106 @@ struct ResultsView: View {
 
             Spacer()
 
-            Picker("View", selection: $viewMode) {
-                ForEach(ResultsViewMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
+            // Filter button
+            Button {
+                showFilterSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.system(size: 14, weight: .medium))
+                    if activeFilterCount > 0 {
+                        Text("\(activeFilterCount)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.backgroundPrimary)
+                            .frame(width: 18, height: 18)
+                            .background(Color.goldAccent)
+                            .clipShape(Circle())
+                    }
                 }
+                .foregroundColor(hasActiveFilters ? .goldAccent : .textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(hasActiveFilters ? Color.goldAccent.opacity(0.15) : Color.clear)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(hasActiveFilters ? Color.goldAccent.opacity(0.3) : Color.borderSubtle, lineWidth: 1)
+                )
             }
-            .pickerStyle(.segmented)
-            .frame(width: 150)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Active Filter Chips
+
+    private var activeFilterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                if let gt = selectedGameTypeRaw {
+                    dismissibleChip(GameType.label(for: gt)) {
+                        withAnimation { selectedGameTypeRaw = nil }
+                    }
+                }
+                if let stakes = selectedStakes {
+                    dismissibleChip(stakes) {
+                        withAnimation { selectedStakes = nil }
+                    }
+                }
+                if let venue = selectedVenue {
+                    dismissibleChip(venue) {
+                        withAnimation { selectedVenue = nil }
+                    }
+                }
+                if selectedDatePreset != .allTime {
+                    let label = selectedDatePreset == .custom
+                        ? "\(customDateStart.formatted(date: .abbreviated, time: .omitted)) – \(customDateEnd.formatted(date: .abbreviated, time: .omitted))"
+                        : selectedDatePreset.rawValue
+                    dismissibleChip(label) {
+                        withAnimation { selectedDatePreset = .allTime }
+                    }
+                }
+
+                Button {
+                    withAnimation {
+                        clearAllFilters()
+                    }
+                } label: {
+                    Text("Clear All")
+                        .font(PokerTypography.chatCaption)
+                        .foregroundColor(.chipRed)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.bottom, 4)
+    }
+
+    private func dismissibleChip(_ label: String, onDismiss: @escaping () -> Void) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(PokerTypography.chatCaption)
+                .foregroundColor(.textPrimary)
+                .lineLimit(1)
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.textSecondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color.cardSurface)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.borderSubtle, lineWidth: 0.5))
+    }
+
+    private func clearAllFilters() {
+        selectedGameTypeRaw = nil
+        selectedStakes = nil
+        selectedVenue = nil
+        selectedDatePreset = .allTime
     }
 
     // MARK: - List Content
@@ -229,28 +475,65 @@ struct ResultsView: View {
             }
 
             Section {
-                ForEach(allSessions) { session in
-                    if session.isTournament, let tournament = session.tournament {
-                        NavigationLink {
-                            ActiveSessionView(tournament: tournament)
-                        } label: {
-                            sessionRow(session)
+                if allSessions.isEmpty && hasActiveFilters {
+                    noFilterResults
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(allSessions) { session in
+                        if session.isTournament, let tournament = session.tournament {
+                            NavigationLink {
+                                ActiveSessionView(tournament: tournament)
+                            } label: {
+                                sessionRow(session)
+                            }
+                            .listRowBackground(Color.cardSurface)
+                        } else if let cashSession = session.cashSession {
+                            NavigationLink {
+                                CashActiveSessionView(session: cashSession)
+                            } label: {
+                                sessionRow(session)
+                            }
+                            .listRowBackground(Color.cardSurface)
                         }
-                        .listRowBackground(Color.cardSurface)
-                    } else if let cashSession = session.cashSession {
-                        NavigationLink {
-                            CashActiveSessionView(session: cashSession)
-                        } label: {
-                            sessionRow(session)
-                        }
-                        .listRowBackground(Color.cardSurface)
                     }
+                    .onDelete(perform: deleteSessions)
                 }
-                .onDelete(perform: deleteSessions)
             }
         }
         .scrollContentBackground(.hidden)
         .listStyle(.plain)
+    }
+
+    // MARK: - No Filter Results
+
+    private var noFilterResults: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 40))
+                .foregroundColor(.textSecondary.opacity(0.5))
+
+            Text("No matching sessions")
+                .font(.headline)
+                .foregroundColor(.textPrimary)
+
+            Text("Try adjusting your filters")
+                .font(PokerTypography.chatBody)
+                .foregroundColor(.textSecondary)
+
+            Button {
+                withAnimation { clearAllFilters() }
+            } label: {
+                Text("Clear Filters")
+                    .font(PokerTypography.chipLabel)
+                    .foregroundColor(.goldAccent)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.goldAccent.opacity(0.15))
+                    .clipShape(Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
     }
 
     // MARK: - Empty State
@@ -531,6 +814,157 @@ struct ResultsView: View {
             }
         }
         return "\(n)\(suffix)"
+    }
+}
+
+// MARK: - Results Filter Sheet
+
+struct ResultsFilterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @Binding var selectedGameTypeRaw: String?
+    @Binding var selectedStakes: String?
+    @Binding var selectedVenue: String?
+    @Binding var selectedDatePreset: DateRangePreset
+    @Binding var customDateStart: Date
+    @Binding var customDateEnd: Date
+
+    let availableGameTypes: [(rawValue: String, label: String)]
+    let availableStakes: [String]
+    let availableVenues: [String]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                // Game Type
+                Section {
+                    filterRow("All Game Types", isSelected: selectedGameTypeRaw == nil) {
+                        selectedGameTypeRaw = nil
+                    }
+                    ForEach(availableGameTypes, id: \.rawValue) { gt in
+                        filterRow(gt.label, isSelected: selectedGameTypeRaw == gt.rawValue) {
+                            selectedGameTypeRaw = gt.rawValue
+                        }
+                    }
+                } header: {
+                    Text("GAME TYPE")
+                        .font(PokerTypography.sectionHeader)
+                        .foregroundColor(.textSecondary)
+                }
+                .listRowBackground(Color.cardSurface)
+
+                // Stakes (only if cash sessions exist)
+                if !availableStakes.isEmpty {
+                    Section {
+                        filterRow("All Stakes", isSelected: selectedStakes == nil) {
+                            selectedStakes = nil
+                        }
+                        ForEach(availableStakes, id: \.self) { stakes in
+                            filterRow(stakes, isSelected: selectedStakes == stakes) {
+                                selectedStakes = stakes
+                            }
+                        }
+                    } header: {
+                        Text("STAKES")
+                            .font(PokerTypography.sectionHeader)
+                            .foregroundColor(.textSecondary)
+                    }
+                    .listRowBackground(Color.cardSurface)
+                }
+
+                // Location
+                if !availableVenues.isEmpty {
+                    Section {
+                        filterRow("All Locations", isSelected: selectedVenue == nil) {
+                            selectedVenue = nil
+                        }
+                        ForEach(availableVenues, id: \.self) { venue in
+                            filterRow(venue, isSelected: selectedVenue == venue) {
+                                selectedVenue = venue
+                            }
+                        }
+                    } header: {
+                        Text("LOCATION")
+                            .font(PokerTypography.sectionHeader)
+                            .foregroundColor(.textSecondary)
+                    }
+                    .listRowBackground(Color.cardSurface)
+                }
+
+                // Date Range
+                Section {
+                    ForEach(DateRangePreset.allCases.filter { $0 != .custom }, id: \.self) { preset in
+                        filterRow(preset.rawValue, isSelected: selectedDatePreset == preset) {
+                            selectedDatePreset = preset
+                        }
+                    }
+                    filterRow("Custom Range", isSelected: selectedDatePreset == .custom) {
+                        selectedDatePreset = .custom
+                    }
+
+                    if selectedDatePreset == .custom {
+                        DatePicker("From", selection: $customDateStart, in: ...customDateEnd, displayedComponents: .date)
+                            .font(PokerTypography.chatBody)
+                            .foregroundColor(.textPrimary)
+                            .tint(.goldAccent)
+
+                        DatePicker("To", selection: $customDateEnd, in: customDateStart..., displayedComponents: .date)
+                            .font(PokerTypography.chatBody)
+                            .foregroundColor(.textPrimary)
+                            .tint(.goldAccent)
+                    }
+                } header: {
+                    Text("DATE RANGE")
+                        .font(PokerTypography.sectionHeader)
+                        .foregroundColor(.textSecondary)
+                }
+                .listRowBackground(Color.cardSurface)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.backgroundPrimary)
+            .navigationTitle("Filters")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Reset") {
+                        selectedGameTypeRaw = nil
+                        selectedStakes = nil
+                        selectedVenue = nil
+                        selectedDatePreset = .allTime
+                    }
+                    .foregroundColor(.chipRed)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.goldAccent)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    private func filterRow(_ label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                action()
+            }
+        } label: {
+            HStack {
+                Text(label)
+                    .font(PokerTypography.chatBody)
+                    .foregroundColor(.textPrimary)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.goldAccent)
+                }
+            }
+        }
     }
 }
 

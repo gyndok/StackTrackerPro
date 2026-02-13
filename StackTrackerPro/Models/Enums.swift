@@ -134,6 +134,68 @@ enum GameType: String, Codable, CaseIterable {
         case .mixed: return "Mixed Game"
         }
     }
+
+    /// Returns a display label for any gameTypeRaw string (built-in or custom).
+    static func label(for rawValue: String) -> String {
+        if let builtIn = GameType(rawValue: rawValue) {
+            return builtIn.label
+        }
+        return GameTypeStore.shared.label(for: rawValue) ?? rawValue
+    }
+}
+
+// MARK: - Custom Game Type Storage
+
+final class GameTypeStore: @unchecked Sendable {
+    static let shared = GameTypeStore()
+    private let key = "settings.customGameTypes"
+
+    struct CustomType: Codable, Identifiable, Equatable {
+        var id: String { rawValue }
+        let rawValue: String
+        let label: String
+    }
+
+    var customTypes: [CustomType] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: key),
+                  let types = try? JSONDecoder().decode([CustomType].self, from: data) else {
+                return []
+            }
+            return types
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
+        }
+    }
+
+    /// All available game types: built-in + custom
+    var allOptions: [(rawValue: String, label: String)] {
+        var options: [(rawValue: String, label: String)] = GameType.allCases.map { ($0.rawValue, $0.label) }
+        options.append(contentsOf: customTypes.map { ($0.rawValue, $0.label) })
+        return options
+    }
+
+    func label(for rawValue: String) -> String? {
+        customTypes.first(where: { $0.rawValue == rawValue })?.label
+    }
+
+    func add(rawValue: String, label: String) {
+        var types = customTypes
+        guard !types.contains(where: { $0.rawValue == rawValue }) else { return }
+        // Don't add if it conflicts with a built-in type
+        guard GameType(rawValue: rawValue) == nil else { return }
+        types.append(CustomType(rawValue: rawValue, label: label))
+        customTypes = types
+    }
+
+    func remove(rawValue: String) {
+        var types = customTypes
+        types.removeAll { $0.rawValue == rawValue }
+        customTypes = types
+    }
 }
 
 // MARK: - BB Zone

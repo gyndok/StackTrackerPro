@@ -14,6 +14,7 @@ enum SettingsKeys {
     static let showMRatio = "settings.display.showMRatio"
     static let milestoneCelebrations = "settings.display.milestoneCelebrations"
     static let defaultStakes = "settings.defaults.stakes"
+    static let appTheme = "settings.display.appTheme"
 }
 
 // MARK: - Settings View
@@ -34,6 +35,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.hapticFeedback) private var hapticFeedback = true
     @AppStorage(SettingsKeys.showMRatio) private var showMRatio = false
     @AppStorage(SettingsKeys.milestoneCelebrations) private var milestoneCelebrations = true
+    @AppStorage(SettingsKeys.appTheme) private var appTheme = AppTheme.midnight.rawValue
 
     // Data queries
     @Query private var allPhotos: [ChipStackPhoto]
@@ -48,10 +50,10 @@ struct SettingsView: View {
     @State private var importResult: CSVImportResult?
     @State private var showImportResult = false
 
-    private var gameTypeBinding: Binding<GameType> {
+    private var gameTypeRawBinding: Binding<String> {
         Binding(
-            get: { GameType(rawValue: defaultGameType) ?? .nlh },
-            set: { defaultGameType = $0.rawValue }
+            get: { defaultGameType },
+            set: { defaultGameType = $0 }
         )
     }
 
@@ -61,6 +63,7 @@ struct SettingsView: View {
                 Color.backgroundPrimary.ignoresSafeArea()
 
                 Form {
+                    themeSection
                     sessionDefaultsSection
                     displaySection
                     importSection
@@ -77,16 +80,56 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Theme
+
+    private var themeSection: some View {
+        Section {
+            ForEach(AppTheme.allCases) { theme in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        appTheme = theme.rawValue
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        // Color swatches
+                        HStack(spacing: 3) {
+                            Circle().fill(theme.palette.backgroundPrimary).frame(width: 18, height: 18)
+                            Circle().fill(theme.palette.cardSurface).frame(width: 18, height: 18)
+                            Circle().fill(theme.palette.goldAccent).frame(width: 18, height: 18)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(theme.rawValue)
+                                .font(.body.weight(.medium))
+                                .foregroundColor(.textPrimary)
+                            Text(theme.description)
+                                .font(PokerTypography.chatCaption)
+                                .foregroundColor(.textSecondary)
+                        }
+
+                        Spacer()
+
+                        if appTheme == theme.rawValue {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.goldAccent)
+                                .font(.system(size: 20))
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("THEME")
+                .font(PokerTypography.sectionHeader)
+                .foregroundColor(.goldAccent)
+        }
+        .listRowBackground(Color.cardSurface)
+    }
+
     // MARK: - Session Defaults
 
     private var sessionDefaultsSection: some View {
         Section {
-            Picker("Game Type", selection: gameTypeBinding) {
-                ForEach(GameType.allCases, id: \.self) { type in
-                    Text(type.label).tag(type)
-                }
-            }
-            .tint(.goldAccent)
+            GameTypePickerView(selectedRawValue: gameTypeRawBinding)
 
             HStack {
                 Text("Default Stakes")

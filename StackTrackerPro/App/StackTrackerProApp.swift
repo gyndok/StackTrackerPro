@@ -6,6 +6,7 @@ struct StackTrackerProApp: App {
     @State private var tournamentManager = TournamentManager()
     @State private var chatManager: ChatManager?
     @State private var cashSessionManager = CashSessionManager()
+    @AppStorage(SettingsKeys.appTheme) private var appTheme = AppTheme.midnight.rawValue
     @State private var showSplash = true
 
     var sharedModelContainer: ModelContainer = {
@@ -69,6 +70,7 @@ struct StackTrackerProApp: App {
                         .zIndex(1)
                 }
             }
+            .id(appTheme)
             .preferredColorScheme(.dark)
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {

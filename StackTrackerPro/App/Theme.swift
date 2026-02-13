@@ -29,36 +29,152 @@ extension Color {
     }
 }
 
-// MARK: - Poker Color Palette
+// MARK: - App Theme
+
+enum AppTheme: String, CaseIterable, Identifiable {
+    case midnight = "Midnight"
+    case felt = "Felt"
+    case classic = "Classic"
+
+    var id: String { rawValue }
+
+    static var current: AppTheme {
+        AppTheme(rawValue: UserDefaults.standard.string(forKey: SettingsKeys.appTheme) ?? "Midnight") ?? .midnight
+    }
+
+    var description: String {
+        switch self {
+        case .midnight: return "Dark blue base"
+        case .felt: return "Casino table green"
+        case .classic: return "Navy & charcoal"
+        }
+    }
+
+    var palette: ThemePalette {
+        switch self {
+        case .midnight: return .midnight
+        case .felt: return .felt
+        case .classic: return .classic
+        }
+    }
+}
+
+// MARK: - Theme Palette
+
+struct ThemePalette {
+    let backgroundPrimary: Color
+    let backgroundSecondary: Color
+    let cardSurface: Color
+    let feltGreen: Color
+    let goldAccent: Color
+    let chipRed: Color
+    let chipBlue: Color
+    let userBubble: Color
+    let aiBubble: Color
+    let textPrimary: Color
+    let textSecondary: Color
+    let mZoneGreen: Color
+    let mZoneYellow: Color
+    let mZoneOrange: Color
+    let mZoneRed: Color
+    let borderSubtle: Color
+
+    // MARK: - Midnight (original)
+
+    static let midnight = ThemePalette(
+        backgroundPrimary: Color(hex: "0A0E14"),
+        backgroundSecondary: Color(hex: "131820"),
+        cardSurface: Color(hex: "1A2030"),
+        feltGreen: Color(hex: "1B5E20"),
+        goldAccent: Color(hex: "FFD54F"),
+        chipRed: Color(hex: "E53935"),
+        chipBlue: Color(hex: "1E88E5"),
+        userBubble: Color(hex: "1B5E20"),
+        aiBubble: Color(hex: "2A2D35"),
+        textPrimary: Color(hex: "E8EAED"),
+        textSecondary: Color(hex: "9AA0A6"),
+        mZoneGreen: Color(hex: "4CAF50"),
+        mZoneYellow: Color(hex: "FFC107"),
+        mZoneOrange: Color(hex: "FF9800"),
+        mZoneRed: Color(hex: "F44336"),
+        borderSubtle: Color.white.opacity(0.08)
+    )
+
+    // MARK: - Felt (casino green)
+
+    static let felt = ThemePalette(
+        backgroundPrimary: Color(hex: "0A1F15"),
+        backgroundSecondary: Color(hex: "112B1E"),
+        cardSurface: Color(hex: "1B4332"),
+        feltGreen: Color(hex: "1B4332"),
+        goldAccent: Color(hex: "D4A843"),
+        chipRed: Color(hex: "EF4444"),
+        chipBlue: Color(hex: "2DD4BF"),
+        userBubble: Color(hex: "22543D"),
+        aiBubble: Color(hex: "1A2E24"),
+        textPrimary: Color(hex: "F8FAFC"),
+        textSecondary: Color(hex: "94A3B8"),
+        mZoneGreen: Color(hex: "22C55E"),
+        mZoneYellow: Color(hex: "FBBF24"),
+        mZoneOrange: Color(hex: "F97316"),
+        mZoneRed: Color(hex: "EF4444"),
+        borderSubtle: Color.white.opacity(0.10)
+    )
+
+    // MARK: - Classic (navy & charcoal)
+
+    static let classic = ThemePalette(
+        backgroundPrimary: Color(hex: "0F172A"),
+        backgroundSecondary: Color(hex: "1A1A2E"),
+        cardSurface: Color(hex: "1E293B"),
+        feltGreen: Color(hex: "1B4332"),
+        goldAccent: Color(hex: "D4A843"),
+        chipRed: Color(hex: "EF4444"),
+        chipBlue: Color(hex: "2DD4BF"),
+        userBubble: Color(hex: "1B4332"),
+        aiBubble: Color(hex: "1E293B"),
+        textPrimary: Color(hex: "F8FAFC"),
+        textSecondary: Color(hex: "94A3B8"),
+        mZoneGreen: Color(hex: "22C55E"),
+        mZoneYellow: Color(hex: "FBBF24"),
+        mZoneOrange: Color(hex: "F97316"),
+        mZoneRed: Color(hex: "EF4444"),
+        borderSubtle: Color.white.opacity(0.10)
+    )
+}
+
+// MARK: - Dynamic Color Palette (reads active theme)
 
 extension Color {
+    private static var activePalette: ThemePalette { AppTheme.current.palette }
+
     // Backgrounds
-    static let backgroundPrimary = Color(hex: "0A0E14")
-    static let backgroundSecondary = Color(hex: "131820")
-    static let cardSurface = Color(hex: "1A2030")
+    static var backgroundPrimary: Color { activePalette.backgroundPrimary }
+    static var backgroundSecondary: Color { activePalette.backgroundSecondary }
+    static var cardSurface: Color { activePalette.cardSurface }
 
     // Accent colors
-    static let feltGreen = Color(hex: "1B5E20")
-    static let goldAccent = Color(hex: "FFD54F")
-    static let chipRed = Color(hex: "E53935")
-    static let chipBlue = Color(hex: "1E88E5")
+    static var feltGreen: Color { activePalette.feltGreen }
+    static var goldAccent: Color { activePalette.goldAccent }
+    static var chipRed: Color { activePalette.chipRed }
+    static var chipBlue: Color { activePalette.chipBlue }
 
     // Chat bubbles
-    static let userBubble = Color(hex: "1B5E20")
-    static let aiBubble = Color(hex: "2A2D35")
+    static var userBubble: Color { activePalette.userBubble }
+    static var aiBubble: Color { activePalette.aiBubble }
 
     // Text
-    static let textPrimary = Color(hex: "E8EAED")
-    static let textSecondary = Color(hex: "9AA0A6")
+    static var textPrimary: Color { activePalette.textPrimary }
+    static var textSecondary: Color { activePalette.textSecondary }
 
     // M-Zone colors
-    static let mZoneGreen = Color(hex: "4CAF50")
-    static let mZoneYellow = Color(hex: "FFC107")
-    static let mZoneOrange = Color(hex: "FF9800")
-    static let mZoneRed = Color(hex: "F44336")
+    static var mZoneGreen: Color { activePalette.mZoneGreen }
+    static var mZoneYellow: Color { activePalette.mZoneYellow }
+    static var mZoneOrange: Color { activePalette.mZoneOrange }
+    static var mZoneRed: Color { activePalette.mZoneRed }
 
     // Borders
-    static let borderSubtle = Color.white.opacity(0.08)
+    static var borderSubtle: Color { activePalette.borderSubtle }
 }
 
 // MARK: - Poker Typography

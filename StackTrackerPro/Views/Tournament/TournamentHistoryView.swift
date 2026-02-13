@@ -166,7 +166,7 @@ struct TournamentHistoryView: View {
                     .foregroundColor(.textPrimary)
 
                 HStack(spacing: 8) {
-                    Text(tournament.gameType.label)
+                    Text(tournament.gameTypeLabel)
                         .font(PokerTypography.chipLabel)
                         .foregroundColor(.textSecondary)
 

@@ -83,6 +83,7 @@
 		CA5H00000000000000010C /* CashSessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000C /* CashSessionListView.swift */; };
 		CA5H00000000000000010D /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000D /* ResultsView.swift */; };
 		CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000E /* ResultsAnalyticsView.swift */; };
+		CA5H00000000000000010F /* GameTypePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000F /* GameTypePickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -164,6 +165,7 @@
 		CA5H00000000000000000C /* CashSessionListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionListView.swift; sourceTree = "<group>"; };
 		CA5H00000000000000000D /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
 		CA5H00000000000000000E /* ResultsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsAnalyticsView.swift; sourceTree = "<group>"; };
+		CA5H00000000000000000F /* GameTypePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameTypePickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -288,6 +290,7 @@
 				45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */,
 				5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */,
 				1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */,
+				CA5H00000000000000000F /* GameTypePickerView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -519,6 +522,7 @@
 				CA5H00000000000000010C /* CashSessionListView.swift in Sources */,
 				CA5H00000000000000010D /* ResultsView.swift in Sources */,
 				CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */,
+				CA5H00000000000000010F /* GameTypePickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

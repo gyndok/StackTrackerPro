@@ -10,7 +10,7 @@ struct CashSessionSetupView: View {
 
     @State private var stakes = ""
     @State private var customStakes = ""
-    @State private var gameType: GameType = .nlh
+    @State private var gameTypeRaw: String = GameType.nlh.rawValue
     @State private var venueName = ""
     @State private var buyIn = ""
 
@@ -43,7 +43,7 @@ struct CashSessionSetupView: View {
                 }
             }
             .onAppear {
-                gameType = GameType(rawValue: savedGameType) ?? .nlh
+                gameTypeRaw = savedGameType
             }
         }
     }
@@ -98,12 +98,7 @@ struct CashSessionSetupView: View {
             }
 
             // Game type picker
-            Picker("Game Type", selection: $gameType) {
-                ForEach(GameType.allCases, id: \.self) { type in
-                    Text(type.label).tag(type)
-                }
-            }
-            .tint(.goldAccent)
+            GameTypePickerView(selectedRawValue: $gameTypeRaw)
         } header: {
             Text("GAME INFO")
                 .font(PokerTypography.sectionHeader)
@@ -163,7 +158,7 @@ struct CashSessionSetupView: View {
 
         let session = CashSession(
             stakes: effectiveStakes,
-            gameType: gameType,
+            gameTypeRaw: gameTypeRaw,
             buyInTotal: buyInAmount,
             venueName: venueName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : venueName.trimmingCharacters(in: .whitespaces)
         )
