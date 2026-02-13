@@ -11,30 +11,27 @@ struct TournamentListView: View {
     @State private var showingSetup = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.backgroundPrimary.ignoresSafeArea()
+        ZStack {
+            Color.backgroundPrimary.ignoresSafeArea()
 
-                if tournaments.isEmpty {
-                    emptyState
-                } else {
-                    tournamentList
+            if tournaments.isEmpty {
+                emptyState
+            } else {
+                tournamentList
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingSetup = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.goldAccent)
                 }
             }
-            .navigationTitle("Stack Tracker Pro")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showingSetup = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.goldAccent)
-                    }
-                }
-            }
-            .sheet(isPresented: $showingSetup) {
-                TournamentSetupView()
-            }
+        }
+        .sheet(isPresented: $showingSetup) {
+            TournamentSetupView()
         }
     }
 
