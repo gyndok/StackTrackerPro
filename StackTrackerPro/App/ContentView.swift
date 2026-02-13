@@ -39,7 +39,7 @@ struct ContentView: View {
             }
 
             Tab("Results", systemImage: "chart.line.uptrend.xyaxis") {
-                TournamentHistoryView()
+                ResultsView()
             }
 
             Tab("Settings", systemImage: "gearshape.fill") {
