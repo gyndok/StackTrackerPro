@@ -36,12 +36,14 @@ struct CashActiveSessionView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Chat input (fixed bottom)
-            CashChatInputView(
-                onAddOn: { showAddOnSheet = true },
-                onCashOut: { cashSessionManager.showEndSessionSheet() },
-                onHandNote: { selectedPage = 2 }
-            )
+            // Chat input (fixed bottom, hidden for completed sessions)
+            if session.status != .completed {
+                CashChatInputView(
+                    onAddOn: { showAddOnSheet = true },
+                    onCashOut: { cashSessionManager.showEndSessionSheet() },
+                    onHandNote: { selectedPage = 2 }
+                )
+            }
         }
         .background(Color.backgroundPrimary)
         .onChange(of: keepScreenAwake, initial: true) { _, newValue in
@@ -87,12 +89,14 @@ struct CashActiveSessionView: View {
                         Label("Hand Notes", systemImage: "note.text")
                     }
 
-                    Divider()
+                    if session.status != .completed {
+                        Divider()
 
-                    Button(role: .destructive) {
-                        cashSessionManager.showEndSessionSheet()
-                    } label: {
-                        Label("End Session", systemImage: "flag.checkered")
+                        Button(role: .destructive) {
+                            cashSessionManager.showEndSessionSheet()
+                        } label: {
+                            Label("End Session", systemImage: "flag.checkered")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -101,9 +105,11 @@ struct CashActiveSessionView: View {
             }
         }
         .onAppear {
-            cashSessionManager.activeSession = session
-            if session.status == .setup {
-                cashSessionManager.startSession(session)
+            if session.status != .completed {
+                cashSessionManager.activeSession = session
+                if session.status == .setup {
+                    cashSessionManager.startSession(session)
+                }
             }
         }
         .sheet(isPresented: Bindable(cashSessionManager).showEndSession) {

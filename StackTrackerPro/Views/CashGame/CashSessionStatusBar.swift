@@ -22,9 +22,9 @@ struct CashSessionStatusBar: View {
 
             Spacer()
 
-            // Center: live timer
-            TimelineView(.periodic(from: .now, by: 1.0)) { context in
-                let elapsed = context.date.timeIntervalSince(session.startTime)
+            // Center: timer (live when active, fixed when completed)
+            if session.status == .completed, let endTime = session.endTime {
+                let elapsed = endTime.timeIntervalSince(session.startTime)
                 let hours = Int(elapsed) / 3600
                 let minutes = (Int(elapsed) % 3600) / 60
                 let seconds = Int(elapsed) % 60
@@ -37,6 +37,23 @@ struct CashSessionStatusBar: View {
                         .font(PokerTypography.statValue)
                         .foregroundColor(.goldAccent)
                         .monospacedDigit()
+                }
+            } else {
+                TimelineView(.periodic(from: .now, by: 1.0)) { context in
+                    let elapsed = context.date.timeIntervalSince(session.startTime)
+                    let hours = Int(elapsed) / 3600
+                    let minutes = (Int(elapsed) % 3600) / 60
+                    let seconds = Int(elapsed) % 60
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .foregroundColor(.goldAccent)
+                            .font(.caption)
+                        Text(String(format: "%d:%02d:%02d", hours, minutes, seconds))
+                            .font(PokerTypography.statValue)
+                            .foregroundColor(.goldAccent)
+                            .monospacedDigit()
+                    }
                 }
             }
 

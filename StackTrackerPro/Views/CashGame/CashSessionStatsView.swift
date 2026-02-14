@@ -31,50 +31,62 @@ struct CashSessionStatsView: View {
         return "\(minutes)m"
     }
 
+    private var isCompleted: Bool {
+        session.status == .completed
+    }
+
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Hero P/L display
-                    heroPL
-
-                    // Stats grid
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        StatBlockView(
-                            label: "Duration",
-                            value: liveDuration(at: context.date)
-                        )
-
-                        StatBlockView(
-                            label: "Hourly Rate",
-                            value: formatHourlyRate(liveHourlyRate(at: context.date)),
-                            valueColor: liveHourlyRate(at: context.date) >= 0 ? .mZoneGreen : .chipRed
-                        )
-
-                        StatBlockView(
-                            label: "Total Buy-in",
-                            value: "$\(session.buyInTotal.formatted())"
-                        )
-
-                        StatBlockView(
-                            label: "Current Stack",
-                            value: session.latestStack != nil ? "$\(session.latestStack!.chipCount.formatted())" : "---"
-                        )
-
-                        StatBlockView(
-                            label: "Stakes",
-                            value: session.displayName
-                        )
-
-                        StatBlockView(
-                            label: "Hand Notes",
-                            value: "\(session.sortedHandNotes.count)"
-                        )
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+        if isCompleted {
+            statsContent(at: session.endTime ?? session.startTime)
+        } else {
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                statsContent(at: context.date)
             }
+        }
+    }
+
+    private func statsContent(at date: Date) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // Hero P/L display
+                heroPL
+
+                // Stats grid
+                LazyVGrid(columns: columns, spacing: 8) {
+                    StatBlockView(
+                        label: "Duration",
+                        value: liveDuration(at: date)
+                    )
+
+                    StatBlockView(
+                        label: "Hourly Rate",
+                        value: formatHourlyRate(liveHourlyRate(at: date)),
+                        valueColor: liveHourlyRate(at: date) >= 0 ? .mZoneGreen : .chipRed
+                    )
+
+                    StatBlockView(
+                        label: "Total Buy-in",
+                        value: "$\(session.buyInTotal.formatted())"
+                    )
+
+                    StatBlockView(
+                        label: "Current Stack",
+                        value: session.latestStack != nil ? "$\(session.latestStack!.chipCount.formatted())" : "---"
+                    )
+
+                    StatBlockView(
+                        label: "Stakes",
+                        value: session.displayName
+                    )
+
+                    StatBlockView(
+                        label: "Hand Notes",
+                        value: "\(session.sortedHandNotes.count)"
+                    )
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
     }
 
