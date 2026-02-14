@@ -7,16 +7,28 @@ extension HandNote: Identifiable {
 
 struct HandNotesPane: View {
     @Environment(TournamentManager.self) private var tournamentManager
-    let tournament: Tournament
+    @Environment(CashSessionManager.self) private var cashSessionManager
+    var tournament: Tournament? = nil
+    var cashSession: CashSession? = nil
 
     @State private var showAddSheet = false
     @State private var editingNote: HandNote?
     @State private var noteText = ""
 
+    /// Compute hand notes from whichever session is provided
+    private var handNotes: [HandNote] {
+        if let tournament {
+            return tournament.sortedHandNotes
+        } else if let cashSession {
+            return cashSession.sortedHandNotes
+        }
+        return []
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                if tournament.sortedHandNotes.isEmpty {
+                if handNotes.isEmpty {
                     emptyState
                 } else {
                     // Add button at top
@@ -25,7 +37,7 @@ struct HandNotesPane: View {
                         .padding(.top, 8)
 
                     LazyVStack(spacing: 8) {
-                        ForEach(tournament.sortedHandNotes) { note in
+                        ForEach(handNotes) { note in
                             handNoteRow(note)
                                 .onTapGesture {
                                     beginEditing(note)
@@ -37,7 +49,7 @@ struct HandNotesPane: View {
                                         Label("Edit", systemImage: "pencil")
                                     }
                                     Button(role: .destructive) {
-                                        tournamentManager.deleteHandNote(note)
+                                        deleteNote(note)
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
@@ -170,9 +182,9 @@ struct HandNotesPane: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         if isNew {
-                            tournamentManager.addHandNote(text: noteText)
+                            addNote()
                         } else if let note = existingNote {
-                            tournamentManager.updateHandNote(note, text: noteText)
+                            updateNote(note)
                         }
                         HapticFeedback.success()
                         showAddSheet = false
@@ -195,22 +207,36 @@ struct HandNotesPane: View {
 
     private var contextBar: some View {
         HStack(spacing: 12) {
-            if let displayLevel = tournament.currentDisplayLevel {
-                Label("Level \(displayLevel)", systemImage: "chart.bar")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
+            if let tournament {
+                if let displayLevel = tournament.currentDisplayLevel {
+                    Label("Level \(displayLevel)", systemImage: "chart.bar")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
 
-            if let blinds = tournament.currentBlinds {
-                Text(blinds.blindsDisplay)
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
+                if let blinds = tournament.currentBlinds {
+                    Text(blinds.blindsDisplay)
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
 
-            if let stack = tournament.latestStack {
-                Text(stack.formattedChipCount)
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.goldAccent)
+                if let stack = tournament.latestStack {
+                    Text(stack.formattedChipCount)
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.goldAccent)
+                }
+            } else if let cashSession {
+                if !cashSession.stakes.isEmpty {
+                    Label(cashSession.stakes, systemImage: "dollarsign.circle")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
+
+                if let stack = cashSession.latestStack {
+                    Text("$\(stack.chipCount)")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.goldAccent)
+                }
             }
 
             Spacer()
@@ -255,6 +281,33 @@ struct HandNotesPane: View {
         editingNote = note
     }
 
+    /// Route add through the appropriate manager
+    private func addNote() {
+        if cashSession != nil {
+            cashSessionManager.addHandNote(text: noteText)
+        } else {
+            tournamentManager.addHandNote(text: noteText)
+        }
+    }
+
+    /// Route update through the appropriate manager
+    private func updateNote(_ note: HandNote) {
+        if cashSession != nil {
+            cashSessionManager.updateHandNote(note, text: noteText)
+        } else {
+            tournamentManager.updateHandNote(note, text: noteText)
+        }
+    }
+
+    /// Route delete through the appropriate manager
+    private func deleteNote(_ note: HandNote) {
+        if cashSession != nil {
+            cashSessionManager.deleteHandNote(note)
+        } else {
+            tournamentManager.deleteHandNote(note)
+        }
+    }
+
     private func formatChips(_ value: Int) -> String {
         if value >= 1_000_000 {
             let m = Double(value) / 1_000_000.0
@@ -273,5 +326,6 @@ struct HandNotesPane: View {
 #Preview {
     HandNotesPane(tournament: Tournament(name: "Preview"))
         .environment(TournamentManager())
+        .environment(CashSessionManager())
         .background(Color.backgroundPrimary)
 }

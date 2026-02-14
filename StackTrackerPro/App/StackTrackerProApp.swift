@@ -5,11 +5,14 @@ import SwiftData
 struct StackTrackerProApp: App {
     @State private var tournamentManager = TournamentManager()
     @State private var chatManager: ChatManager?
+    @State private var cashSessionManager = CashSessionManager()
+    @AppStorage(SettingsKeys.appTheme) private var appTheme = AppTheme.midnight.rawValue
     @State private var showSplash = true
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Tournament.self,
+            CashSession.self,
             BlindLevel.self,
             StackEntry.self,
             ChatMessage.self,
@@ -52,12 +55,14 @@ struct StackTrackerProApp: App {
                 ContentView()
                     .onAppear {
                         tournamentManager.setContext(sharedModelContainer.mainContext)
+                        cashSessionManager.setContext(sharedModelContainer.mainContext)
                         if chatManager == nil {
                             chatManager = ChatManager(tournamentManager: tournamentManager)
                         }
                     }
                     .environment(tournamentManager)
                     .environment(chatManager ?? ChatManager(tournamentManager: tournamentManager))
+                    .environment(cashSessionManager)
 
                 if showSplash {
                     SplashScreenView()
@@ -65,6 +70,7 @@ struct StackTrackerProApp: App {
                         .zIndex(1)
                 }
             }
+            .id(appTheme)
             .preferredColorScheme(.dark)
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {

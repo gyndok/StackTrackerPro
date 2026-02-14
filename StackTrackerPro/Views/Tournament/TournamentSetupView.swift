@@ -17,7 +17,7 @@ struct TournamentSetupView: View {
     var tournament: Tournament?
 
     @State private var name = ""
-    @State private var gameType: GameType = .nlh
+    @State private var gameTypeRaw: String = GameType.nlh.rawValue
     @State private var venueName = ""
     @State private var buyIn = ""
     @State private var entryFee = ""
@@ -132,7 +132,7 @@ struct TournamentSetupView: View {
                 if tournament != nil {
                     loadExisting()
                 } else {
-                    gameType = GameType(rawValue: savedGameType) ?? .nlh
+                    gameTypeRaw = savedGameType
                     startingChips = "\(savedStartingChips)"
                     payoutPercent = "\(savedPayoutPercent)"
                 }
@@ -144,7 +144,7 @@ struct TournamentSetupView: View {
         var result = PokerAtlasScanResult()
         result.tournamentName = name.trimmingCharacters(in: .whitespaces)
         result.venueName = venueName.trimmingCharacters(in: .whitespaces)
-        result.gameType = gameType
+        result.gameType = GameType(rawValue: gameTypeRaw)
         result.buyIn = Int(buyIn)
         result.entryFee = Int(entryFee)
         result.bountyAmount = Int(bountyAmount)
@@ -230,12 +230,7 @@ struct TournamentSetupView: View {
             TextField("Tournament Name", text: $name)
                 .foregroundColor(.textPrimary)
 
-            Picker("Game Type", selection: $gameType) {
-                ForEach(GameType.allCases, id: \.self) { type in
-                    Text(type.label).tag(type)
-                }
-            }
-            .tint(.goldAccent)
+            GameTypePickerView(selectedRawValue: $gameTypeRaw)
         } header: {
             Text("TOURNAMENT INFO")
                 .font(PokerTypography.sectionHeader)
@@ -363,7 +358,7 @@ struct TournamentSetupView: View {
     private func loadExisting() {
         guard let tournament else { return }
         name = tournament.name
-        gameType = tournament.gameType
+        gameTypeRaw = tournament.gameTypeRaw
         venueName = tournament.venueName ?? ""
         buyIn = tournament.buyIn > 0 ? "\(tournament.buyIn)" : ""
         entryFee = tournament.entryFee > 0 ? "\(tournament.entryFee)" : ""
@@ -414,7 +409,7 @@ struct TournamentSetupView: View {
             shareToCloudKit = true
         }
         if let scannedGameType = result.gameType {
-            gameType = scannedGameType
+            gameTypeRaw = scannedGameType.rawValue
         }
         if let scannedBuyIn = result.buyIn, scannedBuyIn > 0 {
             buyIn = "\(scannedBuyIn)"
@@ -454,7 +449,6 @@ struct TournamentSetupView: View {
     private func createTournament() -> Tournament {
         let t = Tournament(
             name: name.trimmingCharacters(in: .whitespaces),
-            gameType: gameType,
             buyIn: Int(buyIn) ?? 0,
             entryFee: Int(entryFee) ?? 0,
             bountyAmount: Int(bountyAmount) ?? 0,
@@ -462,6 +456,7 @@ struct TournamentSetupView: View {
             startingChips: Int(startingChips) ?? 20000,
             reentryPolicy: reentryPolicy
         )
+        t.gameTypeRaw = gameTypeRaw
         t.venueName = venueName.isEmpty ? nil : venueName
         t.payoutPercent = Double(payoutPercent) ?? 15.0
         modelContext.insert(t)
@@ -500,7 +495,7 @@ struct TournamentSetupView: View {
         if let existing = tournament ?? createdTournament {
             // Update existing
             existing.name = name.trimmingCharacters(in: .whitespaces)
-            existing.gameType = gameType
+            existing.gameTypeRaw = gameTypeRaw
             existing.buyIn = Int(buyIn) ?? 0
             existing.entryFee = Int(entryFee) ?? 0
             existing.bountyAmount = Int(bountyAmount) ?? 0

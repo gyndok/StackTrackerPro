@@ -10,6 +10,7 @@ final class HandNote {
     var blindLevelNumber: Int = 0
     var blindsDisplay: String = ""
     var tournament: Tournament?
+    var cashSession: CashSession?
 
     init(
         timestamp: Date = .now,

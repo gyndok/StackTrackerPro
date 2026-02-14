@@ -14,7 +14,7 @@ struct StatusBarView: View {
                     .foregroundColor(.textPrimary)
                     .lineLimit(1)
 
-                Text(tournament.gameType.label)
+                Text(tournament.gameTypeLabel)
                     .font(PokerTypography.chatCaption)
                     .foregroundColor(.textSecondary)
             }

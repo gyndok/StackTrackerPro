@@ -111,6 +111,10 @@ final class Tournament {
         set { gameTypeRaw = newValue.rawValue }
     }
 
+    var gameTypeLabel: String {
+        GameType.label(for: gameTypeRaw)
+    }
+
     var status: TournamentStatus {
         get { TournamentStatus(rawValue: statusRaw) ?? .setup }
         set { statusRaw = newValue.rawValue }
