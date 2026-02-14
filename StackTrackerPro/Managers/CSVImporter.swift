@@ -47,7 +47,7 @@ struct CSVImporter {
             let stakes = columns[3].trimmingCharacters(in: .whitespaces)
             let location = columns[4].trimmingCharacters(in: .whitespaces)
             let buyIn = parseCurrency(columns[5])
-            let cashOut = parseCurrency(columns[6])
+            let cashOut = parseCurrency(columns[6]) ?? 0
             let durationHours = Double(columns[8].trimmingCharacters(in: .whitespaces))
             let notes = columns.count > 10 ? columns[10].trimmingCharacters(in: .whitespaces) : nil
 

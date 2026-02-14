@@ -28,7 +28,7 @@ struct CashAnalyticsView: View {
     // MARK: - Computed Properties
 
     private var totalProfit: Int {
-        sessions.compactMap(\.profit).reduce(0, +)
+        sessions.map { $0.profit ?? 0 }.reduce(0, +)
     }
 
     private var winRate: Double {
@@ -51,7 +51,7 @@ struct CashAnalyticsView: View {
         let grouped = Dictionary(grouping: sessions) { $0.stakes }
         return grouped.map { stakes, group in
             let count = group.count
-            let profit = group.compactMap(\.profit).reduce(0, +)
+            let profit = group.map { $0.profit ?? 0 }.reduce(0, +)
             let wins = group.filter { ($0.profit ?? 0) > 0 }.count
             let wr = count > 0 ? Double(wins) / Double(count) * 100 : 0
             return (stakes: stakes.isEmpty ? "Unknown" : stakes, sessions: count, winRate: wr, profit: profit)
@@ -285,8 +285,8 @@ struct CombinedAnalyticsView: View {
     // MARK: - Computed Properties
 
     private var totalProfit: Int {
-        let tournamentProfit = tournaments.compactMap(\.profit).reduce(0, +)
-        let cashProfit = cashSessions.compactMap(\.profit).reduce(0, +)
+        let tournamentProfit = tournaments.map { $0.profit ?? 0 }.reduce(0, +)
+        let cashProfit = cashSessions.map { $0.profit ?? 0 }.reduce(0, +)
         return tournamentProfit + cashProfit
     }
 
@@ -308,11 +308,11 @@ struct CombinedAnalyticsView: View {
     }
 
     private var tournamentProfit: Int {
-        tournaments.compactMap(\.profit).reduce(0, +)
+        tournaments.map { $0.profit ?? 0 }.reduce(0, +)
     }
 
     private var cashProfit: Int {
-        cashSessions.compactMap(\.profit).reduce(0, +)
+        cashSessions.map { $0.profit ?? 0 }.reduce(0, +)
     }
 
     // MARK: - Body
