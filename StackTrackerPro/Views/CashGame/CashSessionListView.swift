@@ -85,7 +85,7 @@ struct CashSessionListView: View {
                     .font(.headline)
                     .foregroundColor(.textPrimary)
 
-                if let venue = session.venueName {
+                if let venue = session.venueName, !venue.isEmpty {
                     Text(venue)
                         .font(PokerTypography.chipLabel)
                         .foregroundColor(.textSecondary)

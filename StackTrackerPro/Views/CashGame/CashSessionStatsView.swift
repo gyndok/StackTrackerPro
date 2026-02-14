@@ -15,14 +15,14 @@ struct CashSessionStatsView: View {
         return latest.chipCount - session.buyInTotal
     }
 
-    private var liveHourlyRate: Double {
-        let elapsed = Date.now.timeIntervalSince(session.startTime)
+    private func liveHourlyRate(at date: Date) -> Double {
+        let elapsed = date.timeIntervalSince(session.startTime)
         guard elapsed > 0 else { return 0 }
         return Double(currentPL) / (elapsed / 3600)
     }
 
-    private var liveDuration: String {
-        let elapsed = Date.now.timeIntervalSince(session.startTime)
+    private func liveDuration(at date: Date) -> String {
+        let elapsed = date.timeIntervalSince(session.startTime)
         let hours = Int(elapsed) / 3600
         let minutes = (Int(elapsed) % 3600) / 60
         if hours > 0 {
@@ -32,47 +32,49 @@ struct CashSessionStatsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Hero P/L display
-                heroPL
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Hero P/L display
+                    heroPL
 
-                // Stats grid
-                LazyVGrid(columns: columns, spacing: 8) {
-                    StatBlockView(
-                        label: "Duration",
-                        value: liveDuration
-                    )
+                    // Stats grid
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        StatBlockView(
+                            label: "Duration",
+                            value: liveDuration(at: context.date)
+                        )
 
-                    StatBlockView(
-                        label: "Hourly Rate",
-                        value: formatHourlyRate(liveHourlyRate),
-                        valueColor: liveHourlyRate >= 0 ? .mZoneGreen : .chipRed
-                    )
+                        StatBlockView(
+                            label: "Hourly Rate",
+                            value: formatHourlyRate(liveHourlyRate(at: context.date)),
+                            valueColor: liveHourlyRate(at: context.date) >= 0 ? .mZoneGreen : .chipRed
+                        )
 
-                    StatBlockView(
-                        label: "Total Buy-in",
-                        value: "$\(session.buyInTotal.formatted())"
-                    )
+                        StatBlockView(
+                            label: "Total Buy-in",
+                            value: "$\(session.buyInTotal.formatted())"
+                        )
 
-                    StatBlockView(
-                        label: "Current Stack",
-                        value: session.latestStack != nil ? "$\(session.latestStack!.chipCount.formatted())" : "---"
-                    )
+                        StatBlockView(
+                            label: "Current Stack",
+                            value: session.latestStack != nil ? "$\(session.latestStack!.chipCount.formatted())" : "---"
+                        )
 
-                    StatBlockView(
-                        label: "Stakes",
-                        value: session.displayName
-                    )
+                        StatBlockView(
+                            label: "Stakes",
+                            value: session.displayName
+                        )
 
-                    StatBlockView(
-                        label: "Hand Notes",
-                        value: "\(session.sortedHandNotes.count)"
-                    )
+                        StatBlockView(
+                            label: "Hand Notes",
+                            value: "\(session.sortedHandNotes.count)"
+                        )
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
         }
     }
 

@@ -73,7 +73,7 @@ struct CashSessionRecapSheet: View {
                         statRow(
                             "Hourly Rate",
                             value: formattedHourlyRate,
-                            valueColor: (session.hourlyRate ?? 0) >= 0 ? .mZoneGreen : .chipRed
+                            valueColor: session.hourlyRate.map { $0 >= 0 ? .mZoneGreen : .chipRed } ?? .textPrimary
                         )
                     }
                     .background(Color.cardSurface)

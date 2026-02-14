@@ -45,7 +45,7 @@ struct CashSessionStatusBar: View {
             // Right: current P/L
             if let latest = session.latestStack {
                 let pl = latest.chipCount - session.buyInTotal
-                Text(pl >= 0 ? "+$\(pl)" : "-$\(abs(pl))")
+                Text(pl >= 0 ? "+$\(pl.formatted())" : "-$\(abs(pl).formatted())")
                     .font(PokerTypography.statValue)
                     .foregroundColor(pl >= 0 ? .mZoneGreen : .chipRed)
             }

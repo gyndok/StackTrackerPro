@@ -101,16 +101,35 @@ struct CSVImporter {
         var fields: [String] = []
         var current = ""
         var inQuotes = false
+        let chars = Array(line)
+        var i = 0
 
-        for char in line {
-            if char == "\"" {
-                inQuotes.toggle()
-            } else if char == "," && !inQuotes {
-                fields.append(current)
-                current = ""
+        while i < chars.count {
+            let char = chars[i]
+            if inQuotes {
+                if char == "\"" {
+                    if i + 1 < chars.count && chars[i + 1] == "\"" {
+                        // Escaped quote: "" → literal "
+                        current.append("\"")
+                        i += 2
+                        continue
+                    } else {
+                        inQuotes = false
+                    }
+                } else {
+                    current.append(char)
+                }
             } else {
-                current.append(char)
+                if char == "\"" {
+                    inQuotes = true
+                } else if char == "," {
+                    fields.append(current)
+                    current = ""
+                } else {
+                    current.append(char)
+                }
             }
+            i += 1
         }
         fields.append(current)
         return fields

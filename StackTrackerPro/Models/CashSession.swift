@@ -123,6 +123,6 @@ final class CashSession {
     }
 
     var displayName: String {
-        "\(stakes) \(gameTypeLabel)"
+        [stakes, gameTypeLabel].filter { !$0.isEmpty }.joined(separator: " ")
     }
 }

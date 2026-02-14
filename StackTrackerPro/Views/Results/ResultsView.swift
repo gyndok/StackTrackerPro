@@ -197,7 +197,7 @@ struct ResultsView: View {
             for t in filteredTournaments {
                 let detail = buildTournamentDetail(t)
                 items.append(SessionItem(
-                    id: "t-\(t.persistentModelID.hashValue)",
+                    id: "t-\(t.persistentModelID)",
                     date: t.endDate ?? t.startDate,
                     name: t.name,
                     venue: t.venueName,
@@ -217,7 +217,7 @@ struct ResultsView: View {
             for c in filteredCashSessions {
                 let detail = buildCashDetail(c)
                 items.append(SessionItem(
-                    id: "c-\(c.persistentModelID.hashValue)",
+                    id: "c-\(c.persistentModelID)",
                     date: c.endTime ?? c.startTime,
                     name: c.displayName,
                     venue: c.venueName,

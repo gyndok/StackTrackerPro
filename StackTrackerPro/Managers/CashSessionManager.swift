@@ -80,17 +80,6 @@ final class CashSessionManager {
         save()
     }
 
-    func recordHandNote(_ text: String) {
-        guard let session = activeSession else { return }
-        let note = HandNote(
-            descriptionText: text,
-            stackBefore: session.latestStack?.chipCount,
-            blindsDisplay: session.stakes
-        )
-        session.handNotes?.append(note)
-        save()
-    }
-
     func addHandNote(text: String, stackBefore: Int? = nil) {
         guard let session = activeSession else { return }
         let note = HandNote(

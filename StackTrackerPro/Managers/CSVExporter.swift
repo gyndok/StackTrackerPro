@@ -35,7 +35,7 @@ struct CSVExporter {
             for session in cashSessions {
                 let date = session.endTime ?? session.startTime
                 let dateStr = dateFormatter.string(from: date)
-                let variant = session.gameTypeRaw
+                let variant = escapeCSV(session.gameTypeRaw)
                 let stakes = escapeCSV(session.stakes)
                 let location = escapeCSV(session.venueName ?? "")
                 let buyIn = session.buyInTotal
@@ -66,7 +66,7 @@ struct CSVExporter {
             for t in tournaments {
                 let date = t.endDate ?? t.startDate
                 let dateStr = dateFormatter.string(from: date)
-                let variant = t.gameTypeRaw
+                let variant = escapeCSV(t.gameTypeRaw)
                 let stakes = ""
                 let location = escapeCSV(t.venueName ?? "")
                 let buyIn = t.totalInvestment
