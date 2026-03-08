@@ -13,6 +13,7 @@ struct SessionRecapSheet: View {
     @State private var showMilestone = false
     @State private var currentMilestone: MilestoneType?
     @State private var showXShare = false
+    @State private var showVideoExport = false
 
     @Query private var allTournaments: [Tournament]
 
@@ -91,6 +92,29 @@ struct SessionRecapSheet: View {
                         )
                     }
                     .padding(.horizontal, 24)
+
+                    // Create Video button
+                    if !tournament.sortedStackEntries.isEmpty {
+                        Button {
+                            showVideoExport = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "film")
+                                Text("Create Video")
+                            }
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.goldAccent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.goldAccent.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.goldAccent.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .padding(.horizontal, 24)
+                    }
                 }
                 .padding(.vertical, 16)
             }
@@ -120,6 +144,9 @@ struct SessionRecapSheet: View {
         }
         .sheet(isPresented: $showXShare) {
             XShareComposeView(tournament: tournament, context: .completed)
+        }
+        .sheet(isPresented: $showVideoExport) {
+            VideoExportSheet(tournament: tournament)
         }
     }
 
