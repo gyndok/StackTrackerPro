@@ -83,8 +83,8 @@ struct VideoRecapView: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
 
-            if !tournament.venueName.isEmpty {
-                Text(tournament.venueName)
+            if let venue = tournament.venueName, !venue.isEmpty {
+                Text(venue)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.textSecondary)
             }

@@ -7,14 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CC1122334455667788990011 /* BreakEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1122334455667788990011 /* BreakEntry.swift */; };
-		CC2233445566778899001122 /* BreakTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD2233445566778899001122 /* BreakTimerSheet.swift */; };
 		000C7BA5DDB9D5D387B3C160 /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */; };
 		1D12AB0E92E70596BBC657CD /* StackGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BE4525C7D0D3EBC66A2DB44 /* StackGraphView.swift */; };
 		1D4C768A8E499FA09FA5165F /* StackEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2246D3C7B55BD60A532FF48 /* StackEntry.swift */; };
 		24F970FE3E9D3F06AA59D946 /* BountyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */; };
 		345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */; };
+		44C9DCA32F5DCC8500C52F6B /* VideoComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */; };
 		44F697F82F3A5D1F008DDBFF /* AnalyticsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */; };
+		BAF60A0F54732015C91EF026 /* VideoExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 660ACA799D4150711CF58317 /* VideoExportSheet.swift */; };
+		EEC659928F0C9B02682F666A /* VideoRecapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */; };
 		46AD5370A7D959B7B723909E /* Venue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */; };
 		4D0552939B94B2A0CA2C8E96 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E868BED6E80DA62280F89E /* ChatMessage.swift */; };
 		4E6F71E0F8574A68EEA410CD /* ResponseEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */; };
@@ -49,6 +50,24 @@
 		C2C3C4C5C6C7C8C9C0C1C2C3 /* ReceiptOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2D3D4D5D6D7D8D9D0D1D2D3 /* ReceiptOverlayView.swift */; };
 		C5B060D9CBF4503AF8BF9CB9 /* BlindStructureEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */; };
 		C5D4E3F2A1B0C9D8E7F6A5B4 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */; };
+		CA5H000000000000000101 /* CashSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000001 /* CashSession.swift */; };
+		CA5H000000000000000102 /* CashSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000002 /* CashSessionManager.swift */; };
+		CA5H000000000000000103 /* CSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000003 /* CSVImporter.swift */; };
+		CA5H000000000000000104 /* CashSessionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000004 /* CashSessionSetupView.swift */; };
+		CA5H000000000000000105 /* CashSessionStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000005 /* CashSessionStatusBar.swift */; };
+		CA5H000000000000000106 /* EndCashSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000006 /* EndCashSessionSheet.swift */; };
+		CA5H000000000000000107 /* CashActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000007 /* CashActiveSessionView.swift */; };
+		CA5H000000000000000108 /* CashStackGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000008 /* CashStackGraphView.swift */; };
+		CA5H000000000000000109 /* CashSessionStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000009 /* CashSessionStatsView.swift */; };
+		CA5H00000000000000010A /* CashChatInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000A /* CashChatInputView.swift */; };
+		CA5H00000000000000010B /* CashSessionRecapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000B /* CashSessionRecapSheet.swift */; };
+		CA5H00000000000000010C /* CashSessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000C /* CashSessionListView.swift */; };
+		CA5H00000000000000010D /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000D /* ResultsView.swift */; };
+		CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000E /* ResultsAnalyticsView.swift */; };
+		CA5H00000000000000010F /* GameTypePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000F /* GameTypePickerView.swift */; };
+		CA5H000000000000000113 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000013 /* CSVExporter.swift */; };
+		CC1122334455667788990011 /* BreakEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1122334455667788990011 /* BreakEntry.swift */; };
+		CC2233445566778899001122 /* BreakTimerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD2233445566778899001122 /* BreakTimerSheet.swift */; };
 		D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */; };
 		D2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */; };
 		D3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */; };
@@ -69,27 +88,9 @@
 		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
 		FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C122E458D953010331B7239C /* TournamentMetricsView.swift */; };
-		CA5H000000000000000101 /* CashSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000001 /* CashSession.swift */; };
-		CA5H000000000000000102 /* CashSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000002 /* CashSessionManager.swift */; };
-		CA5H000000000000000103 /* CSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000003 /* CSVImporter.swift */; };
-		CA5H000000000000000113 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000013 /* CSVExporter.swift */; };
-		CA5H000000000000000104 /* CashSessionSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000004 /* CashSessionSetupView.swift */; };
-		CA5H000000000000000105 /* CashSessionStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000005 /* CashSessionStatusBar.swift */; };
-		CA5H000000000000000106 /* EndCashSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000006 /* EndCashSessionSheet.swift */; };
-		CA5H000000000000000107 /* CashActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000007 /* CashActiveSessionView.swift */; };
-		CA5H000000000000000108 /* CashStackGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000008 /* CashStackGraphView.swift */; };
-		CA5H000000000000000109 /* CashSessionStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H000000000000000009 /* CashSessionStatsView.swift */; };
-		CA5H00000000000000010A /* CashChatInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000A /* CashChatInputView.swift */; };
-		CA5H00000000000000010B /* CashSessionRecapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000B /* CashSessionRecapSheet.swift */; };
-		CA5H00000000000000010C /* CashSessionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000C /* CashSessionListView.swift */; };
-		CA5H00000000000000010D /* ResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000D /* ResultsView.swift */; };
-		CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000E /* ResultsAnalyticsView.swift */; };
-		CA5H00000000000000010F /* GameTypePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5H00000000000000000F /* GameTypePickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		DD1122334455667788990011 /* BreakEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakEntry.swift; sourceTree = "<group>"; };
-		DD2233445566778899001122 /* BreakTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerSheet.swift; sourceTree = "<group>"; };
 		01CF7122D121AD978C3265B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		07E868BED6E80DA62280F89E /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevelsPane.swift; sourceTree = "<group>"; };
@@ -100,7 +101,10 @@
 		2042A65BAD0C37F569E8BB29 /* ChatBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubbleView.swift; sourceTree = "<group>"; };
 		33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentManager.swift; sourceTree = "<group>"; };
 		435A573CAFB0847E59AB2869 /* HandNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandNote.swift; sourceTree = "<group>"; };
+		44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoComposer.swift; sourceTree = "<group>"; };
 		44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsDashboardView.swift; sourceTree = "<group>"; };
+		4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecapView.swift; sourceTree = "<group>"; };
+		660ACA799D4150711CF58317 /* VideoExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExportSheet.swift; sourceTree = "<group>"; };
 		45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRatioBadge.swift; sourceTree = "<group>"; };
 		4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureEditorView.swift; sourceTree = "<group>"; };
 		5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBlockView.swift; sourceTree = "<group>"; };
@@ -136,26 +140,9 @@
 		C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPokerParser.swift; sourceTree = "<group>"; };
 		C5B62E3D5EFC67A262E5F764 /* ChatThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadView.swift; sourceTree = "<group>"; };
 		C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseEngine.swift; sourceTree = "<group>"; };
-		CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegexPokerParser.swift; sourceTree = "<group>"; };
-		D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndTournamentSheet.swift; sourceTree = "<group>"; };
-		D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentSetupView.swift; sourceTree = "<group>"; };
-		D2D3D4D5D6D7D8D9D0D1D2D3 /* ReceiptOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptOverlayView.swift; sourceTree = "<group>"; };
-		D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
-		DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
-		E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportEngine.swift; sourceTree = "<group>"; };
-		E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportView.swift; sourceTree = "<group>"; };
-		E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportCardView.swift; sourceTree = "<group>"; };
-		E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		E7450AB8F51603F31BC6348C /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
-		F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentHistoryView.swift; sourceTree = "<group>"; };
-		F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweetComposer.swift; sourceTree = "<group>"; };
-		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
-		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
-		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		CA5H000000000000000001 /* CashSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSession.swift; sourceTree = "<group>"; };
 		CA5H000000000000000002 /* CashSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionManager.swift; sourceTree = "<group>"; };
 		CA5H000000000000000003 /* CSVImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVImporter.swift; sourceTree = "<group>"; };
-		CA5H000000000000000013 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
 		CA5H000000000000000004 /* CashSessionSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionSetupView.swift; sourceTree = "<group>"; };
 		CA5H000000000000000005 /* CashSessionStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSessionStatusBar.swift; sourceTree = "<group>"; };
 		CA5H000000000000000006 /* EndCashSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndCashSessionSheet.swift; sourceTree = "<group>"; };
@@ -168,6 +155,25 @@
 		CA5H00000000000000000D /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
 		CA5H00000000000000000E /* ResultsAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsAnalyticsView.swift; sourceTree = "<group>"; };
 		CA5H00000000000000000F /* GameTypePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameTypePickerView.swift; sourceTree = "<group>"; };
+		CA5H000000000000000013 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExporter.swift; sourceTree = "<group>"; };
+		CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegexPokerParser.swift; sourceTree = "<group>"; };
+		D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndTournamentSheet.swift; sourceTree = "<group>"; };
+		D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentSetupView.swift; sourceTree = "<group>"; };
+		D2D3D4D5D6D7D8D9D0D1D2D3 /* ReceiptOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptOverlayView.swift; sourceTree = "<group>"; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
+		DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
+		DD1122334455667788990011 /* BreakEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakEntry.swift; sourceTree = "<group>"; };
+		DD2233445566778899001122 /* BreakTimerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimerSheet.swift; sourceTree = "<group>"; };
+		E1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportEngine.swift; sourceTree = "<group>"; };
+		E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportView.swift; sourceTree = "<group>"; };
+		E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportCardView.swift; sourceTree = "<group>"; };
+		E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		E7450AB8F51603F31BC6348C /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
+		F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentHistoryView.swift; sourceTree = "<group>"; };
+		F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweetComposer.swift; sourceTree = "<group>"; };
+		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
+		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
+		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -227,6 +233,7 @@
 		778F8A5CCA605DF481933210 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */,
 				33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */,
 				CA5H000000000000000002 /* CashSessionManager.swift */,
 				56DA5914D561AE928028205F /* ChatManager.swift */,
@@ -325,8 +332,35 @@
 				B8B9B0B1B2B3B4B5B6B7B8B9 /* MilestoneCardView.swift */,
 				F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */,
 				E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */,
+				4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */,
+				660ACA799D4150711CF58317 /* VideoExportSheet.swift */,
 			);
 			path = Sharing;
+			sourceTree = "<group>";
+		};
+		CA5H000000000000000201 /* CashGame */ = {
+			isa = PBXGroup;
+			children = (
+				CA5H000000000000000004 /* CashSessionSetupView.swift */,
+				CA5H000000000000000005 /* CashSessionStatusBar.swift */,
+				CA5H000000000000000006 /* EndCashSessionSheet.swift */,
+				CA5H000000000000000007 /* CashActiveSessionView.swift */,
+				CA5H000000000000000008 /* CashStackGraphView.swift */,
+				CA5H000000000000000009 /* CashSessionStatsView.swift */,
+				CA5H00000000000000000A /* CashChatInputView.swift */,
+				CA5H00000000000000000B /* CashSessionRecapSheet.swift */,
+				CA5H00000000000000000C /* CashSessionListView.swift */,
+			);
+			path = CashGame;
+			sourceTree = "<group>";
+		};
+		CA5H000000000000000202 /* Results */ = {
+			isa = PBXGroup;
+			children = (
+				CA5H00000000000000000D /* ResultsView.swift */,
+				CA5H00000000000000000E /* ResultsAnalyticsView.swift */,
+			);
+			path = Results;
 			sourceTree = "<group>";
 		};
 		D721B1E0647EB8BA7774BBD5 /* Products */ = {
@@ -360,31 +394,6 @@
 				E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */,
 			);
 			path = Settings;
-			sourceTree = "<group>";
-		};
-		CA5H000000000000000201 /* CashGame */ = {
-			isa = PBXGroup;
-			children = (
-				CA5H000000000000000004 /* CashSessionSetupView.swift */,
-				CA5H000000000000000005 /* CashSessionStatusBar.swift */,
-				CA5H000000000000000006 /* EndCashSessionSheet.swift */,
-				CA5H000000000000000007 /* CashActiveSessionView.swift */,
-				CA5H000000000000000008 /* CashStackGraphView.swift */,
-				CA5H000000000000000009 /* CashSessionStatsView.swift */,
-				CA5H00000000000000000A /* CashChatInputView.swift */,
-				CA5H00000000000000000B /* CashSessionRecapSheet.swift */,
-				CA5H00000000000000000C /* CashSessionListView.swift */,
-			);
-			path = CashGame;
-			sourceTree = "<group>";
-		};
-		CA5H000000000000000202 /* Results */ = {
-			isa = PBXGroup;
-			children = (
-				CA5H00000000000000000D /* ResultsView.swift */,
-				CA5H00000000000000000E /* ResultsAnalyticsView.swift */,
-			);
-			path = Results;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -503,6 +512,9 @@
 				F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */,
 				F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */,
 				D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */,
+				44C9DCA32F5DCC8500C52F6B /* VideoComposer.swift in Sources */,
+				EEC659928F0C9B02682F666A /* VideoRecapView.swift in Sources */,
+				BAF60A0F54732015C91EF026 /* VideoExportSheet.swift in Sources */,
 				D2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift in Sources */,
 				D3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift in Sources */,
 				F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */,
@@ -663,7 +675,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
@@ -678,7 +690,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -694,7 +706,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
@@ -709,7 +721,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

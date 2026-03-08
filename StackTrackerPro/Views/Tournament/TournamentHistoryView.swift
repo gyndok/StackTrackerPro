@@ -14,6 +14,7 @@ struct TournamentHistoryView: View {
     private var completedTournaments: [Tournament]
 
     @State private var tournamentForXShare: Tournament?
+    @State private var tournamentForVideo: Tournament?
     @State private var viewMode: ViewMode = .list
 
     var body: some View {
@@ -46,6 +47,9 @@ struct TournamentHistoryView: View {
             .navigationTitle("History")
             .sheet(item: $tournamentForXShare) { tournament in
                 XShareComposeView(tournament: tournament, context: .completed)
+            }
+            .fullScreenCover(item: $tournamentForVideo) { tournament in
+                VideoExportSheet(tournament: tournament)
             }
         }
     }
@@ -92,6 +96,14 @@ struct TournamentHistoryView: View {
                             tournamentForXShare = tournament
                         } label: {
                             Label("Post to X", systemImage: "square.and.arrow.up.fill")
+                        }
+
+                        if !tournament.sortedStackEntries.isEmpty {
+                            Button {
+                                tournamentForVideo = tournament
+                            } label: {
+                                Label("Create Video", systemImage: "film")
+                            }
                         }
                     }
                     .listRowBackground(Color.cardSurface)

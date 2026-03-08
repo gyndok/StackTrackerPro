@@ -12,6 +12,7 @@ struct ActiveSessionView: View {
     @State private var showLiveShare = false
     @State private var showXShare = false
     @State private var showBreakTimer = false
+    @State private var showVideoExport = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -147,6 +148,14 @@ struct ActiveSessionView: View {
                         Label("Post to X", systemImage: "square.and.arrow.up.fill")
                     }
 
+                    if !tournament.sortedStackEntries.isEmpty {
+                        Button {
+                            showVideoExport = true
+                        } label: {
+                            Label("Create Video", systemImage: "film")
+                        }
+                    }
+
                     Divider()
 
                     Button(role: .destructive) {
@@ -189,6 +198,9 @@ struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showBreakTimer) {
             BreakTimerSheet(tournament: tournament)
+        }
+        .fullScreenCover(isPresented: $showVideoExport) {
+            VideoExportSheet(tournament: tournament)
         }
     }
 

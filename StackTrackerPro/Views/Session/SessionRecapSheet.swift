@@ -145,7 +145,7 @@ struct SessionRecapSheet: View {
         .sheet(isPresented: $showXShare) {
             XShareComposeView(tournament: tournament, context: .completed)
         }
-        .sheet(isPresented: $showVideoExport) {
+        .fullScreenCover(isPresented: $showVideoExport) {
             VideoExportSheet(tournament: tournament)
         }
     }
