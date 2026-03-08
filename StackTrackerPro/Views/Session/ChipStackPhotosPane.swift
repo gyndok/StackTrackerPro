@@ -268,7 +268,7 @@ struct ChipStackPhotosPane: View {
         guard let compressed = compressImage(image) else { return }
         let photo = ChipStackPhoto(
             imageData: compressed,
-            blindLevel: tournament.currentBlindLevelNumber,
+            blindLevel: tournament.currentDisplayLevel ?? tournament.currentBlindLevelNumber,
             stackAtTime: tournament.latestStack?.chipCount
         )
         tournament.chipStackPhotos?.append(photo)

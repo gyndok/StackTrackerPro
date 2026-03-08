@@ -114,12 +114,14 @@ struct StackGraphView: View {
             }
         }
         .chartXAxis {
-            AxisMarks { value in
+            AxisMarks(values: .automatic(desiredCount: xAxisLabelCount(total: data.count))) { value in
                 AxisValueLabel {
                     if let label = value.as(String.self) {
                         Text(label)
                             .font(.caption2)
                             .foregroundColor(.textSecondary)
+                            .rotationEffect(.degrees(-45))
+                            .offset(y: 4)
                     }
                 }
             }
@@ -203,12 +205,14 @@ struct StackGraphView: View {
             }
         }
         .chartXAxis {
-            AxisMarks { value in
+            AxisMarks(values: .automatic(desiredCount: xAxisLabelCount(total: data.count))) { value in
                 AxisValueLabel {
                     if let label = value.as(String.self) {
                         Text(label)
                             .font(.caption2)
                             .foregroundColor(.textSecondary)
+                            .rotationEffect(.degrees(-45))
+                            .offset(y: 4)
                     }
                 }
             }
@@ -240,6 +244,13 @@ struct StackGraphView: View {
                     .foregroundColor(.textSecondary)
             }
         }
+    }
+
+    /// Limits X-axis labels so they don't overlap.
+    private func xAxisLabelCount(total: Int) -> Int {
+        if total <= 8 { return total }
+        if total <= 15 { return 6 }
+        return 5
     }
 
     private func formatChipsShort(_ value: Int) -> String {

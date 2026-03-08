@@ -421,12 +421,13 @@ final class PokerAtlasScanner: @unchecked Sendable {
         let deductions = parseDollarValue(keyValues["deductions"])
 
         if let total = totalBuyIn {
+            // buyIn = total cost to player, entryFee = house rake/fee
             if let ded = deductions, ded > 0, ded < total {
-                // buyIn = prize pool portion, entryFee = rake
-                result.buyIn = total - ded
+                result.buyIn = total
                 result.entryFee = ded
             } else if let entry = entryFee, entry > 0, entry < total {
-                result.buyIn = entry
+                // Poker Atlas "Entry Fee" = prize pool portion; rake = total - entry
+                result.buyIn = total
                 result.entryFee = total - entry
             } else {
                 result.buyIn = total
@@ -508,8 +509,13 @@ final class PokerAtlasScanner: @unchecked Sendable {
         if let match = dollarPlusPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text),
                let r2 = Range(match.range(at: 2), in: text) {
-                result.buyIn = parseNumberFromString(String(text[r1]))
-                result.entryFee = parseNumberFromString(String(text[r2]))
+                let prizePool = parseNumberFromString(String(text[r1]))
+                let fee = parseNumberFromString(String(text[r2]))
+                // "$330 + $70" → buyIn = total ($400), entryFee = fee ($70)
+                if let pp = prizePool, let f = fee {
+                    result.buyIn = pp + f
+                    result.entryFee = f
+                }
                 return
             }
         }

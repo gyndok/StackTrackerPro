@@ -188,7 +188,7 @@ final class Tournament {
     }
 
     var totalInvestment: Int {
-        (buyIn + entryFee) * (1 + rebuysUsed)
+        buyIn * (1 + rebuysUsed)
     }
 
     var profit: Int? {
@@ -220,7 +220,7 @@ final class Tournament {
     // MARK: - Tournament Metrics
 
     var prizePool: Int {
-        buyIn * fieldSize
+        (buyIn - entryFee) * fieldSize
     }
 
     var houseRake: Int {
@@ -233,8 +233,9 @@ final class Tournament {
     }
 
     var playersNeededForGuarantee: Int {
-        guard guarantee > 0, buyIn > 0 else { return 0 }
-        let needed = Int(ceil(Double(guarantee) / Double(buyIn))) - fieldSize
+        let prizePoolPerPlayer = buyIn - entryFee
+        guard guarantee > 0, prizePoolPerPlayer > 0 else { return 0 }
+        let needed = Int(ceil(Double(guarantee) / Double(prizePoolPerPlayer))) - fieldSize
         return max(0, needed)
     }
 
