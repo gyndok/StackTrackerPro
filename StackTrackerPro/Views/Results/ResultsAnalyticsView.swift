@@ -38,9 +38,10 @@ struct CashAnalyticsView: View {
     }
 
     private var avgHourly: Double {
-        let rates = sessions.compactMap(\.hourlyRate)
-        guard !rates.isEmpty else { return 0 }
-        return rates.reduce(0, +) / Double(rates.count)
+        let totalProfit = sessions.compactMap(\.profit).reduce(0, +)
+        let totalHours = sessions.compactMap(\.duration).reduce(0, +) / 3600
+        guard totalHours > 0 else { return 0 }
+        return Double(totalProfit) / totalHours
     }
 
     private var totalHoursPlayed: Double {
@@ -60,11 +61,11 @@ struct CashAnalyticsView: View {
     }
 
     private var biggestWin: Int {
-        sessions.compactMap(\.profit).max() ?? 0
+        sessions.compactMap(\.profit).filter { $0 > 0 }.max() ?? 0
     }
 
     private var biggestLoss: Int {
-        sessions.compactMap(\.profit).min() ?? 0
+        sessions.compactMap(\.profit).filter { $0 < 0 }.min() ?? 0
     }
 
     private var avgSessionDuration: String {

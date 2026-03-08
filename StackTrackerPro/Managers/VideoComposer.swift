@@ -80,8 +80,11 @@ final class VideoComposer {
         let totalFrames = Int(totalDuration * Double(config.fps))
 
         for frameIndex in 0..<totalFrames {
+            try Task.checkCancellation()
+
             // Wait for writer to be ready
             while !writerInput.isReadyForMoreMediaData {
+                try Task.checkCancellation()
                 try await Task.sleep(for: .milliseconds(10))
             }
 
@@ -97,7 +100,9 @@ final class VideoComposer {
             }
 
             let presentationTime = CMTime(value: CMTimeValue(frameIndex), timescale: CMTimeScale(config.fps))
-            adaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+            guard adaptor.append(pixelBuffer, withPresentationTime: presentationTime) else {
+                throw VideoComposerError.writingFailed
+            }
         }
 
         writerInput.markAsFinished()

@@ -124,6 +124,7 @@ struct VideoExportSheet: View {
 
             Button("Try Again") {
                 error = nil
+                progress = 0
                 startGeneration()
             }
             .font(.headline.weight(.semibold))

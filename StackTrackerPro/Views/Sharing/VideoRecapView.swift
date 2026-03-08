@@ -338,9 +338,13 @@ struct VideoRecapView: View {
 
     private func formatChipsShort(_ value: Int) -> String {
         if value >= 1_000_000 {
-            return String(format: "%.0fM", Double(value) / 1_000_000)
-        } else if value >= 1000 {
+            let m = Double(value) / 1_000_000
+            return m == m.rounded() ? String(format: "%.0fM", m) : String(format: "%.1fM", m)
+        } else if value >= 10_000 {
             return String(format: "%.0fk", Double(value) / 1000)
+        } else if value >= 1000 {
+            let k = Double(value) / 1000
+            return k == k.rounded() ? String(format: "%.0fk", k) : String(format: "%.1fk", k)
         }
         return "\(value)"
     }
