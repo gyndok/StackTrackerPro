@@ -14,8 +14,6 @@
 		345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */; };
 		44C9DCA32F5DCC8500C52F6B /* VideoComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */; };
 		44F697F82F3A5D1F008DDBFF /* AnalyticsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */; };
-		BAF60A0F54732015C91EF026 /* VideoExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 660ACA799D4150711CF58317 /* VideoExportSheet.swift */; };
-		EEC659928F0C9B02682F666A /* VideoRecapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */; };
 		46AD5370A7D959B7B723909E /* Venue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */; };
 		4D0552939B94B2A0CA2C8E96 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E868BED6E80DA62280F89E /* ChatMessage.swift */; };
 		4E6F71E0F8574A68EEA410CD /* ResponseEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */; };
@@ -45,6 +43,7 @@
 		AA3344556677889900112233 /* ReceiptCapturePane.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* ReceiptCapturePane.swift */; };
 		B339B3B12F2A4F4D8112DC01 /* ChatBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2042A65BAD0C37F569E8BB29 /* ChatBubbleView.swift */; };
 		B98C73505D56EA40DEDCB0EF /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */; };
+		BAF60A0F54732015C91EF026 /* VideoExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 660ACA799D4150711CF58317 /* VideoExportSheet.swift */; };
 		BE0350EA415B1F4A2053B229 /* FieldSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 567997920E43C3E11DE68146 /* FieldSnapshot.swift */; };
 		C1C2C3C4C5C6C7C8C9C0C1C2 /* EndTournamentSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */; };
 		C2C3C4C5C6C7C8C9C0C1C2C3 /* ReceiptOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2D3D4D5D6D7D8D9D0D1D2D3 /* ReceiptOverlayView.swift */; };
@@ -77,7 +76,10 @@
 		E1E2E3E4E5E6E7E8E9E0E1E2 /* TournamentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */; };
 		E1F145AAF41D1CFEB5562B0A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 529818AED3ED590453EC155B /* Assets.xcassets */; };
 		E3B8A1D4D7297074F9AADF0C /* MRatioBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */; };
+		E3F4A5B6C7D8E9F0A1B2C3D4 /* XShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */; };
 		E91D0161024547D9BB4F458F /* Tournament.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7450AB8F51603F31BC6348C /* Tournament.swift */; };
+		ED1T00000000000000000101 /* EditResultSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED1T00000000000000000001 /* EditResultSheet.swift */; };
+		EEC659928F0C9B02682F666A /* VideoRecapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */; };
 		F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */; };
 		F2E1D0C9A8B7C6D5E4F3A2B1 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* PokerAtlasScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */; };
@@ -103,9 +105,8 @@
 		435A573CAFB0847E59AB2869 /* HandNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandNote.swift; sourceTree = "<group>"; };
 		44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoComposer.swift; sourceTree = "<group>"; };
 		44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsDashboardView.swift; sourceTree = "<group>"; };
-		4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecapView.swift; sourceTree = "<group>"; };
-		660ACA799D4150711CF58317 /* VideoExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExportSheet.swift; sourceTree = "<group>"; };
 		45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MRatioBadge.swift; sourceTree = "<group>"; };
+		4873DA2EF3128A75CE0D78CD /* VideoRecapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecapView.swift; sourceTree = "<group>"; };
 		4A995FB1B68C4F92F234F309 /* BlindStructureEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureEditorView.swift; sourceTree = "<group>"; };
 		5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBlockView.swift; sourceTree = "<group>"; };
 		50C8CDE38102F8460DA98886 /* TournamentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentListView.swift; sourceTree = "<group>"; };
@@ -113,6 +114,7 @@
 		567997920E43C3E11DE68146 /* FieldSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldSnapshot.swift; sourceTree = "<group>"; };
 		56DA5914D561AE928028205F /* ChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
 		5D98A08EDB70CA37265C9783 /* ChatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputView.swift; sourceTree = "<group>"; };
+		660ACA799D4150711CF58317 /* VideoExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExportSheet.swift; sourceTree = "<group>"; };
 		66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StackTrackerPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
@@ -169,6 +171,7 @@
 		E3A4B5C6D7E8F9A0B1C2D3E5 /* ScoutingReportCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoutingReportCardView.swift; sourceTree = "<group>"; };
 		E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E7450AB8F51603F31BC6348C /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
+		ED1T00000000000000000001 /* EditResultSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditResultSheet.swift; sourceTree = "<group>"; };
 		F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentHistoryView.swift; sourceTree = "<group>"; };
 		F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweetComposer.swift; sourceTree = "<group>"; };
 		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
@@ -224,6 +227,7 @@
 				BB3344556677889900112233 /* ReceiptCapturePane.swift */,
 				B9B0B1B2B3B4B5B6B7B8B9B0 /* SessionRecapSheet.swift */,
 				D1D2D3D4D5D6D7D8D9D0D1D2 /* EndTournamentSheet.swift */,
+				ED1T00000000000000000001 /* EditResultSheet.swift */,
 				E2A3B4C5D6E7F8A9B0C1D2E4 /* ScoutingReportView.swift */,
 				DD2233445566778899001122 /* BreakTimerSheet.swift */,
 			);
@@ -508,6 +512,8 @@
 				A8A9A0A1A2A3A4A5A6A7A8A9 /* MilestoneCardView.swift in Sources */,
 				A9A0A1A2A3A4A5A6A7A8A9A0 /* SessionRecapSheet.swift in Sources */,
 				C1C2C3C4C5C6C7C8C9C0C1C2 /* EndTournamentSheet.swift in Sources */,
+				ED1T00000000000000000101 /* EditResultSheet.swift in Sources */,
+				E3F4A5B6C7D8E9F0A1B2C3D4 /* XShareComposeView.swift in Sources */,
 				E1E2E3E4E5E6E7E8E9E0E1E2 /* TournamentHistoryView.swift in Sources */,
 				F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */,
 				F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */,
@@ -675,9 +681,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
@@ -690,7 +697,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -706,9 +713,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
@@ -721,7 +729,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

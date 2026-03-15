@@ -59,6 +59,7 @@ struct StackTrackerProApp: App {
                         if chatManager == nil {
                             chatManager = ChatManager(tournamentManager: tournamentManager)
                         }
+                        migrateNilPayouts(context: sharedModelContainer.mainContext)
                     }
                     .environment(tournamentManager)
                     .environment(chatManager ?? ChatManager(tournamentManager: tournamentManager))
@@ -81,5 +82,28 @@ struct StackTrackerProApp: App {
             }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    /// One-time fix: completed tournaments with nil payout should be 0
+    /// so profit calculates correctly as a loss.
+    private func migrateNilPayouts(context: ModelContext) {
+        let migrationKey = "didMigrateNilPayouts"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+
+        do {
+            let descriptor = FetchDescriptor<Tournament>()
+            let all = try context.fetch(descriptor)
+            var changed = false
+            for tournament in all where tournament.statusRaw == "completed" && tournament.payout == nil {
+                tournament.payout = 0
+                changed = true
+            }
+            if changed {
+                try context.save()
+            }
+            UserDefaults.standard.set(true, forKey: migrationKey)
+        } catch {
+            // Non-fatal — will retry next launch
+        }
     }
 }

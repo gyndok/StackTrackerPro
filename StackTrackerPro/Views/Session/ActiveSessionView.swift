@@ -13,6 +13,7 @@ struct ActiveSessionView: View {
     @State private var showXShare = false
     @State private var showBreakTimer = false
     @State private var showVideoExport = false
+    @State private var showEditResult = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -156,6 +157,16 @@ struct ActiveSessionView: View {
                         }
                     }
 
+                    if tournament.status == .completed {
+                        Divider()
+
+                        Button {
+                            showEditResult = true
+                        } label: {
+                            Label("Edit Result", systemImage: "pencil.circle")
+                        }
+                    }
+
                     Divider()
 
                     Button(role: .destructive) {
@@ -198,6 +209,9 @@ struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showBreakTimer) {
             BreakTimerSheet(tournament: tournament)
+        }
+        .sheet(isPresented: $showEditResult) {
+            EditResultSheet(tournament: tournament)
         }
         .fullScreenCover(isPresented: $showVideoExport) {
             VideoExportSheet(tournament: tournament)

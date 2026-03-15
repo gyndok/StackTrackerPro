@@ -65,7 +65,7 @@ final class TournamentManager {
         guard let tournament = activeTournament else { return }
         tournament.status = .completed
         tournament.finishPosition = position
-        tournament.payout = payout
+        tournament.payout = payout ?? 0
         tournament.endDate = endDate
         save()
         // Keep tournament alive for recap — do NOT clear activeTournament yet
