@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokerStackTrackerPro — User Manual</title>
+  <meta name="description" content="Complete user manual for PokerStackTrackerPro. Learn how to track tournaments, cash games, use AI updates, scan blind structures, and analyze your results.">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:    #d4af37;
+      --gold-lt: #f0d060;
+      --green:   #1a7a3a;
+      --dark:    #0d0d0d;
+      --dark2:   #141414;
+      --dark3:   #1c1c1c;
+      --dark4:   #242424;
+      --text:    #e0e0e0;
+      --muted:   #888;
+      --border:  #2a2a2a;
+      --sidebar: 260px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: rgba(13,13,13,0.97);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 54px;
+      flex-shrink: 0;
+    }
+    .nav-logo { font-size: 16px; font-weight: 700; color: var(--gold); text-decoration: none; }
+    .nav-links { display: flex; gap: 20px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-cta {
+      background: var(--gold); color: #000;
+      padding: 6px 16px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; flex: 1; }
+
+    /* ── SIDEBAR ── */
+    aside {
+      width: var(--sidebar);
+      flex-shrink: 0;
+      position: sticky;
+      top: 54px;
+      height: calc(100vh - 54px);
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      background: var(--dark2);
+      padding: 20px 0;
+    }
+    .toc-section {
+      margin-bottom: 6px;
+    }
+    .toc-heading {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gold);
+      padding: 8px 20px 4px;
+    }
+    .toc-link {
+      display: block;
+      padding: 6px 20px 6px 28px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s, background 0.15s;
+      border-left: 2px solid transparent;
+    }
+    .toc-link:hover {
+      color: var(--gold);
+      background: rgba(212,175,55,0.06);
+      border-left-color: var(--gold);
+    }
+    .toc-link.active {
+      color: var(--gold);
+      border-left-color: var(--gold);
+      background: rgba(212,175,55,0.08);
+    }
+
+    /* ── MAIN CONTENT ── */
+    main {
+      flex: 1;
+      max-width: 820px;
+      padding: 48px 40px 80px;
+      min-width: 0;
+    }
+
+    /* ── SECTIONS ── */
+    .manual-section {
+      margin-bottom: 64px;
+      scroll-margin-top: 74px;
+    }
+    .section-badge {
+      display: inline-block;
+      background: rgba(212,175,55,0.12);
+      color: var(--gold);
+      border: 1px solid rgba(212,175,55,0.25);
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      scroll-margin-top: 74px;
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gold);
+      margin: 24px 0 8px;
+    }
+    p { margin-bottom: 14px; color: var(--text); font-size: 15px; }
+    ul, ol { margin: 0 0 14px 20px; }
+    li { margin-bottom: 6px; font-size: 15px; color: var(--text); }
+    strong { color: #fff; font-weight: 600; }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code {
+      background: var(--dark3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--gold-lt);
+    }
+
+    /* ── CALLOUT BOXES ── */
+    .callout {
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.6;
+      border-left: 3px solid;
+    }
+    .callout-tip   { background: rgba(26,122,58,0.12); border-color: #1a7a3a; }
+    .callout-note  { background: rgba(212,175,55,0.08); border-color: var(--gold); }
+    .callout-warn  { background: rgba(204,102,0,0.1);  border-color: #cc6600; }
+    .callout .label { font-weight: 700; margin-right: 6px; }
+    .callout-tip  .label { color: #4caf50; }
+    .callout-note .label { color: var(--gold); }
+    .callout-warn .label { color: #ff9800; }
+
+    /* ── STEP LIST ── */
+    .steps { list-style: none; margin: 0 0 16px; padding: 0; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      font-size: 15px;
+    }
+    .steps li::before {
+      content: counter(step);
+      background: var(--gold);
+      color: #000;
+      font-weight: 800;
+      font-size: 12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── ZONE TABLE ── */
+    .zone-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+    .zone-table th {
+      background: var(--dark3);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .zone-table td {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .zone-table tr:nth-child(even) td { background: var(--dark3); }
+    .badge {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge-green  { background: rgba(76,175,80,0.2);  color: #4caf50; }
+    .badge-yellow { background: rgba(255,193,7,0.2);  color: #ffc107; }
+    .badge-orange { background: rgba(255,152,0,0.2);  color: #ff9800; }
+    .badge-red    { background: rgba(244,67,54,0.2);  color: #f44336; }
+    .badge-gold   { background: rgba(212,175,55,0.2); color: var(--gold); }
+
+    /* ── AI EXAMPLES ── */
+    .ai-examples { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+    .ai-bubble {
+      background: var(--dark3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-family: 'SF Mono', monospace;
+      color: var(--gold-lt);
+      max-width: 400px;
+    }
+    .ai-bubble.response {
+      background: rgba(26,122,58,0.12);
+      border-color: rgba(76,175,80,0.3);
+      color: #b8f0c8;
+      font-family: -apple-system, sans-serif;
+      font-size: 13px;
+      align-self: flex-end;
+      max-width: 460px;
+    }
+
+    /* ── QUICK REF ── */
+    .quick-ref {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .quick-card {
+      background: var(--dark3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .quick-card .qc-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .quick-card ul { margin: 0 0 0 14px; }
+    .quick-card li { font-size: 13px; color: var(--muted); margin-bottom: 3px; }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; margin: 0 10px; }
+    footer a:hover { color: var(--gold); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      aside { display: none; }
+      main { padding: 32px 20px 60px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">♠ PokerStackTrackerPro</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="manual.html" style="color:var(--gold)">Manual</a>
+    <a href="privacy-policy.html">Privacy</a>
+  </div>
+  <a href="https://apps.apple.com/app/pokerstacktrackerpro/id6760260251" class="nav-cta" target="_blank">App Store</a>
+</nav>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside>
+  <div class="toc-section">
+    <div class="toc-heading">Getting Started</div>
+    <a href="#overview" class="toc-link">Overview</a>
+    <a href="#quickstart" class="toc-link">Quick Start</a>
+    <a href="#navigation" class="toc-link">Navigation</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Tournaments</div>
+    <a href="#tournament-setup" class="toc-link">Setting Up a Tournament</a>
+    <a href="#scan-blinds" class="toc-link">Scanning Blind Structures</a>
+    <a href="#scouting" class="toc-link">Scouting Reports</a>
+    <a href="#active-session" class="toc-link">Active Session</a>
+    <a href="#ai-chat" class="toc-link">AI Chat Updates</a>
+    <a href="#mzone" class="toc-link">M-Ratio & Stack Zones</a>
+    <a href="#hand-notes" class="toc-link">Hand Notes & Photos</a>
+    <a href="#ending" class="toc-link">Ending a Tournament</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Cash Games</div>
+    <a href="#cash-setup" class="toc-link">Starting a Cash Session</a>
+    <a href="#cash-active" class="toc-link">Tracking Cash Sessions</a>
+    <a href="#cash-end" class="toc-link">Ending a Cash Session</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Analytics</div>
+    <a href="#results" class="toc-link">Results Dashboard</a>
+    <a href="#analytics" class="toc-link">Analytics Deep Dive</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Sharing</div>
+    <a href="#share-cards" class="toc-link">Share Cards</a>
+    <a href="#video-recaps" class="toc-link">Video Recaps</a>
+    <a href="#milestones" class="toc-link">Milestones</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Data</div>
+    <a href="#import-export" class="toc-link">Import & Export</a>
+    <a href="#icloud" class="toc-link">iCloud Sync</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Settings</div>
+    <a href="#settings" class="toc-link">Settings</a>
+    <a href="#themes" class="toc-link">Themes</a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main>
+
+  <!-- OVERVIEW -->
+  <div class="manual-section" id="overview">
+    <div class="section-badge">User Manual</div>
+    <h1>PokerStackTrackerPro</h1>
+    <p>PokerStackTrackerPro is a native iOS app for tracking poker tournaments and cash games in real time. Use AI chat to update your stack naturally, scan blind structures with your camera, and review deep analytics to improve your game.</p>
+    <p>This manual covers every feature of the app. Use the sidebar to jump to any section.</p>
+
+    <div class="callout callout-tip">
+      <span class="label">💡 Tip</span> Keep PokerStackTrackerPro open on the table — the screen wake lock keeps your display on automatically during active sessions.
+    </div>
+  </div>
+
+  <!-- QUICK START -->
+  <div class="manual-section" id="quickstart">
+    <h2>Quick Start</h2>
+    <p>Up and running in under two minutes:</p>
+    <ol class="steps">
+      <li>Open the app and tap <strong>Tournaments</strong> or <strong>Cash Games</strong> from the home tab.</li>
+      <li>Tap the <strong>+ New</strong> button to create a session.</li>
+      <li>Enter your tournament name and buy-in — or <strong>scan a blind structure</strong> to auto-fill everything.</li>
+      <li>Tap <strong>Start</strong>. Your session is live.</li>
+      <li>Use the <strong>AI chat bar</strong> at the bottom to update your stack: just type <code>I have 45k</code>.</li>
+    </ol>
+    <div class="callout callout-note">
+      <span class="label">📝 Note</span> No account or login required. All data is stored locally on your device and synced to iCloud automatically.
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <div class="manual-section" id="navigation">
+    <h2>Navigation</h2>
+    <p>The app has three main tabs at the bottom of the screen:</p>
+    <div class="quick-ref">
+      <div class="quick-card">
+        <div class="qc-title">🎰 Tournaments</div>
+        <ul>
+          <li>Active tournament (if any)</li>
+          <li>Tournament history list</li>
+          <li>Create a new tournament</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">💵 Cash Games</div>
+        <ul>
+          <li>Active cash session (if any)</li>
+          <li>Cash session history</li>
+          <li>Create a new cash session</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">📊 Results</div>
+        <ul>
+          <li>Overall profit/loss chart</li>
+          <li>Analytics dashboard</li>
+          <li>Filter by game type, venue, date</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- TOURNAMENT SETUP -->
+  <div class="manual-section" id="tournament-setup">
+    <h2>Setting Up a Tournament</h2>
+    <p>Tap <strong>Tournaments → + New Tournament</strong>. The setup screen has four sections:</p>
+
+    <h3>Quick Setup (top section)</h3>
+    <ul>
+      <li><strong>Scan Poker Atlas Screenshot</strong> — take or upload a photo of a tournament poster or blind schedule to auto-fill the entire form. See <a href="#scan-blinds">Scanning Blind Structures</a>.</li>
+      <li><strong>Browse Nearby Events</strong> — find tournaments shared by other players nearby via CloudKit.</li>
+      <li><strong>Share This Event</strong> — toggle to contribute this tournament's details to the shared pool (appears after filling in name and venue).</li>
+    </ul>
+
+    <h3>Fields</h3>
+    <table class="zone-table">
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td><strong>Tournament Name</strong></td><td>Any name you choose (required)</td></tr>
+      <tr><td><strong>Game Type</strong></td><td>NLH, PLO, Mixed, or a custom game type you've created in Settings</td></tr>
+      <tr><td><strong>Venue</strong></td><td>The card room or casino name</td></tr>
+      <tr><td><strong>Buy-in / Entry Fee</strong></td><td>Buy-in is your prize pool contribution; entry fee goes to the house</td></tr>
+      <tr><td><strong>Bounty Amount</strong></td><td>Per-bounty value for PKO tournaments</td></tr>
+      <tr><td><strong>Guarantee</strong></td><td>Guaranteed prize pool (optional)</td></tr>
+      <tr><td><strong>Re-entry Policy</strong></td><td>None, 1, 2, or Unlimited re-entries</td></tr>
+      <tr><td><strong>Starting Chips</strong></td><td>Your starting stack (required)</td></tr>
+      <tr><td><strong>Starting SB / BB</strong></td><td>First blind level — auto-filled if you scan</td></tr>
+    </table>
+
+    <h3>Blind Structure Editor</h3>
+    <p>Tap <strong>Edit Full Blind Structure</strong> to enter the complete blind schedule. Each level includes: level number, small blind, big blind, ante, and duration (minutes). You can add break entries. If you scanned, the levels are pre-populated — review and edit as needed.</p>
+
+    <div class="callout callout-tip">
+      <span class="label">💡 Tip</span> Set default values (starting chips, game type, payout %) in <strong>Settings → Defaults</strong> to speed up future setups.
+    </div>
+  </div>
+
+  <!-- SCAN BLINDS -->
+  <div class="manual-section" id="scan-blinds">
+    <h2>Scanning Blind Structures</h2>
+    <p>PokerStackTrackerPro can read a blind schedule from a photo and auto-fill your tournament setup — no manual entry needed.</p>
+
+    <ol class="steps">
+      <li>On the New Tournament screen, tap <strong>Scan Poker Atlas Screenshot</strong>.</li>
+      <li>Choose <strong>Camera</strong> to take a live photo, or <strong>Photo Library</strong> to upload one you already have. You can select up to 10 images at once for multi-page structures.</li>
+      <li>The app runs OCR on the image(s) and extracts blind levels, starting chips, buy-in, and venue name where available.</li>
+      <li>Review the pre-filled fields and make any corrections before tapping <strong>Start</strong>.</li>
+    </ol>
+
+    <div class="callout callout-note">
+      <span class="label">📝 Note</span> Works best with clear, well-lit photos. Blurry or angled images may result in partial extraction — always verify the results before starting.
+    </div>
+  </div>
+
+  <!-- SCOUTING REPORTS -->
+  <div class="manual-section" id="scouting">
+    <h2>Pre-Game Scouting Reports</h2>
+    <p>Once you have a blind structure loaded, tap <strong>View Scouting Report</strong> on the setup screen (or swipe to the Scouting pane during an active session).</p>
+    <p>The scouting report analyzes the structure and provides:</p>
+    <ul>
+      <li>Critical blind levels (when antes kick in, when ICM pressure increases)</li>
+      <li>Estimated ITM bubble and final table timing by level</li>
+      <li>Structure speed assessment (turbo, fast, standard, deep)</li>
+      <li>Recommended opening strategy based on structure speed and game type</li>
+      <li>Stack-to-blind warnings at key levels for your starting stack</li>
+    </ul>
+  </div>
+
+  <!-- ACTIVE SESSION -->
+  <div class="manual-section" id="active-session">
+    <h2>Active Session — The 8 Panes</h2>
+    <p>During an active tournament, swipe left and right through 8 panes. The status bar at the top (showing current stack, level, and elapsed time) stays fixed on every pane.</p>
+
+    <div class="quick-ref">
+      <div class="quick-card">
+        <div class="qc-title">📈 Pane 1 — Stack Graph</div>
+        <ul>
+          <li>Live chart of your stack over time</li>
+          <li>Average stack overlay line</li>
+          <li>Starting chips baseline</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">📊 Pane 2 — Metrics</div>
+        <ul>
+          <li>Current M-ratio and BB count</li>
+          <li>Zone badge + coaching tip</li>
+          <li>Field size, players remaining</li>
+          <li>Rebuys, bounties, add-ons</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">🎯 Pane 3 — Blind Levels</div>
+        <ul>
+          <li>Full blind schedule</li>
+          <li>Current level highlighted</li>
+          <li>Time remaining per level</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">📷 Pane 4 — Chip Photos</div>
+        <ul>
+          <li>Timestamped chip stack photos</li>
+          <li>Tap + to add a photo</li>
+          <li>Stack count recorded with photo</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">🧾 Pane 5 — Receipt</div>
+        <ul>
+          <li>Capture your buy-in receipt</li>
+          <li>Stamped with time and stack</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">📝 Pane 6 — Hand Notes</div>
+        <ul>
+          <li>Log hand details with context</li>
+          <li>Stack count and blind level auto-attached</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">💬 Pane 7 — AI Chat</div>
+        <ul>
+          <li>Full message history</li>
+          <li>Update stack via natural language</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">🔍 Pane 8 — Scouting</div>
+        <ul>
+          <li>Pre-game strategy report</li>
+          <li>Viewable anytime during play</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Status Bar (always visible)</h3>
+    <p>The fixed bar at the top shows: <strong>current stack</strong>, <strong>blind level</strong>, <strong>M-ratio zone badge</strong>, <strong>players remaining</strong>, and <strong>elapsed time</strong>. Tap the break timer icon to start a break countdown.</p>
+  </div>
+
+  <!-- AI CHAT -->
+  <div class="manual-section" id="ai-chat">
+    <h2>AI Chat Updates</h2>
+    <p>The fastest way to update your session is through the AI chat bar at the bottom of the screen. Just type naturally — the app extracts what it needs.</p>
+
+    <h3>What you can say</h3>
+    <div class="ai-examples">
+      <div class="ai-bubble">"I have 32k"</div>
+      <div class="ai-bubble">"310 left in the field"</div>
+      <div class="ai-bubble">"blinds just went up to 500/1000"</div>
+      <div class="ai-bubble">"took a rebuy"</div>
+      <div class="ai-bubble">"just knocked someone out, bounty collected"</div>
+      <div class="ai-bubble">"busted in 47th, cashed for $340"</div>
+      <div class="ai-bubble response">✅ Stack updated to 32,000. M-ratio: 14.2 — Yellow Zone. Consider widening your opening range.</div>
+    </div>
+
+    <h3>What gets extracted automatically</h3>
+    <ul>
+      <li><strong>Stack size</strong> — "32k", "32,000", "32 thousand"</li>
+      <li><strong>Players remaining</strong> — "310 left", "about 400 in the field"</li>
+      <li><strong>Blind level</strong> — "blinds are 500/1000/100 ante"</li>
+      <li><strong>Rebuys</strong> — "took a rebuy", "re-entered"</li>
+      <li><strong>Bounties</strong> — "knocked one out", "collected a bounty"</li>
+      <li><strong>Final result</strong> — "busted in 47th", "finished 3rd, won $1,200"</li>
+    </ul>
+
+    <div class="callout callout-tip">
+      <span class="label">💡 Tip</span> On devices that support <strong>Apple Intelligence</strong>, the AI parser uses the on-device model for enhanced accuracy. On all other iPhones, a smart regex parser handles extraction — both work well.
+    </div>
+
+    <h3>Quick Actions</h3>
+    <p>Tap the quick action buttons next to the chat input for one-tap updates: <strong>Rebuy</strong>, <strong>Add-On</strong>, <strong>Bounty</strong>, and <strong>Break</strong>.</p>
+  </div>
+
+  <!-- M-RATIO -->
+  <div class="manual-section" id="mzone">
+    <h2>M-Ratio &amp; Stack Zones</h2>
+    <p>The app tracks your <strong>M-ratio</strong> (stack ÷ cost of one full orbit) and your <strong>BB count</strong> (stack ÷ big blind) in real time. Both are displayed in the status bar and Metrics pane.</p>
+
+    <table class="zone-table">
+      <tr>
+        <th>Zone</th>
+        <th>M-Ratio</th>
+        <th>BB Count</th>
+        <th>Strategy Tip</th>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">🟢 Green</span></td>
+        <td>20+</td>
+        <td>30+</td>
+        <td>Comfortable. Play your full range and look for accumulation spots.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-yellow">🟡 Yellow</span></td>
+        <td>10–20</td>
+        <td>15–30</td>
+        <td>Getting shorter. Widen your opening range, look for re-steal spots.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-orange">🟠 Orange</span></td>
+        <td>5–10</td>
+        <td>8–15</td>
+        <td>Push/fold territory approaching. Look to shove light from late position.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-red">🔴 Red</span></td>
+        <td>&lt;5</td>
+        <td>&lt;8</td>
+        <td>Critical. Push or fold only — any ace, pair, or two broadways is a shove.</td>
+      </tr>
+    </table>
+
+    <p>The zone badge in the status bar updates in real time as your stack and blind level change.</p>
+  </div>
+
+  <!-- HAND NOTES -->
+  <div class="manual-section" id="hand-notes">
+    <h2>Hand Notes &amp; Chip Stack Photos</h2>
+
+    <h3>Hand Notes (Pane 6)</h3>
+    <p>Tap the <strong>+</strong> button on the Hand Notes pane to log a hand. Your current stack size and blind level are automatically recorded with the note — you just write what happened.</p>
+    <p>Use this for: key hands you want to review later, bad beats worth remembering, or strategic decisions you made.</p>
+
+    <h3>Chip Stack Photos (Pane 4)</h3>
+    <p>Tap <strong>+</strong> on the Chip Stack Photos pane to take a timestamped photo of your stack. Each photo is stored with the timestamp, your current stack count, and the blind level at the time.</p>
+
+    <h3>Buy-In Receipt (Pane 5)</h3>
+    <p>Capture your buy-in receipt for record-keeping. The image is saved with the session.</p>
+  </div>
+
+  <!-- ENDING A TOURNAMENT -->
+  <div class="manual-section" id="ending">
+    <h2>Ending a Tournament</h2>
+    <p>When your tournament is over, tap the <strong>End Session</strong> button (accessible from the status bar menu or bottom action bar). A sheet appears to record:</p>
+    <ul>
+      <li><strong>Final position</strong> — where you finished</li>
+      <li><strong>Payout</strong> — your cash winnings (if any)</li>
+      <li><strong>Total bounties collected</strong></li>
+      <li><strong>Additional notes</strong></li>
+    </ul>
+    <p>After confirming, you'll be taken to the <strong>Session Recap</strong> screen showing a full summary, and prompted to create a share card or video recap.</p>
+  </div>
+
+  <hr>
+
+  <!-- CASH SETUP -->
+  <div class="manual-section" id="cash-setup">
+    <h2>Starting a Cash Session</h2>
+    <p>Tap <strong>Cash Games → + New Session</strong>. Fill in:</p>
+    <ul>
+      <li><strong>Game Type</strong> — NLH, PLO, Mixed, or custom</li>
+      <li><strong>Stakes</strong> — e.g. 1/2, 2/5, 5/10</li>
+      <li><strong>Venue</strong></li>
+      <li><strong>Buy-in Amount</strong> — how much you sat down with</li>
+    </ul>
+    <p>Tap <strong>Start Session</strong>. The timer starts immediately.</p>
+  </div>
+
+  <!-- CASH ACTIVE -->
+  <div class="manual-section" id="cash-active">
+    <h2>Tracking Cash Sessions</h2>
+    <p>Cash session tracking works the same as tournaments with the AI chat bar. Type your current stack at any point:</p>
+    <div class="ai-examples">
+      <div class="ai-bubble">"sitting at 680"</div>
+      <div class="ai-bubble">"bought in another 200"</div>
+      <div class="ai-bubble response">✅ Stack updated to $680. Up $80 from buy-in. Hourly rate: +$24/hr</div>
+    </div>
+    <p>The status bar shows your <strong>current stack</strong>, <strong>profit/loss</strong>, <strong>hourly rate</strong>, and <strong>session duration</strong> in real time.</p>
+    <p>Swipe through panes for the <strong>stack graph</strong>, <strong>session stats</strong>, and <strong>hand notes</strong>.</p>
+  </div>
+
+  <!-- CASH END -->
+  <div class="manual-section" id="cash-end">
+    <h2>Ending a Cash Session</h2>
+    <p>Tap <strong>End Session</strong> and enter your <strong>cash-out amount</strong>. The app calculates your net result, hourly rate, and adds the session to your results history.</p>
+  </div>
+
+  <hr>
+
+  <!-- RESULTS -->
+  <div class="manual-section" id="results">
+    <h2>Results Dashboard</h2>
+    <p>The <strong>Results</strong> tab shows your complete playing history at a glance:</p>
+    <ul>
+      <li><strong>Cumulative profit/loss chart</strong> — your running total over time</li>
+      <li><strong>Summary stats</strong> — total profit, sessions played, ITM rate, biggest win</li>
+      <li><strong>Session list</strong> — all tournaments and cash sessions, sortable and filterable</li>
+    </ul>
+    <p>Tap any session in the list to view its full recap, including the stack graph, timeline, and all notes and photos from that session.</p>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="manual-section" id="analytics">
+    <h2>Analytics Deep Dive</h2>
+    <p>Tap <strong>Analytics</strong> within the Results tab for deeper breakdowns:</p>
+    <ul>
+      <li><strong>ROI</strong> — return on investment across all sessions</li>
+      <li><strong>Win Rate / Hourly Rate</strong> — how much you make per hour</li>
+      <li><strong>Performance by Game Type</strong> — NLH vs PLO vs Mixed</li>
+      <li><strong>Performance by Venue</strong> — which card rooms are most profitable for you</li>
+      <li><strong>Performance by Stakes</strong> — for cash games</li>
+      <li><strong>Average field size and ITM rate</strong> — tournament-specific</li>
+      <li><strong>Biggest wins and losses</strong></li>
+    </ul>
+    <p>Use the filter bar to narrow results by date range, game type, or format (tournaments only / cash only).</p>
+  </div>
+
+  <hr>
+
+  <!-- SHARE CARDS -->
+  <div class="manual-section" id="share-cards">
+    <h2>Share Cards</h2>
+    <p>After ending a session — or from any past session recap — tap <strong>Share</strong> to create a polished image card. Three formats are available:</p>
+    <ul>
+      <li><strong>Stories</strong> — 9:16 vertical format for Instagram/TikTok Stories</li>
+      <li><strong>Feed</strong> — 1:1 square format for Instagram/Twitter feed posts</li>
+      <li><strong>Quote</strong> — minimal card with a key stat or quote from your session</li>
+    </ul>
+    <p>Cards include your result, profit/loss, session details, and a mini stack graph. Tap <strong>Post to X</strong> to share directly to X/Twitter, or use the native share sheet to send anywhere.</p>
+  </div>
+
+  <!-- VIDEO RECAPS -->
+  <div class="manual-section" id="video-recaps">
+    <h2>Video Recaps</h2>
+    <p>Tap <strong>Video Recap</strong> from the session recap screen to generate a short animated video of your session. The video shows:</p>
+    <ul>
+      <li>Animated stack graph building over time</li>
+      <li>Key session stats overlaid</li>
+      <li>Your final result</li>
+    </ul>
+    <p>Tap <strong>Export</strong> to save to your Photos app or share directly to social media.</p>
+
+    <div class="callout callout-note">
+      <span class="label">📝 Note</span> Video generation may take a few seconds depending on session length.
+    </div>
+  </div>
+
+  <!-- MILESTONES -->
+  <div class="manual-section" id="milestones">
+    <h2>Milestones</h2>
+    <p>The app automatically detects and celebrates key milestones:</p>
+    <ul>
+      <li>🏆 <strong>First Cash</strong> — your first tournament cash</li>
+      <li>🥇 <strong>First Place</strong> — winning a tournament outright</li>
+      <li>⭐ <strong>New Personal Best</strong> — your biggest cash ever</li>
+      <li>👑 <strong>Final Table</strong> — making it to the final table</li>
+    </ul>
+    <p>When a milestone is triggered, you'll see a special milestone card that you can share.</p>
+  </div>
+
+  <hr>
+
+  <!-- IMPORT / EXPORT -->
+  <div class="manual-section" id="import-export">
+    <h2>Import &amp; Export</h2>
+
+    <h3>CSV Import</h3>
+    <p>Go to <strong>Settings → Import Data</strong> to bring in historical sessions from a CSV file. Useful if you've been tracking in a spreadsheet and want to consolidate your history.</p>
+
+    <h3>CSV Export</h3>
+    <p>Go to <strong>Settings → Export Data</strong> to export all your sessions as a CSV file. Opens the native share sheet so you can save to Files, email, or open in Excel/Numbers.</p>
+  </div>
+
+  <!-- ICLOUD -->
+  <div class="manual-section" id="icloud">
+    <h2>iCloud Sync</h2>
+    <p>PokerStackTrackerPro uses <strong>iCloud (CloudKit)</strong> to sync your data across all your Apple devices automatically. No setup required — as long as you're signed into iCloud, your sessions appear on every device.</p>
+
+    <div class="callout callout-tip">
+      <span class="label">💡 Tip</span> iCloud sync is automatic and background. If you don't see recent sessions on a second device, pull down to refresh or wait a few seconds for the sync to complete.
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- SETTINGS -->
+  <div class="manual-section" id="settings">
+    <h2>Settings</h2>
+    <p>Access Settings from the gear icon in the top-right corner of any main tab.</p>
+    <table class="zone-table">
+      <tr><th>Setting</th><th>Description</th></tr>
+      <tr><td><strong>Default Game Type</strong></td><td>Pre-fills the game type picker on new sessions</td></tr>
+      <tr><td><strong>Default Starting Chips</strong></td><td>Pre-fills starting stack for new tournaments</td></tr>
+      <tr><td><strong>Default Payout %</strong></td><td>Pre-fills the payout percentage field</td></tr>
+      <tr><td><strong>Keep Screen Awake</strong></td><td>Prevents your screen from sleeping during active sessions (on by default)</td></tr>
+      <tr><td><strong>Haptic Feedback</strong></td><td>Toggle vibration for key events</td></tr>
+      <tr><td><strong>Theme</strong></td><td>Choose between Midnight, Felt, and Classic dark themes</td></tr>
+      <tr><td><strong>Custom Game Types</strong></td><td>Add your own game types (e.g. "8-Game", "Stud")</td></tr>
+      <tr><td><strong>Import Data</strong></td><td>Import sessions from a CSV file</td></tr>
+      <tr><td><strong>Export Data</strong></td><td>Export all sessions to CSV</td></tr>
+    </table>
+  </div>
+
+  <!-- THEMES -->
+  <div class="manual-section" id="themes">
+    <h2>Themes</h2>
+    <p>Three dark themes are available, all designed for low-light poker room conditions. Change theme in <strong>Settings → Theme</strong>.</p>
+    <div class="quick-ref">
+      <div class="quick-card">
+        <div class="qc-title" style="color:#7986CB">🌙 Midnight</div>
+        <ul><li>Deep navy background</li><li>Gold accent</li><li>Best for dark card rooms</li></ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title" style="color:#4caf50">🎰 Felt</div>
+        <ul><li>Deep green background</li><li>Classic casino felt look</li><li>High contrast</li></ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title" style="color:#c8860a">♠ Classic</div>
+        <ul><li>Rich dark brown</li><li>Warm amber accent</li><li>Traditional card room feel</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="manual-section">
+    <h2>Support</h2>
+    <p>Found a bug or have a feature request? Open an issue on <a href="https://github.com/gyndok/StackTrackerPro/issues" target="_blank">GitHub</a>. We read every submission.</p>
+    <p>For privacy information, see our <a href="privacy-policy.html">Privacy Policy</a>.</p>
+  </div>
+
+</main>
+</div>
+
+<footer>
+  <div>
+    <a href="index.html">Home</a>
+    <a href="manual.html">Manual</a>
+    <a href="privacy-policy.html">Privacy</a>
+    <a href="https://github.com/gyndok/StackTrackerPro/issues" target="_blank">Support</a>
+    <a href="https://apps.apple.com/app/pokerstacktrackerpro/id6760260251" target="_blank">App Store</a>
+  </div>
+  <p style="margin-top: 12px;">© 2026 Geffrey Klein. All rights reserved.</p>
+</footer>
+
+<script>
+  // Highlight active sidebar link on scroll
+  const links = document.querySelectorAll('.toc-link');
+  const sections = document.querySelectorAll('.manual-section[id], h2[id]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.toc-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
