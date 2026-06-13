@@ -71,6 +71,8 @@ struct BreakTimerSheet: View {
                                     .padding(.vertical, 10)
                                     .background(selectedDuration == preset.seconds ? Color.goldAccent : Color.cardSurface)
                             }
+                            .accessibilityLabel("\(preset.label) minutes")
+                            .accessibilityAddTraits(selectedDuration == preset.seconds ? [.isSelected] : [])
                         }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -147,8 +149,10 @@ struct BreakTimerSheet: View {
                                     .font(.title3)
                                     .foregroundColor(.white)
                                     .shadow(radius: 2)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
-                            .padding(6)
+                            .accessibilityLabel("Remove photo")
                         }
                     } else {
                         Button {
@@ -190,7 +194,8 @@ struct BreakTimerSheet: View {
                     .padding(.horizontal, 16)
                 }
 
-                // Start Break button
+                // Start Break button — table/seat are optional so a plain
+                // countdown can be started without filling anything in.
                 Button {
                     startBreak()
                 } label: {
@@ -199,19 +204,13 @@ struct BreakTimerSheet: View {
                         .foregroundColor(.backgroundPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(startButtonDisabled ? Color.gray.opacity(0.4) : Color.goldAccent)
+                        .background(Color.goldAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .disabled(startButtonDisabled)
                 .padding(.horizontal, 16)
             }
             .padding(.vertical, 16)
         }
-    }
-
-    private var startButtonDisabled: Bool {
-        tableNumber.trimmingCharacters(in: .whitespaces).isEmpty ||
-        seatNumber.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     // MARK: - Active Countdown
@@ -260,8 +259,8 @@ struct BreakTimerSheet: View {
 
                 // Info cards
                 HStack(spacing: 12) {
-                    infoCard(title: "TABLE", value: latestBreak?.tableNumber ?? "—")
-                    infoCard(title: "SEAT", value: latestBreak?.seatNumber ?? "—")
+                    infoCard(title: "TABLE", value: displayValue(latestBreak?.tableNumber))
+                    infoCard(title: "SEAT", value: displayValue(latestBreak?.seatNumber))
                     infoCard(title: "CHIPS", value: (latestBreak?.chipCount ?? 0).formatted())
                 }
                 .padding(.horizontal, 16)
@@ -293,6 +292,11 @@ struct BreakTimerSheet: View {
                 Spacer()
             }
         }
+    }
+
+    private func displayValue(_ value: String?) -> String {
+        let trimmed = value?.trimmingCharacters(in: .whitespaces) ?? ""
+        return trimmed.isEmpty ? "—" : trimmed
     }
 
     private func infoCard(title: String, value: String) -> some View {

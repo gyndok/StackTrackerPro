@@ -65,6 +65,8 @@ struct CashSessionStatusBar: View {
                 Text(pl >= 0 ? "+$\(pl.formatted())" : "-$\(abs(pl).formatted())")
                     .font(PokerTypography.statValue)
                     .foregroundColor(pl >= 0 ? .mZoneGreen : .chipRed)
+                    .accessibilityLabel("Profit and loss")
+                    .accessibilityValue(pl >= 0 ? "up $\(pl.formatted())" : "down $\(abs(pl).formatted())")
             }
         }
         .padding(.horizontal, 16)

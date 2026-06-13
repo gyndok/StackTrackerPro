@@ -36,6 +36,7 @@ struct ChatThreadView: View {
             Image(systemName: "bubble.left.and.bubble.right")
                 .font(.system(size: 40))
                 .foregroundColor(.textSecondary.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("Start chatting to track your tournament")
                 .font(PokerTypography.chatBody)

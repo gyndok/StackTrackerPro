@@ -28,6 +28,7 @@ struct CashSessionListView: View {
                     Image(systemName: "plus.circle.fill")
                         .foregroundColor(.goldAccent)
                 }
+                .accessibilityLabel("Add cash session")
             }
         }
         .sheet(isPresented: $showingSetup) {
@@ -40,6 +41,7 @@ struct CashSessionListView: View {
             Image(systemName: "dollarsign.circle.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.goldAccent.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No Cash Sessions")
                 .font(.title2.weight(.semibold))

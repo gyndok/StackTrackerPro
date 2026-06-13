@@ -104,6 +104,7 @@ struct CashAnalyticsView: View {
             Image(systemName: "chart.bar.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.goldAccent.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No Cash Analytics")
                 .font(.title2.weight(.semibold))
@@ -339,6 +340,7 @@ struct CombinedAnalyticsView: View {
             Image(systemName: "chart.bar.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.goldAccent.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No Analytics Available")
                 .font(.title2.weight(.semibold))

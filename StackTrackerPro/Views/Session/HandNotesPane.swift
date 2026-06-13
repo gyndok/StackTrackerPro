@@ -42,6 +42,8 @@ struct HandNotesPane: View {
                                 .onTapGesture {
                                     beginEditing(note)
                                 }
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityHint("Double tap to edit")
                                 .contextMenu {
                                     Button {
                                         beginEditing(note)
@@ -261,6 +263,7 @@ struct HandNotesPane: View {
             Image(systemName: "note.text")
                 .font(.system(size: 40))
                 .foregroundColor(.textSecondary.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No hand notes yet")
                 .font(PokerTypography.chatBody)

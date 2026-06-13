@@ -164,6 +164,7 @@ struct TournamentBrowserView: View {
             Image(systemName: "map")
                 .font(.system(size: 48))
                 .foregroundColor(.textSecondary)
+                .accessibilityHidden(true)
             Text("No Nearby Events")
                 .font(.title3.weight(.semibold))
                 .foregroundColor(.textPrimary)
@@ -182,6 +183,7 @@ struct TournamentBrowserView: View {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: 48))
                 .foregroundColor(.textSecondary)
+                .accessibilityHidden(true)
             Text("No Matching Events")
                 .font(.title3.weight(.semibold))
                 .foregroundColor(.textPrimary)
@@ -242,6 +244,7 @@ struct TournamentBrowserView: View {
                                     .clipShape(Capsule())
                                     .overlay(Capsule().stroke(Color.goldAccent.opacity(0.3), lineWidth: 1))
                             }
+                            .accessibilityAddTraits(selectedFilter == filter ? [.isSelected] : [])
                         }
                     }
                     .padding(.leading)
@@ -274,6 +277,8 @@ struct TournamentBrowserView: View {
                 }
                 .padding(.trailing)
                 .padding(.leading, 8)
+                .accessibilityLabel("Filters")
+                .accessibilityValue(activeFilterCount > 0 ? "\(activeFilterCount) active" : "none active")
             }
             .padding(.vertical, 10)
 
@@ -330,6 +335,7 @@ struct TournamentBrowserView: View {
             .clipShape(Capsule())
             .overlay(Capsule().stroke(Color.goldAccent.opacity(0.3), lineWidth: 1))
         }
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
     }
 
     private var expandedFilterSection: some View {
@@ -566,7 +572,7 @@ struct TournamentBrowserView: View {
     private func detailLabel(_ label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(label)
-                .font(.system(size: 10, weight: .medium))
+                .font(.caption2.weight(.medium))
                 .foregroundColor(.textSecondary)
             Text(value)
                 .font(PokerTypography.chipLabel)
@@ -585,10 +591,14 @@ struct TournamentBrowserView: View {
         return "\(n)"
     }
 
-    private func formatEventDate(_ date: Date) -> String {
+    private static let eventDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, h:mm a"
-        return formatter.string(from: date)
+        return formatter
+    }()
+
+    private func formatEventDate(_ date: Date) -> String {
+        Self.eventDateFormatter.string(from: date)
     }
 
     private func selectListing(_ listing: SharedTournamentListing) {

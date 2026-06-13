@@ -79,6 +79,7 @@ struct CashChatInputView: View {
                         .foregroundColor(canSend ? .goldAccent : .goldAccent.opacity(0.3))
                 }
                 .disabled(!canSend)
+                .accessibilityLabel("Send stack update")
             }
             .padding(.horizontal, 16)
         }

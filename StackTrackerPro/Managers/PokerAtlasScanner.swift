@@ -7,8 +7,13 @@ struct PokerAtlasScanResult {
     var tournamentName: String?
     var venueName: String?
     var gameType: GameType?
+    /// Total cost to the player.
     var buyIn: Int?
+    /// House fee/rake portion of the buy-in, excluding `deductions`.
     var entryFee: Int?
+    /// Prize-pool deductions (staff bonus, etc.) listed separately by
+    /// Poker Atlas. Never folded into `entryFee` to avoid double-counting.
+    var deductions: Int?
     var bountyAmount: Int?
     var guarantee: Int?
     var startingChips: Int?
@@ -60,6 +65,30 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     private init() {}
 
+    // MARK: - Regex Patterns
+
+    /// Builds a regex from a compile-time pattern. The patterns below are
+    /// constants; an invalid one is a programmer error, surfaced with a
+    /// clear message instead of a bare `try!` crash.
+    private static func regex(_ pattern: String) -> NSRegularExpression {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            preconditionFailure("PokerAtlasScanner: invalid regex pattern: \(pattern)")
+        }
+        return regex
+    }
+
+    private static let cityStatePattern = regex(#"^[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}$"#)
+    private static let blindsPairPattern = regex(#"(\d[\d,]*)\s*/\s*(\d[\d,]*)"#)
+    private static let dollarPlusPattern = regex(#"\$\s*(\d[\d,]*)\s*\+\s*\$\s*(\d[\d,]*)"#)
+    private static let buyInPattern = regex(#"(?i)buy[\s-]?in[:\s]*\$?\s*(\d[\d,]*)"#)
+    private static let startingChipsPattern = regex(#"(?i)(?:starting\s+(?:chips|stack))[:\s]*(\d[\d,]*)"#)
+    private static let guaranteePrefixPattern = regex(#"(?i)\$\s*(\d[\d,]*[kK]?)\s*(?:gtd|guaranteed|guarantee)"#)
+    private static let guaranteeSuffixPattern = regex(#"(?i)(?:gtd|guarantee|guaranteed)[:\s]*\$?\s*(\d[\d,]*[kK]?)"#)
+    private static let bountyPattern = regex(#"(?i)bounty(?:\s+amount)?[:\s]*\$?\s*(\d[\d,]*)"#)
+    private static let numberPattern = regex(#"\d[\d,]*"#)
+    private static let dollarTokenPattern = regex(#"(\d[\d,]*)"#)
+    private static let statusBarTimePattern = regex(#"^\d{1,2}:\d{2}\b"#)
+
     func scan(image: UIImage) async throws -> PokerAtlasScanResult {
         guard let cgImage = image.cgImage else {
             throw ScannerError.invalidImage
@@ -105,6 +134,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
             if merged.gameType == nil { merged.gameType = r.gameType }
             if merged.buyIn == nil { merged.buyIn = r.buyIn }
             if merged.entryFee == nil { merged.entryFee = r.entryFee }
+            if merged.deductions == nil { merged.deductions = r.deductions }
             if merged.bountyAmount == nil { merged.bountyAmount = r.bountyAmount }
             if merged.guarantee == nil { merged.guarantee = r.guarantee }
             if merged.startingChips == nil { merged.startingChips = r.startingChips }
@@ -291,15 +321,19 @@ final class PokerAtlasScanner: @unchecked Sendable {
             let lowerLine = normalized.lowercased()
 
             for label in Self.knownLabels {
-                if lowerLine.hasPrefix(label) {
-                    let valueStart = normalized.index(normalized.startIndex, offsetBy: label.count)
-                    let value = String(normalized[valueStart...])
+                // Compute the prefix range on the ORIGINAL string with a
+                // case-insensitive anchored search: lowercasing can change
+                // string length (e.g. İ), so an offset measured on the
+                // lowercased copy could misalign.
+                guard lowerLine.hasPrefix(label) else { continue }
+                if let labelRange = normalized.range(of: label, options: [.caseInsensitive, .anchored]) {
+                    let value = String(normalized[labelRange.upperBound...])
                         .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ":")))
                     if !value.isEmpty {
                         dict[label] = value
                     }
-                    break
                 }
+                break
             }
         }
 
@@ -353,7 +387,6 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     private func parseVenue(from lines: [String], keyValues: [String: String], result: inout PokerAtlasScanResult) {
         // Look for "City, ST" pattern — venue name is typically the line above it
-        let cityStatePattern = try! NSRegularExpression(pattern: #"^[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}$"#)
 
         for (i, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -361,7 +394,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
             if i + 1 < lines.count {
                 let nextLine = lines[i + 1].trimmingCharacters(in: .whitespacesAndNewlines)
                 let range = NSRange(nextLine.startIndex..., in: nextLine)
-                if cityStatePattern.firstMatch(in: nextLine, range: range) != nil {
+                if Self.cityStatePattern.firstMatch(in: nextLine, range: range) != nil {
                     if trimmed.count >= 3, trimmed.count <= 60, !isChromeText(trimmed) {
                         result.venueName = trimmed
                         return
@@ -421,16 +454,21 @@ final class PokerAtlasScanner: @unchecked Sendable {
         let deductions = parseDollarValue(keyValues["deductions"])
 
         if let total = totalBuyIn {
-            // buyIn = total cost to player, entryFee = house rake/fee
+            // buyIn keeps total-cost-to-player semantics.
+            result.buyIn = total
             if let ded = deductions, ded > 0, ded < total {
-                result.buyIn = total
-                result.entryFee = ded
+                // Expose deductions separately (Tournament.deductions feeds
+                // prize-pool math); entryFee must NOT double-count them.
+                result.deductions = ded
+                if let entry = entryFee, entry > 0, entry < total {
+                    // Poker Atlas "Entry Fee" = prize pool portion, so any
+                    // remaining house fee = total - prize pool - deductions.
+                    let fee = total - entry - ded
+                    result.entryFee = fee > 0 ? fee : nil
+                }
             } else if let entry = entryFee, entry > 0, entry < total {
                 // Poker Atlas "Entry Fee" = prize pool portion; rake = total - entry
-                result.buyIn = total
                 result.entryFee = total - entry
-            } else {
-                result.buyIn = total
             }
         }
 
@@ -470,9 +508,8 @@ final class PokerAtlasScanner: @unchecked Sendable {
         guard let blindsStr = keyValues["starting blinds"] else { return }
 
         // Parse "100/200" format
-        let pattern = try! NSRegularExpression(pattern: #"(\d[\d,]*)\s*/\s*(\d[\d,]*)"#)
         let range = NSRange(blindsStr.startIndex..., in: blindsStr)
-        if let match = pattern.firstMatch(in: blindsStr, range: range),
+        if let match = Self.blindsPairPattern.firstMatch(in: blindsStr, range: range),
            let r1 = Range(match.range(at: 1), in: blindsStr),
            let r2 = Range(match.range(at: 2), in: blindsStr) {
             result.startingSB = parseNumberFromString(String(blindsStr[r1]))
@@ -503,10 +540,9 @@ final class PokerAtlasScanner: @unchecked Sendable {
     // MARK: - Text Fallback Parsers
 
     private func parseBuyInFromText(from text: String, result: inout PokerAtlasScanResult) {
-        let dollarPlusPattern = try! NSRegularExpression(pattern: #"\$\s*(\d[\d,]*)\s*\+\s*\$\s*(\d[\d,]*)"#)
         let range = NSRange(text.startIndex..., in: text)
 
-        if let match = dollarPlusPattern.firstMatch(in: text, range: range) {
+        if let match = Self.dollarPlusPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text),
                let r2 = Range(match.range(at: 2), in: text) {
                 let prizePool = parseNumberFromString(String(text[r1]))
@@ -520,8 +556,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
             }
         }
 
-        let buyInPattern = try! NSRegularExpression(pattern: #"(?i)buy[\s-]?in[:\s]*\$?\s*(\d[\d,]*)"#)
-        if let match = buyInPattern.firstMatch(in: text, range: range) {
+        if let match = Self.buyInPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text) {
                 result.buyIn = parseNumberFromString(String(text[r1]))
             }
@@ -529,10 +564,9 @@ final class PokerAtlasScanner: @unchecked Sendable {
     }
 
     private func parseStartingChipsFromText(from text: String, result: inout PokerAtlasScanResult) {
-        let chipsPattern = try! NSRegularExpression(pattern: #"(?i)(?:starting\s+(?:chips|stack))[:\s]*(\d[\d,]*)"#)
         let range = NSRange(text.startIndex..., in: text)
 
-        if let match = chipsPattern.firstMatch(in: text, range: range) {
+        if let match = Self.startingChipsPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text) {
                 result.startingChips = parseNumberFromString(String(text[r1]))
             }
@@ -542,16 +576,14 @@ final class PokerAtlasScanner: @unchecked Sendable {
     private func parseGuaranteeFromText(from text: String, result: inout PokerAtlasScanResult) {
         let range = NSRange(text.startIndex..., in: text)
 
-        let gtdPattern1 = try! NSRegularExpression(pattern: #"(?i)\$\s*(\d[\d,]*[kK]?)\s*(?:gtd|guaranteed|guarantee)"#)
-        if let match = gtdPattern1.firstMatch(in: text, range: range) {
+        if let match = Self.guaranteePrefixPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text) {
                 result.guarantee = parseChipValue(String(text[r1]))
                 return
             }
         }
 
-        let gtdPattern2 = try! NSRegularExpression(pattern: #"(?i)(?:gtd|guarantee|guaranteed)[:\s]*\$?\s*(\d[\d,]*[kK]?)"#)
-        if let match = gtdPattern2.firstMatch(in: text, range: range) {
+        if let match = Self.guaranteeSuffixPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text) {
                 result.guarantee = parseChipValue(String(text[r1]))
             }
@@ -561,8 +593,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
     private func parseBountyFromText(from text: String, result: inout PokerAtlasScanResult) {
         let range = NSRange(text.startIndex..., in: text)
 
-        let bountyPattern = try! NSRegularExpression(pattern: #"(?i)bounty(?:\s+amount)?[:\s]*\$?\s*(\d[\d,]*)"#)
-        if let match = bountyPattern.firstMatch(in: text, range: range) {
+        if let match = Self.bountyPattern.firstMatch(in: text, range: range) {
             if let r1 = Range(match.range(at: 1), in: text) {
                 result.bountyAmount = parseNumberFromString(String(text[r1]))
             }
@@ -739,9 +770,8 @@ final class PokerAtlasScanner: @unchecked Sendable {
     // MARK: - Helpers
 
     private func extractNumbers(from text: String) -> [Int] {
-        let pattern = try! NSRegularExpression(pattern: #"\d[\d,]*"#)
         let range = NSRange(text.startIndex..., in: text)
-        let matches = pattern.matches(in: text, range: range)
+        let matches = Self.numberPattern.matches(in: text, range: range)
         return matches.compactMap { match in
             guard let r = Range(match.range, in: text) else { return nil }
             return parseNumberFromString(String(text[r]))
@@ -776,9 +806,8 @@ final class PokerAtlasScanner: @unchecked Sendable {
         let cleaned = str.replacingOccurrences(of: "$", with: "")
             .trimmingCharacters(in: .whitespaces)
         // Take first number-like token
-        let pattern = try! NSRegularExpression(pattern: #"(\d[\d,]*)"#)
         let range = NSRange(cleaned.startIndex..., in: cleaned)
-        if let match = pattern.firstMatch(in: cleaned, range: range),
+        if let match = Self.dollarTokenPattern.firstMatch(in: cleaned, range: range),
            let r = Range(match.range(at: 1), in: cleaned) {
             return parseNumberFromString(String(cleaned[r]))
         }
@@ -802,8 +831,7 @@ final class PokerAtlasScanner: @unchecked Sendable {
         if lower.count <= 3 { return true }
 
         // Status bar time patterns: "3:30", "3:30 4", "12:45 PM"
-        let timePattern = try! NSRegularExpression(pattern: #"^\d{1,2}:\d{2}\b"#)
-        if timePattern.firstMatch(in: lower, range: NSRange(lower.startIndex..., in: lower)) != nil {
+        if Self.statusBarTimePattern.firstMatch(in: lower, range: NSRange(lower.startIndex..., in: lower)) != nil {
             return true
         }
 

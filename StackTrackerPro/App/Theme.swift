@@ -17,7 +17,9 @@ extension Color {
         case 8:
             (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
         default:
-            (a, r, g, b) = (255, 1, 1, 1)
+            // Invalid hex string — fall back to an obvious neutral gray
+            // rather than near-black RGB(1, 1, 1).
+            (a, r, g, b) = (255, 128, 128, 128)
         }
         self.init(
             .sRGB,
@@ -39,7 +41,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 
     static var current: AppTheme {
-        AppTheme(rawValue: UserDefaults.standard.string(forKey: SettingsKeys.appTheme) ?? "Midnight") ?? .midnight
+        ThemeManager.shared.theme
     }
 
     var description: String {
@@ -143,10 +145,36 @@ struct ThemePalette {
     )
 }
 
+// MARK: - Theme Manager
+
+/// Observable source of truth for the active theme. View bodies that read any
+/// themed color (e.g. `Color.backgroundPrimary`) register an Observation
+/// dependency through `ThemeManager.shared` and re-render when the theme
+/// changes — no view-hierarchy reset needed.
+///
+/// `@unchecked Sendable`: `theme` is a value-type enum, mutated only from the
+/// main thread (the Settings theme picker); reads from other contexts are benign.
+@Observable
+final class ThemeManager: @unchecked Sendable {
+    static let shared = ThemeManager()
+
+    var theme: AppTheme {
+        didSet {
+            UserDefaults.standard.set(theme.rawValue, forKey: SettingsKeys.appTheme)
+        }
+    }
+
+    var palette: ThemePalette { theme.palette }
+
+    private init() {
+        theme = AppTheme(rawValue: UserDefaults.standard.string(forKey: SettingsKeys.appTheme) ?? "Midnight") ?? .midnight
+    }
+}
+
 // MARK: - Dynamic Color Palette (reads active theme)
 
 extension Color {
-    private static var activePalette: ThemePalette { AppTheme.current.palette }
+    private static var activePalette: ThemePalette { ThemeManager.shared.palette }
 
     // Backgrounds
     static var backgroundPrimary: Color { activePalette.backgroundPrimary }
@@ -180,15 +208,31 @@ extension Color {
 // MARK: - Poker Typography
 
 struct PokerTypography {
-    static let heroStat = Font.system(size: 42, weight: .bold, design: .rounded)
-    static let statValue = Font.system(size: 18, weight: .semibold, design: .monospaced)
-    static let chatBody = Font.system(size: 15, weight: .regular)
-    static let chatCaption = Font.system(size: 11, weight: .regular)
-    static let blindLevel = Font.system(size: 14, weight: .bold, design: .monospaced)
-    static let sectionHeader = Font.system(size: 13, weight: .bold)
-    static let chipLabel = Font.system(size: 12, weight: .medium)
+    /// System font whose size scales with Dynamic Type, relative to the given text style.
+    private static func scaledSystem(
+        size: CGFloat,
+        weight: Font.Weight,
+        design: Font.Design = .default,
+        relativeTo textStyle: UIFont.TextStyle
+    ) -> Font {
+        Font.system(
+            size: UIFontMetrics(forTextStyle: textStyle).scaledValue(for: size),
+            weight: weight,
+            design: design
+        )
+    }
 
-    // Share card typography
+    static var heroStat: Font { scaledSystem(size: 42, weight: .bold, design: .rounded, relativeTo: .largeTitle) }
+    static var statValue: Font { scaledSystem(size: 18, weight: .semibold, design: .monospaced, relativeTo: .body) }
+    static var chatBody: Font { scaledSystem(size: 15, weight: .regular, relativeTo: .subheadline) }
+    static var chatCaption: Font { scaledSystem(size: 11, weight: .regular, relativeTo: .caption2) }
+    static var blindLevel: Font { scaledSystem(size: 14, weight: .bold, design: .monospaced, relativeTo: .footnote) }
+    static var sectionHeader: Font { scaledSystem(size: 13, weight: .bold, relativeTo: .footnote) }
+    static var chipLabel: Font { scaledSystem(size: 12, weight: .medium, relativeTo: .caption1) }
+
+    // Share card typography — rendered into fixed-size export canvases
+    // (share images/video frames), so these intentionally do NOT scale
+    // with Dynamic Type to avoid overflowing the canvas.
     static let shareHero = Font.system(size: 36, weight: .bold, design: .rounded)
     static let shareValue = Font.system(size: 16, weight: .semibold, design: .monospaced)
     static let shareLabel = Font.system(size: 10, weight: .medium)

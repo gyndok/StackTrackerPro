@@ -149,6 +149,7 @@ enum GameType: String, Codable, CaseIterable {
 final class GameTypeStore: @unchecked Sendable {
     static let shared = GameTypeStore()
     private let key = "settings.customGameTypes"
+    private let lock = NSLock()
 
     struct CustomType: Codable, Identifiable, Equatable {
         var id: String { rawValue }
@@ -157,18 +158,8 @@ final class GameTypeStore: @unchecked Sendable {
     }
 
     var customTypes: [CustomType] {
-        get {
-            guard let data = UserDefaults.standard.data(forKey: key),
-                  let types = try? JSONDecoder().decode([CustomType].self, from: data) else {
-                return []
-            }
-            return types
-        }
-        set {
-            if let data = try? JSONEncoder().encode(newValue) {
-                UserDefaults.standard.set(data, forKey: key)
-            }
-        }
+        get { lock.withLock { loadTypes() } }
+        set { lock.withLock { saveTypes(newValue) } }
     }
 
     /// All available game types: built-in + custom
@@ -183,18 +174,38 @@ final class GameTypeStore: @unchecked Sendable {
     }
 
     func add(rawValue: String, label: String) {
-        var types = customTypes
-        guard !types.contains(where: { $0.rawValue == rawValue }) else { return }
-        // Don't add if it conflicts with a built-in type
-        guard GameType(rawValue: rawValue) == nil else { return }
-        types.append(CustomType(rawValue: rawValue, label: label))
-        customTypes = types
+        lock.withLock {
+            var types = loadTypes()
+            guard !types.contains(where: { $0.rawValue == rawValue }) else { return }
+            // Don't add if it conflicts with a built-in type
+            guard GameType(rawValue: rawValue) == nil else { return }
+            types.append(CustomType(rawValue: rawValue, label: label))
+            saveTypes(types)
+        }
     }
 
     func remove(rawValue: String) {
-        var types = customTypes
-        types.removeAll { $0.rawValue == rawValue }
-        customTypes = types
+        lock.withLock {
+            var types = loadTypes()
+            types.removeAll { $0.rawValue == rawValue }
+            saveTypes(types)
+        }
+    }
+
+    // MARK: - Private (callers must hold `lock`)
+
+    private func loadTypes() -> [CustomType] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let types = try? JSONDecoder().decode([CustomType].self, from: data) else {
+            return []
+        }
+        return types
+    }
+
+    private func saveTypes(_ types: [CustomType]) {
+        if let data = try? JSONEncoder().encode(types) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
     }
 }
 

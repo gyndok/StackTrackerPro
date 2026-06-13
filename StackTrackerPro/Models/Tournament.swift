@@ -25,6 +25,14 @@ final class Tournament {
     var payout: Int?
     var bountiesCollected: Int = 0
 
+    // Timing (CloudKit-safe defaults)
+    var actualStartDate: Date?
+    var accumulatedPauseSeconds: Int = 0
+    var pausedAt: Date?
+
+    // Ante format (big-blind ante by default; see AnteFormat)
+    var anteFormatRaw: String = AnteFormat.bigBlind.rawValue
+
     // Current state
     var currentBlindLevelNumber: Int = 1
     var fieldSize: Int = 0
@@ -94,6 +102,10 @@ final class Tournament {
         self.finishPosition = nil
         self.payout = nil
         self.bountiesCollected = 0
+        self.actualStartDate = nil
+        self.accumulatedPauseSeconds = 0
+        self.pausedAt = nil
+        self.anteFormatRaw = AnteFormat.bigBlind.rawValue
         self.currentBlindLevelNumber = 1
         self.fieldSize = 0
         self.playersRemaining = 0
@@ -118,6 +130,11 @@ final class Tournament {
     var status: TournamentStatus {
         get { TournamentStatus(rawValue: statusRaw) ?? .setup }
         set { statusRaw = newValue.rawValue }
+    }
+
+    var anteFormat: AnteFormat {
+        get { AnteFormat(rawValue: anteFormatRaw) ?? .bigBlind }
+        set { anteFormatRaw = newValue.rawValue }
     }
 
     var sortedStackEntries: [StackEntry] {
@@ -191,18 +208,39 @@ final class Tournament {
         buyIn * (1 + rebuysUsed)
     }
 
+    /// Total bounty winnings. Prefers persisted per-event amounts (supports
+    /// variable/PKO bounties); falls back to count × flat amount for legacy data.
+    var bountyWinnings: Int {
+        if let events = bountyEvents, !events.isEmpty {
+            return events.reduce(0) { $0 + $1.amount }
+        }
+        return bountiesCollected * bountyAmount
+    }
+
     var profit: Int? {
         guard let payout else { return nil }
-        return payout + (bountiesCollected * bountyAmount) - totalInvestment
+        return payout + bountyWinnings - totalInvestment
+    }
+
+    /// Seconds of active play between the effective start and `reference`,
+    /// excluding accumulated (and any in-flight) pause time. Never negative.
+    private func activeSeconds(until reference: Date) -> TimeInterval {
+        let start = actualStartDate ?? startDate
+        var elapsed = reference.timeIntervalSince(start)
+        elapsed -= TimeInterval(accumulatedPauseSeconds)
+        if let pausedAt, status == .paused {
+            elapsed -= reference.timeIntervalSince(pausedAt)
+        }
+        return max(0, elapsed)
     }
 
     var duration: TimeInterval? {
         guard let end = endDate else { return nil }
-        return end.timeIntervalSince(startDate)
+        return activeSeconds(until: end)
     }
 
     var durationFormatted: String {
-        let elapsed = duration ?? Date.now.timeIntervalSince(startDate)
+        let elapsed = duration ?? activeSeconds(until: .now)
         let hours = Int(elapsed) / 3600
         let minutes = (Int(elapsed) % 3600) / 60
         if hours > 0 {
@@ -219,8 +257,14 @@ final class Tournament {
 
     // MARK: - Tournament Metrics
 
+    /// Per-player contribution to the prize pool (total buy-in minus rake,
+    /// bounty, and other deductions). Never negative.
+    var prizePoolContributionPerPlayer: Int {
+        max(0, buyIn - entryFee - bountyAmount - deductions)
+    }
+
     var prizePool: Int {
-        (buyIn - entryFee) * fieldSize
+        prizePoolContributionPerPlayer * fieldSize
     }
 
     var houseRake: Int {
@@ -233,7 +277,7 @@ final class Tournament {
     }
 
     var playersNeededForGuarantee: Int {
-        let prizePoolPerPlayer = buyIn - entryFee
+        let prizePoolPerPlayer = prizePoolContributionPerPlayer
         guard guarantee > 0, prizePoolPerPlayer > 0 else { return 0 }
         let needed = Int(ceil(Double(guarantee) / Double(prizePoolPerPlayer))) - fieldSize
         return max(0, needed)
@@ -243,10 +287,11 @@ final class Tournament {
         fieldSize * startingChips
     }
 
+    /// Players left until the money bubble. 0 once in the money.
     var estimatedBubbleDistance: Int {
         guard fieldSize > 0, payoutPercent > 0 else { return 0 }
         let itm = Int(ceil(Double(fieldSize) * payoutPercent / 100.0))
-        return playersRemaining - itm
+        return max(0, playersRemaining - itm)
     }
 
     var averageStackInBB: Double {

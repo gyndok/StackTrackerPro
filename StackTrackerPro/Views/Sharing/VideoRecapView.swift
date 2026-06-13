@@ -314,9 +314,8 @@ struct VideoRecapView: View {
     }
 
     private var roiText: String {
-        guard tournament.totalInvestment > 0, let payout = tournament.payout else { return "—" }
-        let totalReturn = payout + (tournament.bountiesCollected * tournament.bountyAmount)
-        let roi = (Double(totalReturn - tournament.totalInvestment) / Double(tournament.totalInvestment)) * 100
+        guard tournament.totalInvestment > 0, let profit = tournament.profit else { return "—" }
+        let roi = (Double(profit) / Double(tournament.totalInvestment)) * 100
         return String(format: "%.0f%%", roi)
     }
 

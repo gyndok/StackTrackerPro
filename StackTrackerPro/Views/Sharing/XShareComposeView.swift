@@ -9,6 +9,7 @@ struct XShareComposeView: View {
     @State private var tweetText = ""
     @State private var availableImages: [UIImage] = []
     @State private var selectedImageIndex: Int = 0
+    @State private var isRenderingImages = true
 
     private var remaining: Int {
         TweetComposer.remainingCharacters(for: tweetText)
@@ -48,7 +49,14 @@ struct XShareComposeView: View {
                     .padding(.horizontal, 20)
 
                     // MARK: - Image Section
-                    if !availableImages.isEmpty {
+                    if isRenderingImages {
+                        sectionHeader("ATTACH IMAGE")
+
+                        ProgressView()
+                            .tint(.goldAccent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                    } else if !availableImages.isEmpty {
                         sectionHeader("ATTACH IMAGE")
 
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -116,9 +124,13 @@ struct XShareComposeView: View {
                 }
             }
         }
-        .onAppear {
+        .task {
             tweetText = TweetComposer.composeTweet(for: tournament, context: context)
+            // Yield so the sheet finishes presenting before the expensive
+            // card render runs, avoiding a presentation hitch.
+            await Task.yield()
             renderImages()
+            isRenderingImages = false
         }
     }
 

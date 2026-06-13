@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import ImageIO
 
 struct ChipStackPhotosPane: View {
+    @Environment(\.modelContext) private var modelContext
     @Bindable var tournament: Tournament
     @State private var showCamera = false
     @State private var showPhotoPicker = false
@@ -106,7 +108,7 @@ struct ChipStackPhotosPane: View {
             fullScreenPhoto = photo
         } label: {
             ZStack(alignment: .bottomLeading) {
-                if let uiImage = UIImage(data: photo.imageData) {
+                if let uiImage = thumbnailImage(for: photo) {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
@@ -120,7 +122,7 @@ struct ChipStackPhotosPane: View {
 
                 // Level badge
                 Text("Lvl \(photo.blindLevel)")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
@@ -129,6 +131,7 @@ struct ChipStackPhotosPane: View {
                     .padding(4)
             }
         }
+        .accessibilityLabel("Chip stack photo, level \(photo.blindLevel)")
         .contextMenu {
             Button(role: .destructive) {
                 deletePhoto(photo)
@@ -185,6 +188,7 @@ struct ChipStackPhotosPane: View {
                         .foregroundColor(.white.opacity(0.8))
                         .padding(.trailing, 4)
                 }
+                .accessibilityLabel("Share photo")
 
                 // Close button
                 Button {
@@ -194,6 +198,7 @@ struct ChipStackPhotosPane: View {
                         .font(.title)
                         .foregroundColor(.white.opacity(0.8))
                 }
+                .accessibilityLabel("Close")
             }
             .padding(16)
         }
@@ -213,6 +218,7 @@ struct ChipStackPhotosPane: View {
             Image(systemName: "camera.fill")
                 .font(.system(size: 40))
                 .foregroundColor(.textSecondary.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No chip stack photos yet")
                 .font(PokerTypography.chatBody)
@@ -231,14 +237,9 @@ struct ChipStackPhotosPane: View {
     private func sharePhoto(_ photo: ChipStackPhoto) {
         guard let uiImage = UIImage(data: photo.imageData) else { return }
 
-        let blinds = tournament.currentBlinds
-        let level = tournament.currentDisplayLevel ?? photo.blindLevel
-        var blindText = "Level \(level)"
-        if let b = blinds {
-            blindText += " \u{2014} \(b.smallBlind)/\(b.bigBlind)"
-            if b.ante > 0 { blindText += " ante \(b.ante)" }
-        }
-
+        // Stamp the level/stack captured with the photo, not current state —
+        // historical photos shouldn't show today's blinds.
+        let blindText = "Level \(photo.blindLevel)"
         let stackText = photo.stackAtTime.map { "\($0.formatted()) chips" }
 
         let overlayView = ChipStackPhotoOverlayView(
@@ -276,6 +277,23 @@ struct ChipStackPhotosPane: View {
 
     private func deletePhoto(_ photo: ChipStackPhoto) {
         tournament.chipStackPhotos?.removeAll { $0.persistentModelID == photo.persistentModelID }
+        modelContext.delete(photo)
+    }
+
+    /// Downsampled image for the grid — avoids decoding full-resolution JPEGs
+    /// for ~100pt thumbnails. Full resolution is kept for detail/share views.
+    private func thumbnailImage(for photo: ChipStackPhoto) -> UIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: 300
+        ]
+        guard let source = CGImageSourceCreateWithData(photo.imageData as CFData, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(data: photo.imageData)
+        }
+        return UIImage(cgImage: cgImage)
     }
 
     private func compressImage(_ image: UIImage) -> Data? {

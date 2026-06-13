@@ -21,6 +21,7 @@ struct TournamentSetupView: View {
     @State private var venueName = ""
     @State private var buyIn = ""
     @State private var entryFee = ""
+    @State private var deductions = ""
     @State private var bountyAmount = ""
     @State private var guarantee = ""
     @State private var startingChips = "20000"
@@ -70,8 +71,16 @@ struct TournamentSetupView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(.textSecondary)
+                    Button("Cancel") {
+                        // Discard the tournament created for the blind editor /
+                        // scouting report if the user never started it.
+                        if let created = createdTournament {
+                            modelContext.delete(created)
+                            createdTournament = nil
+                        }
+                        dismiss()
+                    }
+                    .foregroundColor(.textSecondary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Start") { startTournament() }
@@ -82,7 +91,7 @@ struct TournamentSetupView: View {
             }
             .navigationDestination(isPresented: $showBlindEditor) {
                 if let t = createdTournament ?? tournament {
-                    BlindStructureEditorView(tournament: t, scannedLevels: scannedBlindLevels)
+                    BlindStructureEditorView(tournament: t, scannedLevels: $scannedBlindLevels)
                 }
             }
             .navigationDestination(isPresented: $showScoutingReport) {
@@ -147,6 +156,7 @@ struct TournamentSetupView: View {
         result.gameType = GameType(rawValue: gameTypeRaw)
         result.buyIn = Int(buyIn)
         result.entryFee = Int(entryFee)
+        result.deductions = Int(deductions)
         result.bountyAmount = Int(bountyAmount)
         result.guarantee = Int(guarantee)
         result.startingChips = Int(startingChips)
@@ -255,6 +265,7 @@ struct TournamentSetupView: View {
         Section {
             numberField("Buy-in ($)", text: $buyIn)
             numberField("Entry Fee ($)", text: $entryFee)
+            numberField("Deductions ($)", text: $deductions)
             numberField("Bounty Amount ($)", text: $bountyAmount)
             numberField("Guarantee ($)", text: $guarantee)
             numberField("Payout % of Field", text: $payoutPercent)
@@ -362,6 +373,7 @@ struct TournamentSetupView: View {
         venueName = tournament.venueName ?? ""
         buyIn = tournament.buyIn > 0 ? "\(tournament.buyIn)" : ""
         entryFee = tournament.entryFee > 0 ? "\(tournament.entryFee)" : ""
+        deductions = tournament.deductions > 0 ? "\(tournament.deductions)" : ""
         bountyAmount = tournament.bountyAmount > 0 ? "\(tournament.bountyAmount)" : ""
         guarantee = tournament.guarantee > 0 ? "\(tournament.guarantee)" : ""
         startingChips = "\(tournament.startingChips)"
@@ -417,6 +429,9 @@ struct TournamentSetupView: View {
         if let scannedEntryFee = result.entryFee, scannedEntryFee > 0 {
             entryFee = "\(scannedEntryFee)"
         }
+        if let scannedDeductions = result.deductions, scannedDeductions > 0 {
+            deductions = "\(scannedDeductions)"
+        }
         if let scannedBounty = result.bountyAmount, scannedBounty > 0 {
             bountyAmount = "\(scannedBounty)"
         }
@@ -459,23 +474,11 @@ struct TournamentSetupView: View {
         t.gameTypeRaw = gameTypeRaw
         t.venueName = venueName.isEmpty ? nil : venueName
         t.payoutPercent = Double(payoutPercent) ?? 15.0
+        t.deductions = Int(deductions) ?? 0
         modelContext.insert(t)
 
         if !scannedBlindLevels.isEmpty {
-            // Add all scanned blind levels via inverse relationship
-            for scanned in scannedBlindLevels {
-                let level = BlindLevel(
-                    levelNumber: scanned.levelNumber,
-                    smallBlind: scanned.smallBlind,
-                    bigBlind: scanned.bigBlind,
-                    ante: scanned.ante,
-                    durationMinutes: scanned.durationMinutes,
-                    isBreak: scanned.isBreak,
-                    breakLabel: scanned.breakLabel
-                )
-                level.tournament = t
-                modelContext.insert(level)
-            }
+            applyScannedBlindLevels(to: t)
         } else {
             // Add starting blind level
             let level1 = BlindLevel(
@@ -490,6 +493,33 @@ struct TournamentSetupView: View {
         return t
     }
 
+    /// Replaces the tournament's blind levels with the scanned ones, deleting
+    /// the old BlindLevel objects from the context. `scannedBlindLevels` is
+    /// left intact so the CloudKit share payload can still include it; the
+    /// blind editor consumes it through its binding instead.
+    private func applyScannedBlindLevels(to t: Tournament) {
+        guard !scannedBlindLevels.isEmpty else { return }
+
+        for existing in t.blindLevels ?? [] {
+            modelContext.delete(existing)
+        }
+        t.blindLevels?.removeAll()
+
+        for scanned in scannedBlindLevels {
+            let level = BlindLevel(
+                levelNumber: scanned.levelNumber,
+                smallBlind: scanned.smallBlind,
+                bigBlind: scanned.bigBlind,
+                ante: scanned.ante,
+                durationMinutes: scanned.durationMinutes,
+                isBreak: scanned.isBreak,
+                breakLabel: scanned.breakLabel
+            )
+            level.tournament = t
+            modelContext.insert(level)
+        }
+    }
+
     private func startTournament() {
         let t: Tournament
         if let existing = tournament ?? createdTournament {
@@ -498,12 +528,14 @@ struct TournamentSetupView: View {
             existing.gameTypeRaw = gameTypeRaw
             existing.buyIn = Int(buyIn) ?? 0
             existing.entryFee = Int(entryFee) ?? 0
+            existing.deductions = Int(deductions) ?? 0
             existing.bountyAmount = Int(bountyAmount) ?? 0
             existing.guarantee = Int(guarantee) ?? 0
             existing.startingChips = Int(startingChips) ?? 20000
             existing.reentryPolicy = reentryPolicy
             existing.venueName = venueName.isEmpty ? nil : venueName
             existing.payoutPercent = Double(payoutPercent) ?? 15.0
+            applyScannedBlindLevels(to: existing)
             t = existing
         } else {
             t = createTournament()

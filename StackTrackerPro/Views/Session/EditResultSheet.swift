@@ -18,7 +18,14 @@ struct EditResultSheet: View {
 
     private var computedProfit: Int? {
         guard let payout = parsedPayout else { return nil }
-        return payout + (tournament.bountiesCollected * tournament.bountyAmount) - tournament.totalInvestment
+        return payout + tournament.bountyWinnings - tournament.totalInvestment
+    }
+
+    private var finishPositionError: String? {
+        guard let position = Int(finishPositionText),
+              tournament.fieldSize > 0,
+              position > tournament.fieldSize else { return nil }
+        return "Finish position can't exceed the field size (\(tournament.fieldSize))"
     }
 
     // MARK: - Body
@@ -72,6 +79,12 @@ struct EditResultSheet: View {
             }
             .background(Color.cardSurface)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            if let error = finishPositionError {
+                Text(error)
+                    .font(PokerTypography.chatCaption)
+                    .foregroundColor(.red)
+            }
         }
     }
 
@@ -84,12 +97,11 @@ struct EditResultSheet: View {
             VStack(spacing: 0) {
                 summaryRow("Total Investment", value: "$\(tournament.totalInvestment.formatted())")
 
-                if tournament.bountiesCollected > 0 && tournament.bountyAmount > 0 {
+                if tournament.bountyWinnings > 0 {
                     Divider().background(Color.textSecondary.opacity(0.2))
-                    let bountyTotal = tournament.bountiesCollected * tournament.bountyAmount
                     summaryRow(
                         "Bounties Earned",
-                        value: "\(tournament.bountiesCollected) × $\(tournament.bountyAmount.formatted()) = $\(bountyTotal.formatted())"
+                        value: "\(tournament.bountiesCollected) bounties = $\(tournament.bountyWinnings.formatted())"
                     )
                 }
 
@@ -116,9 +128,10 @@ struct EditResultSheet: View {
                 .foregroundColor(.backgroundPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.goldAccent)
+                .background(finishPositionError == nil ? Color.goldAccent : Color.gray.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .disabled(finishPositionError != nil)
         .padding(.top, 8)
     }
 

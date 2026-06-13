@@ -1,10 +1,14 @@
 import Foundation
 import SwiftData
 import Observation
+import os
 
 @MainActor @Observable
 final class ChatManager {
     var isProcessing = false
+
+    @ObservationIgnored
+    private let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "ChatManager")
 
     private let tournamentManager: TournamentManager
     private let responseEngine = ResponseEngine.shared
@@ -49,7 +53,7 @@ final class ChatManager {
         let aiMessage = ChatMessage(sender: .ai, text: responseText)
         tournament.chatMessages?.append(aiMessage)
 
-        try? tournamentManager.modelContext?.save()
+        saveContext()
         HapticFeedback.impact(.light)
     }
 
@@ -62,17 +66,41 @@ final class ChatManager {
         case .rebuy:
             await processUserMessage(text: "I rebought")
         case .sameStack:
-            if let last = tournament.latestStack {
-                await processUserMessage(text: "\(last.chipCount)")
-            }
+            // Apply directly via the manager API — text parsing ignores bare
+            // numbers below 1000, which made this a no-op for short stacks.
+            guard tournament.status != .completed, let last = tournament.latestStack else { break }
+
+            let userMessage = ChatMessage(sender: .user, text: "Same stack: \(last.chipCount)")
+            tournament.chatMessages?.append(userMessage)
+
+            tournamentManager.updateStack(chipCount: last.chipCount)
+
+            var entities = ParsedEntities()
+            entities.chipCount = last.chipCount
+            let responseText = responseEngine.generateResponse(entities: entities, tournament: tournament)
+            let aiMessage = ChatMessage(sender: .ai, text: responseText)
+            tournament.chatMessages?.append(aiMessage)
+
+            saveContext()
+            HapticFeedback.impact(.light)
         case .stats:
             let summary = responseEngine.sessionSummaryResponse(tournament: tournament)
             let aiMessage = ChatMessage(sender: .ai, text: summary)
             tournament.chatMessages?.append(aiMessage)
-            try? tournamentManager.modelContext?.save()
+            saveContext()
         case .share:
             // Handled in ActiveSessionView (needs UI state for sheet presentation)
             break
+        }
+    }
+
+    // MARK: - Persistence
+
+    private func saveContext() {
+        do {
+            try tournamentManager.modelContext?.save()
+        } catch {
+            logger.error("Failed to save chat changes: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -94,6 +122,18 @@ final class ChatManager {
     // MARK: - Apply Entities
 
     private func applyEntities(_ entities: ParsedEntities, to tournament: Tournament) {
+        // Completed tournaments are read-only — never mutate state from chat.
+        guard tournament.status != .completed else { return }
+
+        // Defense in depth (mirrors RegexPokerParser and covers AI-parser
+        // results): a hand note is the entire entity. Suppress all other
+        // extraction so "note: villain busted my aces" can't trigger an
+        // elimination, bounty, rebuy, payout, blinds, or stack update.
+        if let note = entities.handNote {
+            tournamentManager.recordHandNote(note)
+            return
+        }
+
         // Update blinds first (so stack entry captures correct blind info)
         if entities.smallBlind != nil || entities.bigBlind != nil || entities.levelNumber != nil {
             tournamentManager.updateBlinds(
@@ -126,11 +166,6 @@ final class ChatManager {
         // Update stack (after blinds so M-ratio is correct)
         if let chipCount = entities.chipCount {
             tournamentManager.updateStack(chipCount: chipCount)
-        }
-
-        // Hand note
-        if let note = entities.handNote {
-            tournamentManager.recordHandNote(note)
         }
 
         // Elimination

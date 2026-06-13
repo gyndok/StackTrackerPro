@@ -66,7 +66,8 @@ private struct SessionItem: Identifiable {
     let gameTypeRaw: String
     let duration: String
     let detailLine: String
-    let profit: Int
+    /// nil when no result has been recorded (e.g. tournament with no payout entered)
+    let profit: Int?
     let isTournament: Bool
 
     // Keep references for navigation
@@ -99,6 +100,9 @@ struct ResultsView: View {
     @State private var customDateStart: Date = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
     @State private var customDateEnd: Date = .now
     @State private var showFilterSheet = false
+
+    // Chart scrubbing (session number under the touch point)
+    @State private var plScrubSession: Int?
 
     // MARK: - Available Filter Options (derived from data)
 
@@ -205,7 +209,7 @@ struct ResultsView: View {
                     gameTypeRaw: t.gameTypeRaw,
                     duration: t.durationFormatted,
                     detailLine: detail,
-                    profit: t.profit ?? 0,
+                    profit: t.profit,
                     isTournament: true,
                     tournament: t,
                     cashSession: nil
@@ -225,7 +229,7 @@ struct ResultsView: View {
                     gameTypeRaw: c.gameTypeRaw,
                     duration: c.durationFormatted,
                     detailLine: detail,
-                    profit: c.profit ?? 0,
+                    profit: c.profit,
                     isTournament: false,
                     tournament: nil,
                     cashSession: c
@@ -240,27 +244,89 @@ struct ResultsView: View {
         !completedTournaments.isEmpty || !completedCashSessions.isEmpty
     }
 
-    private var filteredSessionCount: Int {
-        allSessions.count
-    }
-
-    private var filteredWinRate: Double {
-        let sessions = allSessions
+    private func filteredWinRate(_ sessions: [SessionItem]) -> Double {
         guard !sessions.isEmpty else { return 0 }
-        let wins = sessions.filter { $0.profit > 0 }.count
+        let wins = sessions.filter { ($0.profit ?? 0) > 0 }.count
         return Double(wins) / Double(sessions.count) * 100
     }
 
-    private var filteredTotalProfit: Int {
-        allSessions.map(\.profit).reduce(0, +)
+    private func filteredTotalProfit(_ sessions: [SessionItem]) -> Int {
+        sessions.reduce(0) { $0 + ($1.profit ?? 0) }
     }
 
-    private var cumulativePLData: [(session: Int, cumulative: Int)] {
-        let sorted = allSessions.sorted { $0.date < $1.date }
+    private func cumulativePLData(_ sessions: [SessionItem]) -> [(session: Int, date: Date, cumulative: Int)] {
+        let sorted = sessions.sorted { $0.date < $1.date }
         var running = 0
         return sorted.enumerated().map { index, item in
-            running += item.profit
-            return (session: index + 1, cumulative: running)
+            running += item.profit ?? 0
+            return (session: index + 1, date: item.date, cumulative: running)
+        }
+    }
+
+    // MARK: - Rate Stat (BB/hr for cash where stakes parse; $/hr otherwise)
+
+    /// Parses the big blind from a stakes string like "1/2", "$2/$5", or
+    /// "1/3/6" (SB/BB[/straddle] notation — the second number is the BB).
+    static func bigBlind(from stakes: String) -> Double? {
+        let numbers = stakes
+            .components(separatedBy: CharacterSet(charactersIn: "0123456789.").inverted)
+            .compactMap { Double($0) }
+            .filter { $0 > 0 }
+        guard numbers.count >= 2 else { return nil }
+        return numbers[1]
+    }
+
+    /// Aggregate rate across the displayed sessions. When viewing cash only
+    /// and every counted session has a parseable big blind, reports BB/hr;
+    /// otherwise falls back to $/hr.
+    private var rateStat: (value: String, isPositive: Bool) {
+        let cash = filteredCashSessions.filter { $0.profit != nil && ($0.duration ?? 0) > 0 }
+
+        if selectedFilter == .cash, !cash.isEmpty {
+            let bbRates = cash.compactMap { s -> (profitBB: Double, hours: Double)? in
+                guard let bb = Self.bigBlind(from: s.stakes), bb > 0,
+                      let profit = s.profit, let dur = s.duration, dur > 0 else { return nil }
+                return (Double(profit) / bb, dur / 3600)
+            }
+            if bbRates.count == cash.count {
+                let totalHours = bbRates.map(\.hours).reduce(0, +)
+                if totalHours > 0 {
+                    let rate = bbRates.map(\.profitBB).reduce(0, +) / totalHours
+                    return (String(format: "%+.1f BB/hr", rate), rate >= 0)
+                }
+            }
+        }
+
+        var profit = cash.compactMap(\.profit).reduce(0, +)
+        var seconds = cash.compactMap(\.duration).reduce(0, +)
+        if selectedFilter != .cash {
+            let tourneys = filteredTournaments.filter { $0.profit != nil && ($0.duration ?? 0) > 0 }
+            profit += tourneys.compactMap(\.profit).reduce(0, +)
+            seconds += tourneys.compactMap(\.duration).reduce(0, +)
+        }
+        guard seconds > 0 else { return ("—", true) }
+        let rate = Double(profit) / (seconds / 3600)
+        return (formatCurrency(Int(rate.rounded())) + "/hr", rate >= 0)
+    }
+
+    // MARK: - Monthly P/L
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter
+    }()
+
+    private func monthlyPL(_ sessions: [SessionItem]) -> [(month: String, profit: Int, sessions: Int)] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: sessions) { item -> Date in
+            calendar.date(from: calendar.dateComponents([.year, .month], from: item.date)) ?? item.date
+        }
+        // Most recent first, capped at 12 months to keep the list light
+        return grouped.keys.sorted(by: >).prefix(12).map { key in
+            let group = grouped[key]!
+            let profit = group.reduce(0) { $0 + ($1.profit ?? 0) }
+            return (month: Self.monthFormatter.string(from: key), profit: profit, sessions: group.count)
         }
     }
 
@@ -288,7 +354,8 @@ struct ResultsView: View {
                             cashSessions: filteredCashSessions
                         )
                     } else {
-                        listContent
+                        // Compute the merged list once per body evaluation
+                        listContent(sessions: allSessions)
                     }
                 }
             }
@@ -437,10 +504,15 @@ struct ResultsView: View {
             Button {
                 onDismiss()
             } label: {
+                // Visual size stays small; frame + contentShape expand the
+                // tap target to ~44pt, negative padding preserves layout.
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.textSecondary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .padding(-17)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -458,28 +530,39 @@ struct ResultsView: View {
 
     // MARK: - List Content
 
-    private var listContent: some View {
-        List {
+    private func listContent(sessions: [SessionItem]) -> some View {
+        let plData = cumulativePLData(sessions)
+        let monthly = monthlyPL(sessions)
+
+        return List {
             Section {
-                aggregateStatsHeader
+                aggregateStatsHeader(sessions: sessions)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
             }
 
-            if cumulativePLData.count >= 2 {
+            if plData.count >= 2 {
                 Section {
-                    cumulativePLChart
+                    cumulativePLChart(data: plData)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+                }
+            }
+
+            if monthly.count >= 2 {
+                Section {
+                    monthlyPLSection(monthly)
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
                 }
             }
 
             Section {
-                if allSessions.isEmpty && hasActiveFilters {
+                if sessions.isEmpty && hasActiveFilters {
                     noFilterResults
                         .listRowBackground(Color.clear)
                 } else {
-                    ForEach(allSessions) { session in
+                    ForEach(sessions) { session in
                         if session.isTournament, let tournament = session.tournament {
                             NavigationLink {
                                 ActiveSessionView(tournament: tournament)
@@ -558,19 +641,28 @@ struct ResultsView: View {
 
     // MARK: - Aggregate Stats Header
 
-    private var aggregateStatsHeader: some View {
-        HStack(spacing: 0) {
-            statColumn(value: "\(filteredSessionCount)", label: "Sessions")
+    private func aggregateStatsHeader(sessions: [SessionItem]) -> some View {
+        let totalProfit = filteredTotalProfit(sessions)
+        let rate = rateStat
+
+        return HStack(spacing: 0) {
+            statColumn(value: "\(sessions.count)", label: "Sessions")
             Divider().frame(height: 32).overlay(Color.borderSubtle)
             statColumn(
-                value: String(format: "%.0f%%", filteredWinRate),
+                value: String(format: "%.0f%%", filteredWinRate(sessions)),
                 label: "Win Rate"
             )
             Divider().frame(height: 32).overlay(Color.borderSubtle)
             statColumn(
-                value: formatCurrency(filteredTotalProfit),
+                value: formatCurrency(totalProfit),
                 label: "Profit",
-                color: filteredTotalProfit >= 0 ? .mZoneGreen : .chipRed
+                color: totalProfit >= 0 ? .mZoneGreen : .chipRed
+            )
+            Divider().frame(height: 32).overlay(Color.borderSubtle)
+            statColumn(
+                value: rate.value,
+                label: "Rate",
+                color: rate.isPositive ? .mZoneGreen : .chipRed
             )
         }
         .padding(.vertical, 12)
@@ -598,14 +690,14 @@ struct ResultsView: View {
 
     // MARK: - Cumulative P/L Chart
 
-    private var cumulativePLChart: some View {
+    private func cumulativePLChart(data: [(session: Int, date: Date, cumulative: Int)]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("CUMULATIVE P/L")
                 .font(PokerTypography.sectionHeader)
                 .foregroundColor(.textSecondary)
 
             Chart {
-                ForEach(cumulativePLData, id: \.session) { point in
+                ForEach(data, id: \.session) { point in
                     AreaMark(
                         x: .value("Session", point.session),
                         y: .value("Profit", point.cumulative)
@@ -628,7 +720,7 @@ struct ResultsView: View {
                     .interpolationMethod(.catmullRom)
                 }
 
-                if let last = cumulativePLData.last {
+                if let last = data.last {
                     PointMark(
                         x: .value("Session", last.session),
                         y: .value("Profit", last.cumulative)
@@ -640,8 +732,52 @@ struct ResultsView: View {
                 RuleMark(y: .value("Zero", 0))
                     .foregroundStyle(Color.textSecondary.opacity(0.5))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+
+                if let scrub = plScrubSession,
+                   let point = data.first(where: { $0.session == scrub }) {
+                    RuleMark(x: .value("Session", point.session))
+                        .foregroundStyle(Color.goldAccent.opacity(0.6))
+                        .lineStyle(StrokeStyle(lineWidth: 1))
+
+                    PointMark(
+                        x: .value("Session", point.session),
+                        y: .value("Profit", point.cumulative)
+                    )
+                    .foregroundStyle(Color.goldAccent)
+                    .symbolSize(70)
+                    .annotation(
+                        position: .top,
+                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                    ) {
+                        ChartScrubCallout(
+                            title: point.date.formatted(date: .abbreviated, time: .omitted),
+                            value: formatCurrency(point.cumulative),
+                            valueColor: point.cumulative >= 0 ? .mZoneGreen : .chipRed
+                        )
+                    }
+                }
             }
             .frame(height: 200)
+            .chartOverlay { proxy in
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(Color.clear)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { drag in
+                                    guard let plotFrame = proxy.plotFrame else { return }
+                                    let x = drag.location.x - geo[plotFrame].origin.x
+                                    if let session: Int = proxy.value(atX: x) {
+                                        plScrubSession = data.min {
+                                            abs($0.session - session) < abs($1.session - session)
+                                        }?.session
+                                    }
+                                }
+                                .onEnded { _ in plScrubSession = nil }
+                        )
+                }
+            }
             .chartYAxis {
                 AxisMarks(position: .leading) { value in
                     AxisValueLabel {
@@ -670,6 +806,39 @@ struct ResultsView: View {
                 plot
                     .background(Color.cardSurface.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .pokerCard()
+    }
+
+    // MARK: - Monthly P/L Section
+
+    private func monthlyPLSection(_ monthly: [(month: String, profit: Int, sessions: Int)]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("MONTHLY P/L")
+                .font(PokerTypography.sectionHeader)
+                .foregroundColor(.textSecondary)
+
+            ForEach(monthly, id: \.month) { stat in
+                HStack {
+                    Text(stat.month)
+                        .font(PokerTypography.chatBody)
+                        .foregroundColor(.textPrimary)
+
+                    Spacer()
+
+                    Text("\(stat.sessions) session\(stat.sessions == 1 ? "" : "s")")
+                        .font(PokerTypography.chatCaption)
+                        .foregroundColor(.textSecondary)
+
+                    Text(formatCurrency(stat.profit))
+                        .font(PokerTypography.statValue)
+                        .foregroundColor(stat.profit >= 0 ? .mZoneGreen : .chipRed)
+                        .frame(width: 90, alignment: .trailing)
+                }
+                .padding(10)
+                .background(Color.cardSurface.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
         .pokerCard()
@@ -724,10 +893,18 @@ struct ResultsView: View {
         .padding(.vertical, 4)
     }
 
-    private func profitBadge(_ profit: Int) -> some View {
-        let isPositive = profit >= 0
-        let color: Color = isPositive ? .mZoneGreen : .chipRed
-        let text = isPositive ? "+\(formatCurrency(profit))" : formatCurrency(profit)
+    private func profitBadge(_ profit: Int?) -> some View {
+        let color: Color
+        let text: String
+        if let profit {
+            let isPositive = profit >= 0
+            color = isPositive ? .mZoneGreen : .chipRed
+            text = isPositive ? "+\(formatCurrency(profit))" : formatCurrency(profit)
+        } else {
+            // No result recorded (e.g. payout never entered)
+            color = .textSecondary
+            text = "—"
+        }
 
         return Text(text)
             .font(PokerTypography.chipLabel)
@@ -793,8 +970,15 @@ struct ResultsView: View {
     private func formatCurrencyShort(_ amount: Int) -> String {
         let absAmount = abs(amount)
         let sign = amount < 0 ? "-" : ""
+        if absAmount >= 10_000 {
+            return "\(sign)$\(Int((Double(absAmount) / 1000).rounded()))k"
+        }
         if absAmount >= 1000 {
-            return "\(sign)$\(absAmount / 1000)k"
+            let thousands = (Double(absAmount) / 100).rounded() / 10
+            let formatted = thousands == thousands.rounded()
+                ? "\(Int(thousands))"
+                : String(format: "%.1f", thousands)
+            return "\(sign)$\(formatted)k"
         }
         return "\(sign)$\(absAmount)"
     }
@@ -814,6 +998,35 @@ struct ResultsView: View {
             }
         }
         return "\(n)\(suffix)"
+    }
+}
+
+// MARK: - Chart Scrub Callout
+
+/// Small callout card shown while scrubbing a chart with a finger.
+/// Shared by the Results, Analytics, and Stack charts.
+struct ChartScrubCallout: View {
+    let title: String
+    let value: String
+    var valueColor: Color = .goldAccent
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(title)
+                .font(PokerTypography.chatCaption)
+                .foregroundColor(.textSecondary)
+            Text(value)
+                .font(PokerTypography.statValue)
+                .foregroundColor(valueColor)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.backgroundSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.goldAccent.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 

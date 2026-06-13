@@ -163,12 +163,19 @@ final class CloudKitService: @unchecked Sendable {
             gameType: scanResult.gameType?.rawValue ?? ""
         )
 
-        // Check for existing record with same dedup key
+        // Check for existing record with same dedup key.
+        // Failures (offline/throttled) propagate to the caller instead of
+        // being treated as "no duplicate" — on check failure we do NOT save,
+        // and the caller can distinguish "duplicate" from "couldn't check".
         let predicate = NSPredicate(format: "%K == %@", Fields.deduplicationKey, dedupKey)
         let query = CKQuery(recordType: recordType, predicate: predicate)
-        if let (existingResults, _) = try? await database.records(matching: query, resultsLimit: 1),
-           !existingResults.isEmpty {
-            throw CloudKitServiceError.duplicateSkipped
+        do {
+            let (existingResults, _) = try await database.records(matching: query, resultsLimit: 1)
+            if !existingResults.isEmpty {
+                throw CloudKitServiceError.duplicateSkipped
+            }
+        } catch let error as CKError where error.code == .unknownItem {
+            // Record type doesn't exist yet — nothing shared, no duplicates possible
         }
 
         let record = CKRecord(recordType: recordType)
@@ -212,8 +219,10 @@ final class CloudKitService: @unchecked Sendable {
         let minLon = longitude - lonRadiusDegrees
         let maxLon = longitude + lonRadiusDegrees
 
-        let today = Calendar.current.startOfDay(for: Date())
-        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+        // Fixed UTC calendar so every device computes the same "today" window
+        // (matches the UTC-based deduplication key).
+        let today = Self.utcCalendar.startOfDay(for: Date())
+        let endOfToday = Self.utcCalendar.date(byAdding: .day, value: 1, to: today)!
 
         let predicate = NSPredicate(
             format: "%K >= %@ AND %K <= %@ AND %K >= %@ AND %K <= %@ AND %K >= %@ AND %K < %@",
@@ -252,10 +261,24 @@ final class CloudKitService: @unchecked Sendable {
 
     // MARK: - Private Helpers
 
-    private func buildDeduplicationKey(venueName: String, eventDate: Date, buyIn: Int, gameType: String) -> String {
+    /// Fixed UTC calendar/formatter so all devices generate identical
+    /// deduplication keys and date windows regardless of local timezone.
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }()
+
+    private static let utcDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")!
         formatter.dateFormat = "yyyy-MM-dd"
-        let dateStr = formatter.string(from: eventDate)
+        return formatter
+    }()
+
+    private func buildDeduplicationKey(venueName: String, eventDate: Date, buyIn: Int, gameType: String) -> String {
+        let dateStr = Self.utcDayFormatter.string(from: eventDate)
         return "\(venueName)|\(dateStr)|\(buyIn)|\(gameType)"
     }
 

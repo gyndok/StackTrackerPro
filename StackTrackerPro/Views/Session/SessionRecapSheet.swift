@@ -137,7 +137,12 @@ struct SessionRecapSheet: View {
         .onChange(of: selectedSize) { _, _ in
             renderCard()
         }
-        .sheet(isPresented: $showMilestone) {
+        .sheet(isPresented: $showMilestone, onDismiss: {
+            // Present any remaining milestones one after another.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                presentNextMilestone()
+            }
+        }) {
             if let milestone = currentMilestone {
                 milestoneSheet(milestone)
             }
@@ -165,13 +170,19 @@ struct SessionRecapSheet: View {
             completed: tournament,
             allTournaments: allTournaments
         )
-        if let first = milestones.first {
-            currentMilestone = first
-            MilestoneTracker.shared.markShown(milestones)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                showMilestone = true
-            }
+        guard !milestones.isEmpty else { return }
+        MilestoneTracker.shared.markShown(milestones)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            presentNextMilestone()
         }
+    }
+
+    /// Pops the next queued milestone and presents it; called again after
+    /// each milestone sheet is dismissed until the queue is empty.
+    private func presentNextMilestone() {
+        guard !milestones.isEmpty else { return }
+        currentMilestone = milestones.removeFirst()
+        showMilestone = true
     }
 
     // MARK: - Milestone Sheet

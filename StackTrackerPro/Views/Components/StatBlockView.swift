@@ -61,6 +61,20 @@ struct StatBlockView: View {
                 }
             }
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(accessibilityValueText)
+    }
+
+    private var accessibilityValueText: String {
+        var text = value
+        switch trend {
+        case .up: text += ", trending up"
+        case .down: text += ", trending down"
+        case .flat: text += ", steady"
+        case nil: break
+        }
+        return text
     }
 }
 

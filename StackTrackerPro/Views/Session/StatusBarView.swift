@@ -30,11 +30,15 @@ struct StatusBarView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "cup.and.saucer.fill")
                             .foregroundColor(remaining <= 120 ? .mZoneRed : .goldAccent)
+                            .accessibilityHidden(true)
                         Text(String(format: "%d:%02d", minutes, seconds))
                             .font(PokerTypography.statValue)
                             .foregroundColor(remaining <= 120 ? .mZoneRed : .goldAccent)
                             .monospacedDigit()
                     }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Break time remaining")
+                    .accessibilityValue("\(minutes) minutes \(seconds) seconds\(remaining <= 120 ? ", ending soon" : "")")
                 }
             } else if let blinds = tournament.currentBlinds, !blinds.isBreak {
                 VStack(alignment: .trailing, spacing: 2) {

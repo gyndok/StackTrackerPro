@@ -1,6 +1,21 @@
 import Foundation
 import SwiftData
 
+/// How antes are collected in a blind structure.
+/// Modern structures use a big-blind ante paid once per orbit by one player;
+/// older structures collect an ante from every player each hand.
+enum AnteFormat: String, CaseIterable {
+    case bigBlind = "bigBlind"
+    case perPlayer = "perPlayer"
+
+    var label: String {
+        switch self {
+        case .bigBlind: return "Big Blind Ante"
+        case .perPlayer: return "Per-Player Ante"
+        }
+    }
+}
+
 @Model
 final class BlindLevel {
     var levelNumber: Int = 0
@@ -30,10 +45,17 @@ final class BlindLevel {
         self.breakLabel = breakLabel
     }
 
-    /// Cost of one full orbit (seats-per-table × ante + SB + BB)
+    /// Cost of one full orbit, aware of the tournament's ante format:
+    /// big-blind ante → SB + BB + ante (paid once per orbit);
+    /// per-player ante → SB + BB + seats × ante.
     var orbitCost: Int {
-        let seats = UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
-        return smallBlind + bigBlind + (seats * ante)
+        switch tournament?.anteFormat ?? .bigBlind {
+        case .bigBlind:
+            return smallBlind + bigBlind + ante
+        case .perPlayer:
+            let seats = UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
+            return smallBlind + bigBlind + (seats * ante)
+        }
     }
 
     var blindsDisplay: String {

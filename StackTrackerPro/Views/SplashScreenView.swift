@@ -54,6 +54,7 @@ struct SplashScreenView: View {
                             .opacity(iconOpacity)
                     }
                 }
+                .accessibilityHidden(true)
 
                 // App name
                 VStack(spacing: 6) {
@@ -68,6 +69,8 @@ struct SplashScreenView: View {
                 }
                 .opacity(titleOpacity)
                 .offset(y: titleOffset)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Stack Tracker Pro")
 
                 Spacer()
                 Spacer()

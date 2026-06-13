@@ -8,7 +8,6 @@ struct VideoExportSheet: View {
     @State private var progress: Double = 0
     @State private var videoURL: URL?
     @State private var error: String?
-    @State private var isGenerating = false
     @State private var generationTask: Task<Void, Never>?
 
     var body: some View {
@@ -42,11 +41,10 @@ struct VideoExportSheet: View {
             .onAppear {
                 startGeneration()
             }
-            .onDisappear {
-                if let url = videoURL {
-                    try? FileManager.default.removeItem(at: url)
-                }
-            }
+            // Note: the exported file is intentionally NOT deleted on
+            // disappear — a ShareLink save may still be in flight.
+            // VideoComposer writes into a dedicated temp subdirectory and
+            // cleans stale exports on the next export.
         }
     }
 
@@ -57,6 +55,7 @@ struct VideoExportSheet: View {
             Image(systemName: "film")
                 .font(.system(size: 40))
                 .foregroundColor(.goldAccent)
+                .accessibilityHidden(true)
 
             Text("Creating your recap...")
                 .font(.system(size: 16, weight: .semibold))
@@ -111,6 +110,7 @@ struct VideoExportSheet: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 40))
                 .foregroundColor(.goldAccent)
+                .accessibilityHidden(true)
 
             Text("Something went wrong")
                 .font(.system(size: 16, weight: .semibold))

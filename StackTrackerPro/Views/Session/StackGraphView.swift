@@ -9,6 +9,9 @@ struct StackGraphView: View {
 
     @State private var showBB = false
 
+    // Chart scrubbing (level label under the touch point)
+    @State private var scrubLabel: String?
+
     /// Groups entries by blind level, keeps only the latest entry per level, sorted ascending.
     private var latestPerLevel: [StackEntry] {
         let grouped = Dictionary(grouping: entries) { $0.blindLevelNumber }
@@ -98,6 +101,32 @@ struct StackGraphView: View {
             RuleMark(y: .value("Start", startingChips))
                 .foregroundStyle(Color.goldAccent.opacity(0.2))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+
+            if let scrubLabel,
+               let index = levelLabels.firstIndex(of: scrubLabel) {
+                let entry = data[index]
+                RuleMark(x: .value("Level", scrubLabel))
+                    .foregroundStyle(Color.goldAccent.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .annotation(
+                        position: .top,
+                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                    ) {
+                        ChartScrubCallout(
+                            title: "\(scrubLabel) · \(entry.timestamp.formatted(date: .omitted, time: .shortened))",
+                            value: entry.formattedChipCount,
+                            valueColor: entry.mZone.color
+                        )
+                    }
+            }
+        }
+        .chartOverlay { proxy in
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .gesture(scrubGesture(proxy: proxy, geo: geo))
+            }
         }
         .chartXScale(domain: levelLabels)
         .chartYAxis {
@@ -189,6 +218,33 @@ struct StackGraphView: View {
                             .foregroundColor(.textSecondary)
                     }
             }
+
+            if let scrubLabel,
+               let index = levelLabels.firstIndex(of: scrubLabel) {
+                let entry = data[index]
+                let bb = entry.currentBB > 0 ? Double(entry.chipCount) / Double(entry.currentBB) : 0
+                RuleMark(x: .value("Level", scrubLabel))
+                    .foregroundStyle(Color.goldAccent.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .annotation(
+                        position: .top,
+                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                    ) {
+                        ChartScrubCallout(
+                            title: "\(scrubLabel) · \(entry.timestamp.formatted(date: .omitted, time: .shortened))",
+                            value: String(format: "%.0f BB", bb),
+                            valueColor: BBZone.from(bbCount: bb).color
+                        )
+                    }
+            }
+        }
+        .chartOverlay { proxy in
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(Color.clear)
+                    .contentShape(Rectangle())
+                    .gesture(scrubGesture(proxy: proxy, geo: geo))
+            }
         }
         .chartXScale(domain: levelLabels)
         .chartYAxis {
@@ -244,6 +300,22 @@ struct StackGraphView: View {
                     .foregroundColor(.textSecondary)
             }
         }
+    }
+
+    // MARK: - Scrub Gesture
+
+    /// Drag gesture that maps the touch X position to a level label so the
+    /// matching stack entry can be inspected. Cleared on release.
+    private func scrubGesture(proxy: ChartProxy, geo: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { drag in
+                guard let plotFrame = proxy.plotFrame else { return }
+                let x = drag.location.x - geo[plotFrame].origin.x
+                if let label: String = proxy.value(atX: x) {
+                    scrubLabel = label
+                }
+            }
+            .onEnded { _ in scrubLabel = nil }
     }
 
     /// Limits X-axis labels so they don't overlap.

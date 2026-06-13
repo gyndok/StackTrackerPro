@@ -52,18 +52,34 @@ struct ParsedPokerInput {
 final class AIPokerParser: @unchecked Sendable {
     static let shared = AIPokerParser()
 
+    /// Guards all mutable state below. The class is @unchecked Sendable;
+    /// soundness relies on every access to these properties going through
+    /// `lock`.
+    private let lock = NSLock()
     private var session: LanguageModelSession?
-    private var _isAvailable: Bool?
+    private var parsesOnCurrentSession = 0
+    private var _isAvailable = false
+    private var lastAvailabilityCheck: Date?
+
+    /// Re-check model availability at most this often (the model may have
+    /// finished downloading since the last check, or become unavailable).
+    private let availabilityRecheckInterval: TimeInterval = 60
+    /// Proactively recycle the session after this many parses so the
+    /// growing transcript never exceeds the model's context window.
+    private let maxParsesPerSession = 20
 
     private init() {}
 
     var isAvailable: Bool {
-        if let cached = _isAvailable {
-            return cached
+        lock.lock()
+        defer { lock.unlock() }
+        if let last = lastAvailabilityCheck,
+           Date().timeIntervalSince(last) < availabilityRecheckInterval {
+            return _isAvailable
         }
-        let availability = SystemLanguageModel.default.availability
-        _isAvailable = (availability == .available)
-        return _isAvailable ?? false
+        lastAvailabilityCheck = Date()
+        _isAvailable = (SystemLanguageModel.default.availability == .available)
+        return _isAvailable
     }
 
     var statusMessage: String {
@@ -82,15 +98,40 @@ final class AIPokerParser: @unchecked Sendable {
         }
     }
 
-    private func setupSession() {
-        guard session == nil else { return }
+    /// Returns the current session, creating or recycling one as needed.
+    private func currentSession() -> LanguageModelSession {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if parsesOnCurrentSession >= maxParsesPerSession {
+            session = nil
+            parsesOnCurrentSession = 0
+        }
+
+        if let session {
+            parsesOnCurrentSession += 1
+            return session
+        }
 
         let instructions = """
             Extract poker tournament data. k=thousands, M=millions. \
             Blinds: SB/BB format (500/1000 means SB=500, BB=1000).
             """
 
-        session = LanguageModelSession(instructions: instructions)
+        let newSession = LanguageModelSession(instructions: instructions)
+        session = newSession
+        parsesOnCurrentSession = 1
+        return newSession
+    }
+
+    /// Discards the current session and forces a fresh availability check
+    /// on the next `isAvailable` read.
+    private func resetAfterFailure() {
+        lock.lock()
+        defer { lock.unlock() }
+        session = nil
+        parsesOnCurrentSession = 0
+        lastAvailabilityCheck = nil
     }
 
     func parse(_ text: String) async throws -> ParsedEntities {
@@ -98,18 +139,23 @@ final class AIPokerParser: @unchecked Sendable {
             throw AIParserError.modelUnavailable
         }
 
-        setupSession()
+        let session = currentSession()
 
-        guard let session else {
-            throw AIParserError.modelUnavailable
+        do {
+            let response = try await session.respond(
+                to: text,
+                generating: ParsedPokerInput.self
+            )
+            return response.content.toEntities()
+        } catch {
+            // A grown transcript can exceed the context window, leaving the
+            // session permanently broken (every subsequent parse would throw
+            // and silently regress to regex). Recreate the session on the
+            // next parse and re-evaluate availability instead of trusting
+            // the cached value.
+            resetAfterFailure()
+            throw error
         }
-
-        let response = try await session.respond(
-            to: text,
-            generating: ParsedPokerInput.self
-        )
-
-        return response.content.toEntities()
     }
 }
 

@@ -5,6 +5,7 @@ final class MilestoneTracker {
     static let shared = MilestoneTracker()
 
     private let shownKey = "MilestoneTracker.shownMilestones"
+    private let bestCashKey = "MilestoneTracker.bestCashAmount"
 
     private init() {}
 
@@ -41,19 +42,24 @@ final class MilestoneTracker {
             }
         }
 
-        // New PB Cash: payout > all previous
-        if !shown.contains(MilestoneType.newPBCash.rawValue) {
-            if let payout = completed.payout, payout > 0 {
-                let previousMax = allTournaments
-                    .filter {
-                        $0.persistentModelID != completed.persistentModelID &&
-                        $0.status == .completed
-                    }
-                    .compactMap(\.payout)
-                    .max() ?? 0
-                if payout > previousMax && previousMax > 0 {
-                    newMilestones.append(.newPBCash)
+        // New PB Cash: compared against the stored previous best (not one-shot —
+        // fires every time the best is exceeded, then the stored best is updated).
+        if let payout = completed.payout, payout > 0 {
+            let storedBest = UserDefaults.standard.integer(forKey: bestCashKey)
+            let previousMax = allTournaments
+                .filter {
+                    $0.persistentModelID != completed.persistentModelID &&
+                    $0.status == .completed
                 }
+                .compactMap(\.payout)
+                .max() ?? 0
+            // Seed from history for users who recorded cashes before this key existed.
+            let previousBest = max(storedBest, previousMax)
+            if payout > previousBest && previousBest > 0 {
+                newMilestones.append(.newPBCash)
+            }
+            if payout > storedBest {
+                UserDefaults.standard.set(payout, forKey: bestCashKey)
             }
         }
 

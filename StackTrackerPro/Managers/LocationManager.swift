@@ -10,7 +10,11 @@ final class LocationManager: NSObject, ObservableObject, @unchecked Sendable {
     private var cacheTimestamp: Date?
     private let cacheDuration: TimeInterval = 300 // 5 minutes
 
-    private var locationContinuation: CheckedContinuation<CLLocation, any Error>?
+    // Multiple callers can await a fix or an authorization change at once;
+    // every continuation is resumed (exactly once) by the delegate callbacks,
+    // so none is ever dropped unresumed.
+    private var locationContinuations: [CheckedContinuation<CLLocation, any Error>] = []
+    private var authorizationContinuations: [CheckedContinuation<CLAuthorizationStatus, Never>] = []
 
     private override init() {
         super.init()
@@ -25,21 +29,33 @@ final class LocationManager: NSObject, ObservableObject, @unchecked Sendable {
             return cached
         }
 
-        let status = manager.authorizationStatus
+        var status = manager.authorizationStatus
         if status == .notDetermined {
-            manager.requestWhenInUseAuthorization()
-            // Wait briefly for authorization
-            try await Task.sleep(for: .milliseconds(500))
+            // Await the real authorization change instead of sleeping —
+            // first-time users may take arbitrarily long to answer the prompt.
+            status = await requestAuthorization()
         }
 
-        let currentStatus = manager.authorizationStatus
-        guard currentStatus == .authorizedWhenInUse || currentStatus == .authorizedAlways else {
+        guard status == .authorizedWhenInUse || status == .authorizedAlways else {
             throw LocationError.permissionDenied
         }
 
         return try await withCheckedThrowingContinuation { continuation in
-            self.locationContinuation = continuation
-            self.manager.requestLocation()
+            self.locationContinuations.append(continuation)
+            // Only the first waiter kicks off a request; the delegate
+            // callback resumes everyone.
+            if self.locationContinuations.count == 1 {
+                self.manager.requestLocation()
+            }
+        }
+    }
+
+    private func requestAuthorization() async -> CLAuthorizationStatus {
+        await withCheckedContinuation { continuation in
+            self.authorizationContinuations.append(continuation)
+            if self.authorizationContinuations.count == 1 {
+                self.manager.requestWhenInUseAuthorization()
+            }
         }
     }
 
@@ -74,15 +90,35 @@ extension LocationManager: CLLocationManagerDelegate {
         Task { @MainActor in
             self.cachedLocation = location
             self.cacheTimestamp = Date()
-            self.locationContinuation?.resume(returning: location)
-            self.locationContinuation = nil
+            let waiters = self.locationContinuations
+            self.locationContinuations = []
+            for waiter in waiters {
+                waiter.resume(returning: location)
+            }
         }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
         Task { @MainActor in
-            self.locationContinuation?.resume(throwing: LocationError.locationUnavailable)
-            self.locationContinuation = nil
+            let waiters = self.locationContinuations
+            self.locationContinuations = []
+            for waiter in waiters {
+                waiter.resume(throwing: LocationError.locationUnavailable)
+            }
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            // .notDetermined fires when the delegate is first attached and
+            // while the permission prompt is still on screen — keep waiting.
+            guard status != .notDetermined else { return }
+            let waiters = self.authorizationContinuations
+            self.authorizationContinuations = []
+            for waiter in waiters {
+                waiter.resume(returning: status)
+            }
         }
     }
 }

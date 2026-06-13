@@ -33,6 +33,15 @@ final class RegexPokerParser: @unchecked Sendable {
         let input = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         var entities = ParsedEntities()
 
+        // Hand note: "hand note: ...", "noted: ...", "HN: ...", "note: ..."
+        // A hand note is the entire entity — suppress ALL other extraction so
+        // phrases like "note: villain busted my aces" can't trigger
+        // eliminations, bounties, rebuys, payouts, blinds, or stack updates.
+        if let match = input.firstMatch(of: /(?:hand\s*note|noted|hn|note)\s*:\s*(.+)/) {
+            entities.handNote = String(match.1).trimmingCharacters(in: .whitespaces)
+            return entities
+        }
+
         // Level number: "level 7", "lvl 7", "lv 7"
         if let match = input.firstMatch(of: /(?:level|lvl|lv)\s*(\d+)/) {
             entities.levelNumber = Int(match.1)
@@ -68,7 +77,13 @@ final class RegexPokerParser: @unchecked Sendable {
         // Payout: "cashed for $680", "won $1200", "payout $500", "got $680"
         if let match = input.firstMatch(of: /(?:cashed|won|payout|got|paid|collected)\s*(?:for\s+)?\$?([\d,]+[kK]?)/) {
             let value = parseChipValue(String(match.1).replacingOccurrences(of: ",", with: ""))
-            if !entities.bountyCollected || value > 200 {
+            // Constraint: ParsedEntities has no per-bounty amount field (the
+            // bounty value is fixed per tournament), so an amount that clearly
+            // describes the bounty itself ("got a $100 bounty") is dropped
+            // rather than misrecorded as prize money. All other amounts are
+            // recorded as payouts — no minimum threshold.
+            let amountBelongsToBounty = input.firstMatch(of: /\$?[\d,]+[kK]?\s*(?:bounty|bounties|knockout|ko)\b/) != nil
+            if !amountBelongsToBounty {
                 entities.payoutAmount = value
             }
         }
@@ -85,26 +100,20 @@ final class RegexPokerParser: @unchecked Sendable {
             entities.playersRemaining = Int(match.1)
         }
 
-        // Hand note: "hand note: ...", "noted: ...", "HN: ...", "note: ..."
-        if let match = input.firstMatch(of: /(?:hand\s*note|noted|hn|note)\s*:\s*(.+)/) {
-            entities.handNote = String(match.1).trimmingCharacters(in: .whitespaces)
-        }
-
         // Stack/chip count: "18k", "45,000", "I have 32k", "stack is 45000"
         // Must be parsed AFTER blinds to avoid conflicts
-        // Skip if message is a hand note to prevent false stack updates
-        if entities.handNote == nil {
-            entities.chipCount = extractStackValue(from: input, entities: entities)
-        }
+        entities.chipCount = extractStackValue(from: input, entities: entities)
 
         return entities
     }
 
     private func extractStackValue(from input: String, entities: ParsedEntities) -> Int? {
         // Explicit stack mentions: "I have 32k", "stack is 45k", "sitting on 32k", "at 32k"
+        // The trailing (?![\d,]*\/) guard rejects numbers that are part of
+        // blinds notation ("now at 500/1000" must not record stack=500).
         let stackPatterns: [Regex<(Substring, Substring)>] = [
-            /(?:i have|stack is|stack at|sitting on|sitting at|at|chips?)\s+(\d+[kKmM]?(?:,\d{3})*)/,
-            /(\d+[kKmM](?:,\d{3})*)\s+(?:chips?|stack)/,
+            /(?:i have|stack is|stack at|sitting on|sitting at|at|chips?)\s+(\d+[kKmM]?(?:,\d{3})*)(?![\d,]*\/)/,
+            /(\d+[kKmM](?:,\d{3})*)(?![\d,]*\/)\s+(?:chips?|stack)/,
         ]
 
         for pattern in stackPatterns {

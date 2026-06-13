@@ -3,11 +3,16 @@ import SwiftData
 
 @main
 struct StackTrackerProApp: App {
-    @State private var tournamentManager = TournamentManager()
-    @State private var chatManager: ChatManager?
+    @State private var tournamentManager: TournamentManager
+    @State private var chatManager: ChatManager
     @State private var cashSessionManager = CashSessionManager()
-    @AppStorage(SettingsKeys.appTheme) private var appTheme = AppTheme.midnight.rawValue
     @State private var showSplash = true
+
+    init() {
+        let tournamentManager = TournamentManager()
+        _tournamentManager = State(initialValue: tournamentManager)
+        _chatManager = State(initialValue: ChatManager(tournamentManager: tournamentManager))
+    }
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -21,30 +26,33 @@ struct StackTrackerProApp: App {
             FieldSnapshot.self,
             Venue.self,
             ChipStackPhoto.self,
+            BreakEntry.self,
         ])
 
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .private("iCloud.com.gyndok.stacktrackerpro")
+        )
+
         do {
-            let modelConfiguration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false,
-                cloudKitDatabase: .private("iCloud.com.gyndok.stacktrackerpro")
-            )
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            // If store is incompatible (schema migration), delete all DB files and retry
+            // If the store is incompatible (failed schema migration), move the store
+            // files aside as a backup — never delete user data — and retry with the
+            // same CloudKit-backed configuration.
             let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
+            let fileManager = FileManager.default
             for suffix in ["", "-wal", "-shm"] {
                 let fileURL = URL(filePath: storeURL.path() + suffix)
-                try? FileManager.default.removeItem(at: fileURL)
+                let backupURL = URL(filePath: storeURL.path() + ".backup" + suffix)
+                try? fileManager.removeItem(at: backupURL)
+                try? fileManager.moveItem(at: fileURL, to: backupURL)
             }
             do {
-                let modelConfiguration = ModelConfiguration(
-                    schema: schema,
-                    isStoredInMemoryOnly: false
-                )
                 return try ModelContainer(for: schema, configurations: [modelConfiguration])
             } catch {
-                fatalError("Could not create ModelContainer: \(error)")
+                fatalError("Could not create ModelContainer even after moving the existing store aside (backup kept at default.store.backup): \(error)")
             }
         }
     }()
@@ -56,13 +64,10 @@ struct StackTrackerProApp: App {
                     .onAppear {
                         tournamentManager.setContext(sharedModelContainer.mainContext)
                         cashSessionManager.setContext(sharedModelContainer.mainContext)
-                        if chatManager == nil {
-                            chatManager = ChatManager(tournamentManager: tournamentManager)
-                        }
                         migrateNilPayouts(context: sharedModelContainer.mainContext)
                     }
                     .environment(tournamentManager)
-                    .environment(chatManager ?? ChatManager(tournamentManager: tournamentManager))
+                    .environment(chatManager)
                     .environment(cashSessionManager)
 
                 if showSplash {
@@ -71,7 +76,6 @@ struct StackTrackerProApp: App {
                         .zIndex(1)
                 }
             }
-            .id(appTheme)
             .preferredColorScheme(.dark)
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -84,12 +88,11 @@ struct StackTrackerProApp: App {
         .modelContainer(sharedModelContainer)
     }
 
-    /// One-time fix: completed tournaments with nil payout should be 0
-    /// so profit calculates correctly as a loss.
+    /// Idempotent fix: completed tournaments with nil payout should be 0
+    /// so profit calculates correctly as a loss. Runs on every launch so
+    /// records that later sync down from devices on older versions are
+    /// also repaired.
     private func migrateNilPayouts(context: ModelContext) {
-        let migrationKey = "didMigrateNilPayouts"
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-
         do {
             let descriptor = FetchDescriptor<Tournament>()
             let all = try context.fetch(descriptor)
@@ -101,7 +104,6 @@ struct StackTrackerProApp: App {
             if changed {
                 try context.save()
             }
-            UserDefaults.standard.set(true, forKey: migrationKey)
         } catch {
             // Non-fatal — will retry next launch
         }

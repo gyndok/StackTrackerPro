@@ -55,6 +55,7 @@ struct BlindLevelsPane: View {
                 Image(systemName: "cup.and.saucer.fill")
                     .font(.caption)
                     .foregroundColor(.textSecondary)
+                    .accessibilityHidden(true)
                 Text(level.breakLabel ?? "Break")
                     .font(PokerTypography.chatBody)
                     .foregroundColor(.textSecondary)
@@ -78,15 +79,19 @@ struct BlindLevelsPane: View {
                         .foregroundColor(.textSecondary)
                 }
 
-                // Edit pencil
+                // Edit pencil (12pt glyph, expanded to a ~44pt tap target)
                 Button {
                     beginEditing(level)
                 } label: {
                     Image(systemName: "pencil")
                         .font(.system(size: 12))
                         .foregroundColor(.goldAccent.opacity(0.5))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .frame(width: 24, height: 24)
+                .accessibilityLabel("Edit level \(displayNum ?? level.levelNumber)")
             }
 
             if isCurrent {
@@ -94,6 +99,7 @@ struct BlindLevelsPane: View {
                 Image(systemName: "arrowtriangle.right.fill")
                     .font(.caption2)
                     .foregroundColor(.goldAccent)
+                    .accessibilityLabel("Current level")
             }
         }
         .padding(.horizontal, 12)
@@ -262,6 +268,7 @@ struct BlindLevelsPane: View {
             Image(systemName: "list.number")
                 .font(.system(size: 40))
                 .foregroundColor(.textSecondary.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No blind structure set")
                 .font(PokerTypography.chatBody)

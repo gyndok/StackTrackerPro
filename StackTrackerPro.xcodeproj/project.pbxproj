@@ -75,6 +75,7 @@
 		DF9551684BF64F293F715890 /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DA5914D561AE928028205F /* ChatManager.swift */; };
 		E1E2E3E4E5E6E7E8E9E0E1E2 /* TournamentHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */; };
 		E1F145AAF41D1CFEB5562B0A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 529818AED3ED590453EC155B /* Assets.xcassets */; };
+		E1F145AAF41D1CFEB5562B0B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 529818AED3ED590453EC155C /* PrivacyInfo.xcprivacy */; };
 		E3B8A1D4D7297074F9AADF0C /* MRatioBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D75E83FB49507E95AFAF29 /* MRatioBadge.swift */; };
 		E3F4A5B6C7D8E9F0A1B2C3D4 /* XShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */; };
 		E91D0161024547D9BB4F458F /* Tournament.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7450AB8F51603F31BC6348C /* Tournament.swift */; };
@@ -90,6 +91,7 @@
 		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
 		FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C122E458D953010331B7239C /* TournamentMetricsView.swift */; };
+		7E5700000000000000000003 /* StackTrackerProTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000002 /* StackTrackerProTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -111,6 +113,8 @@
 		5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBlockView.swift; sourceTree = "<group>"; };
 		50C8CDE38102F8460DA98886 /* TournamentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentListView.swift; sourceTree = "<group>"; };
 		529818AED3ED590453EC155B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		529818AED3ED590453EC155C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		529818AED3ED590453EC155D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		567997920E43C3E11DE68146 /* FieldSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldSnapshot.swift; sourceTree = "<group>"; };
 		56DA5914D561AE928028205F /* ChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
 		5D98A08EDB70CA37265C9783 /* ChatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputView.swift; sourceTree = "<group>"; };
@@ -177,10 +181,19 @@
 		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
 		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
 		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7E5700000000000000000001 /* StackTrackerProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StackTrackerProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E5700000000000000000002 /* StackTrackerProTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackTrackerProTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		2EE5141556C7852B30E87123 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7E5700000000000000000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -199,6 +212,7 @@
 				778F8A5CCA605DF481933210 /* Managers */,
 				B3FF000EAD123ECB4835E3AE /* Views */,
 				408FBE2D98A644B78B0C156A /* Resources */,
+				529818AED3ED590453EC155D /* Info.plist */,
 			);
 			path = StackTrackerPro;
 			sourceTree = "<group>";
@@ -207,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				529818AED3ED590453EC155B /* Assets.xcassets */,
+				529818AED3ED590453EC155C /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -261,6 +276,7 @@
 			isa = PBXGroup;
 			children = (
 				1C92D8867AE44F55B3275065 /* StackTrackerPro */,
+				7E5700000000000000000004 /* StackTrackerProTests */,
 				D721B1E0647EB8BA7774BBD5 /* Products */,
 				DBD715E0A5F6F2FC5CD76470 /* Frameworks */,
 			);
@@ -371,6 +387,7 @@
 			isa = PBXGroup;
 			children = (
 				66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */,
+				7E5700000000000000000001 /* StackTrackerProTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -400,6 +417,14 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		7E5700000000000000000004 /* StackTrackerProTests */ = {
+			isa = PBXGroup;
+			children = (
+				7E5700000000000000000002 /* StackTrackerProTests.swift */,
+			);
+			path = StackTrackerProTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -420,7 +445,42 @@
 			productReference = 66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */;
 			productType = "com.apple.product-type.application";
 		};
+		7E5700000000000000000005 /* StackTrackerProTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7E570000000000000000000C /* Build configuration list for PBXNativeTarget "StackTrackerProTests" */;
+			buildPhases = (
+				7E5700000000000000000006 /* Sources */,
+				7E5700000000000000000007 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7E5700000000000000000009 /* PBXTargetDependency */,
+			);
+			name = StackTrackerProTests;
+			productName = StackTrackerProTests;
+			productReference = 7E5700000000000000000001 /* StackTrackerProTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXContainerItemProxy section */
+		7E5700000000000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E6921F438ED91165739C4837 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8796EC6A87564C187A908CD6;
+			remoteInfo = StackTrackerPro;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		7E5700000000000000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8796EC6A87564C187A908CD6 /* StackTrackerPro */;
+			targetProxy = 7E5700000000000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		E6921F438ED91165739C4837 /* Project object */ = {
@@ -428,6 +488,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					7E5700000000000000000005 = {
+						TestTargetID = 8796EC6A87564C187A908CD6;
+					};
+				};
 			};
 			buildConfigurationList = 46E5A916260DF83493DCF3A2 /* Build configuration list for PBXProject "StackTrackerPro" */;
 			developmentRegion = en;
@@ -443,6 +508,7 @@
 			projectRoot = "";
 			targets = (
 				8796EC6A87564C187A908CD6 /* StackTrackerPro */,
+				7E5700000000000000000005 /* StackTrackerProTests */,
 			);
 		};
 /* End PBXProject section */
@@ -453,6 +519,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E1F145AAF41D1CFEB5562B0A /* Assets.xcassets in Resources */,
+				E1F145AAF41D1CFEB5562B0B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,6 +612,14 @@
 				CA5H00000000000000010D /* ResultsView.swift in Sources */,
 				CA5H00000000000000010E /* ResultsAnalyticsView.swift in Sources */,
 				CA5H00000000000000010F /* GameTypePickerView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7E5700000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7E5700000000000000000003 /* StackTrackerProTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -683,6 +758,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -716,6 +792,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -740,6 +817,42 @@
 			};
 			name = Release;
 		};
+		7E570000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StackTrackerPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StackTrackerPro";
+			};
+			name = Debug;
+		};
+		7E570000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StackTrackerPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StackTrackerPro";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -757,6 +870,15 @@
 			buildConfigurations = (
 				044EFCA05EA43619939F1711 /* Debug */,
 				76A8B94FCFE7B1ECDD6FECC1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7E570000000000000000000C /* Build configuration list for PBXNativeTarget "StackTrackerProTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7E570000000000000000000A /* Debug */,
+				7E570000000000000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -17,21 +17,30 @@ struct EndTournamentSheet: View {
 
     private var computedProfit: Int? {
         guard let payout = parsedPayout else { return nil }
-        return payout + (tournament.bountiesCollected * tournament.bountyAmount) - tournament.totalInvestment
+        return payout + tournament.bountyWinnings - tournament.totalInvestment
     }
 
+    private var finishPositionError: String? {
+        guard let position = Int(finishPositionText),
+              tournament.fieldSize > 0,
+              position > tournament.fieldSize else { return nil }
+        return "Finish position can't exceed the field size (\(tournament.fieldSize))"
+    }
+
+    /// Pause-aware elapsed play time (mirrors the model's duration math for
+    /// tournaments that haven't ended yet).
     private var elapsedInterval: TimeInterval {
-        Date.now.timeIntervalSince(tournament.startDate)
+        let start = tournament.actualStartDate ?? tournament.startDate
+        var elapsed = Date.now.timeIntervalSince(start)
+        elapsed -= TimeInterval(tournament.accumulatedPauseSeconds)
+        if let pausedAt = tournament.pausedAt, tournament.status == .paused {
+            elapsed -= Date.now.timeIntervalSince(pausedAt)
+        }
+        return max(0, elapsed)
     }
 
     private var liveDuration: String {
-        let elapsed = elapsedInterval
-        let hours = Int(elapsed) / 3600
-        let minutes = (Int(elapsed) % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
+        tournament.durationFormatted
     }
 
     private var computedHourlyRate: Double? {
@@ -45,7 +54,7 @@ struct EndTournamentSheet: View {
     }
 
     private var bountyTotal: Int {
-        tournament.bountiesCollected * tournament.bountyAmount
+        tournament.bountyWinnings
     }
 
     // MARK: - Body
@@ -91,6 +100,12 @@ struct EndTournamentSheet: View {
             }
             .background(Color.cardSurface)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            if let error = finishPositionError {
+                Text(error)
+                    .font(PokerTypography.chatCaption)
+                    .foregroundColor(.red)
+            }
         }
     }
 
@@ -107,11 +122,11 @@ struct EndTournamentSheet: View {
 
                 summaryRow("Total Investment", value: "$\(tournament.totalInvestment.formatted())")
 
-                if tournament.bountiesCollected > 0 && tournament.bountyAmount > 0 {
+                if bountyTotal > 0 {
                     Divider().background(Color.textSecondary.opacity(0.2))
                     summaryRow(
                         "Bounties Earned",
-                        value: "\(tournament.bountiesCollected) × $\(tournament.bountyAmount.formatted()) = $\(bountyTotal.formatted())"
+                        value: "\(tournament.bountiesCollected) bounties = $\(bountyTotal.formatted())"
                     )
                 }
 
@@ -157,9 +172,10 @@ struct EndTournamentSheet: View {
                 .foregroundColor(.backgroundPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.goldAccent)
+                .background(finishPositionError == nil ? Color.goldAccent : Color.gray.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .disabled(finishPositionError != nil)
         .padding(.top, 8)
     }
 

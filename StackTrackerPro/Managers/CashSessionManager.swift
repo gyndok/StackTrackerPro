@@ -1,15 +1,21 @@
 import Foundation
 import SwiftData
 import Observation
+import os
 
 @MainActor @Observable
 final class CashSessionManager {
+    private static let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "CashSessionManager")
+
     var activeSession: CashSession?
     var modelContext: ModelContext?
 
     var showEndSession = false
     var showSessionRecap = false
     private(set) var completedSessionForRecap: CashSession?
+
+    // Surfaced errors for the UI
+    private(set) var lastSaveError: String?
 
     init() {}
 
@@ -106,6 +112,13 @@ final class CashSessionManager {
     // MARK: - Persistence
 
     private func save() {
-        try? modelContext?.save()
+        guard let modelContext else { return }
+        do {
+            try modelContext.save()
+            lastSaveError = nil
+        } catch {
+            Self.logger.error("Failed to save model context: \(error.localizedDescription)")
+            lastSaveError = error.localizedDescription
+        }
     }
 }

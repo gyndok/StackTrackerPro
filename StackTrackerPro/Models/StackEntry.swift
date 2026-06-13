@@ -9,6 +9,9 @@ final class StackEntry {
     var currentSB: Int = 0
     var currentBB: Int = 0
     var currentAnte: Int = 0
+    /// Seats per table snapshotted at record time, so changing the setting
+    /// later doesn't rewrite historical M-ratios. Nil for legacy rows.
+    var seatsAtTable: Int?
     var sourceRaw: String = "chat"
     var tournament: Tournament?
     var cashSession: CashSession?
@@ -20,6 +23,7 @@ final class StackEntry {
         currentSB: Int = 0,
         currentBB: Int = 0,
         currentAnte: Int = 0,
+        seatsAtTable: Int? = nil,
         source: StackEntrySource = .chat
     ) {
         self.timestamp = timestamp
@@ -28,6 +32,7 @@ final class StackEntry {
         self.currentSB = currentSB
         self.currentBB = currentBB
         self.currentAnte = currentAnte
+        self.seatsAtTable = seatsAtTable
         self.sourceRaw = source.rawValue
     }
 
@@ -41,8 +46,18 @@ final class StackEntry {
     }
 
     var mRatio: Double {
-        let seats = UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
-        let orbit = currentSB + currentBB + (seats * currentAnte)
+        let anteTotal: Int
+        switch tournament?.anteFormat ?? .bigBlind {
+        case .bigBlind:
+            anteTotal = currentAnte
+        case .perPlayer:
+            // Prefer the snapshotted seat count; only legacy rows fall back
+            // to the live setting (read once into a local).
+            let seats = seatsAtTable
+                ?? (UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9)
+            anteTotal = seats * currentAnte
+        }
+        let orbit = currentSB + currentBB + anteTotal
         guard orbit > 0 else { return 0 }
         return Double(chipCount) / Double(orbit)
     }

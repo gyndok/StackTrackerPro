@@ -55,7 +55,10 @@ struct TournamentMetricsView: View {
                 Image(systemName: "minus.circle.fill")
                     .font(.title3)
                     .foregroundColor(.goldAccent)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Decrease payout percent")
 
             Text(String(format: tournament.payoutPercent.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f%%" : "%.1f%%", tournament.payoutPercent))
                 .font(PokerTypography.statValue)
@@ -70,7 +73,10 @@ struct TournamentMetricsView: View {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
                     .foregroundColor(.goldAccent)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Increase payout percent")
         }
         .padding(12)
         .background(Color.cardSurface)
@@ -272,11 +278,9 @@ struct TournamentMetricsView: View {
     }
 
     private func savePlayersEdit() {
+        guard isPlayersEditValid else { return }
         let entries = Int(editTotalEntries) ?? 0
         let remaining = Int(editPlayersRemaining) ?? 0
-
-        guard remaining <= entries || entries == 0 else { return }
-        guard entries == 0 || entries >= tournament.fieldSize else { return }
 
         tournamentManager.updateField(
             totalEntries: entries > 0 ? entries : nil,
@@ -286,12 +290,14 @@ struct TournamentMetricsView: View {
         showPlayersEditor = false
     }
 
+    // Any positive entry count is allowed (so a fat-fingered field size can be
+    // corrected downward) — it just can't drop below the players still in.
     private var isPlayersEditValid: Bool {
         let entries = Int(editTotalEntries) ?? 0
         let remaining = Int(editPlayersRemaining) ?? 0
         if entries == 0 && remaining == 0 { return false }
-        if entries > 0 && remaining > entries { return false }
-        if entries > 0 && entries < tournament.fieldSize { return false }
+        let effectiveRemaining = remaining > 0 ? remaining : tournament.playersRemaining
+        if entries > 0 && entries < effectiveRemaining { return false }
         return true
     }
 

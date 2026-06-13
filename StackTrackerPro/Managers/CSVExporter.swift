@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import os
 
 struct CSVExportResult {
     let csvString: String
@@ -10,10 +11,18 @@ struct CSVExportResult {
 
 struct CSVExporter {
 
+    private static let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "CSVExporter")
+
     /// Exports all completed sessions to CSV matching the import format:
-    /// Date, Format, Variant, Stakes, Location, Buy-in ($), Cash-out ($), Profit/Loss ($), Duration (hours), Hourly Rate ($/hr), Notes
+    /// Date, Format, Variant, Stakes, Location, Buy-in ($), Cash-out ($), Profit/Loss ($),
+    /// Duration (hours), Hourly Rate ($/hr), Notes, Tournament Name, Finish Position,
+    /// Field Size, Rebuys, Bounties Collected, Bounty Amount
+    ///
+    /// Note: fetch failures are logged (the export will then be missing that
+    /// record type) — the signature stays non-throwing because SettingsView
+    /// owns the call site and expects a value.
     static func exportCSV(from context: ModelContext) -> CSVExportResult {
-        let header = "Date,Format,Variant,Stakes,Location,Buy-in ($),Cash-out ($),Profit/Loss ($),Duration (hours),Hourly Rate ($/hr),Notes"
+        let header = "Date,Format,Variant,Stakes,Location,Buy-in ($),Cash-out ($),Profit/Loss ($),Duration (hours),Hourly Rate ($/hr),Notes,Tournament Name,Finish Position,Field Size,Rebuys,Bounties Collected,Bounty Amount"
 
         var rows: [(date: Date, line: String)] = []
         var cashCount = 0
@@ -39,8 +48,9 @@ struct CSVExporter {
                 let stakes = escapeCSV(session.stakes)
                 let location = escapeCSV(session.venueName ?? "")
                 let buyIn = session.buyInTotal
-                let cashOut = session.cashOut ?? 0
-                let profit = (session.cashOut ?? 0) - session.buyInTotal
+                // Blank cash-out means "no recorded result" — preserved on import
+                let cashOutStr = session.cashOut.map(String.init) ?? ""
+                let profitStr = session.cashOut.map { String($0 - session.buyInTotal) } ?? ""
                 let durationHours = session.duration.map { $0 / 3600 }
                 let hourlyRate = session.hourlyRate
 
@@ -48,11 +58,13 @@ struct CSVExporter {
                 let hourlyStr = hourlyRate.map { String(format: "%.2f", $0) } ?? ""
                 let notes = escapeCSV(session.notes ?? "")
 
-                let line = "\(dateStr),Cash,\(variant),\(stakes),\(location),\(buyIn),\(cashOut),\(profit),\(durationStr),\(hourlyStr),\(notes)"
+                let line = "\(dateStr),Cash,\(variant),\(stakes),\(location),\(buyIn),\(cashOutStr),\(profitStr),\(durationStr),\(hourlyStr),\(notes),,,,,,"
                 rows.append((date: date, line: line))
                 cashCount += 1
             }
-        } catch {}
+        } catch {
+            logger.error("CSV export: failed to fetch cash sessions: \(error.localizedDescription, privacy: .public)")
+        }
 
         // Fetch completed tournaments
         do {
@@ -70,8 +82,9 @@ struct CSVExporter {
                 let stakes = ""
                 let location = escapeCSV(t.venueName ?? "")
                 let buyIn = t.totalInvestment
-                let cashOut = t.payout ?? 0
-                let profit = (t.payout ?? 0) + (t.bountiesCollected * t.bountyAmount) - t.totalInvestment
+                // Blank cash-out means "no recorded result" — preserved on import
+                let cashOutStr = t.payout.map(String.init) ?? ""
+                let profitStr = t.profit.map(String.init) ?? ""
                 let durationHours = t.duration.map { $0 / 3600 }
                 let hourlyRate: Double? = if let p = t.profit, let d = t.duration, d > 0 {
                     Double(p) / (d / 3600)
@@ -81,13 +94,20 @@ struct CSVExporter {
 
                 let durationStr = durationHours.map { String(format: "%.2f", $0) } ?? ""
                 let hourlyStr = hourlyRate.map { String(format: "%.2f", $0) } ?? ""
-                let notes = escapeCSV(t.name)
+                let tournamentName = escapeCSV(t.name)
+                let finishStr = t.finishPosition.map(String.init) ?? ""
+                let fieldStr = t.fieldSize > 0 ? String(t.fieldSize) : ""
+                let rebuysStr = String(t.rebuysUsed)
+                let bountiesStr = String(t.bountiesCollected)
+                let bountyAmountStr = String(t.bountyAmount)
 
-                let line = "\(dateStr),Tournament,\(variant),\(stakes),\(location),\(buyIn),\(cashOut),\(profit),\(durationStr),\(hourlyStr),\(notes)"
+                let line = "\(dateStr),Tournament,\(variant),\(stakes),\(location),\(buyIn),\(cashOutStr),\(profitStr),\(durationStr),\(hourlyStr),,\(tournamentName),\(finishStr),\(fieldStr),\(rebuysStr),\(bountiesStr),\(bountyAmountStr)"
                 rows.append((date: date, line: line))
                 tournamentCount += 1
             }
-        } catch {}
+        } catch {
+            logger.error("CSV export: failed to fetch tournaments: \(error.localizedDescription, privacy: .public)")
+        }
 
         // Sort all rows by date
         rows.sort { $0.date < $1.date }

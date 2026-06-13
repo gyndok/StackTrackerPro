@@ -59,10 +59,13 @@ struct CashActiveSessionView: View {
                     Circle()
                         .fill(session.status == .active ? Color.mZoneGreen : Color.mZoneYellow)
                         .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
                     Text(session.status.label)
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Session status: \(session.status.label)")
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -102,6 +105,7 @@ struct CashActiveSessionView: View {
                     Image(systemName: "ellipsis.circle")
                         .foregroundColor(.goldAccent)
                 }
+                .accessibilityLabel("Session options")
             }
         }
         .onAppear {
@@ -115,11 +119,12 @@ struct CashActiveSessionView: View {
         .sheet(isPresented: Bindable(cashSessionManager).showEndSession) {
             EndCashSessionSheet(session: session)
         }
-        .sheet(isPresented: Bindable(cashSessionManager).showSessionRecap) {
-            if let recapSession = cashSessionManager.completedSessionForRecap {
-                CashSessionRecapSheet(session: recapSession) {
-                    cashSessionManager.dismissRecap()
-                }
+        .sheet(item: Binding(
+            get: { cashSessionManager.showSessionRecap ? cashSessionManager.completedSessionForRecap : nil },
+            set: { if $0 == nil { cashSessionManager.dismissRecap() } }
+        )) { recapSession in
+            CashSessionRecapSheet(session: recapSession) {
+                cashSessionManager.dismissRecap()
             }
         }
         .sheet(isPresented: $showAddOnSheet) {
@@ -129,16 +134,33 @@ struct CashActiveSessionView: View {
 
     // MARK: - Page Indicator
 
+    private static let pageNames = ["Stack chart", "Stats", "Hand notes"]
+
     private var pageIndicator: some View {
-        HStack(spacing: 8) {
+        // Buttons are 16pt wide with zero spacing so dot centers stay 16pt
+        // apart — visually identical to the old 8pt dots + 8pt gaps, but with
+        // a larger tappable area per dot.
+        HStack(spacing: 0) {
             ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
-                    .frame(width: 8, height: 8)
-                    .animation(.spring(response: 0.3), value: selectedPage)
+                Button {
+                    selectedPage = index
+                } label: {
+                    Circle()
+                        .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
+                        .frame(width: 8, height: 8)
+                        .animation(.spring(response: 0.3), value: selectedPage)
+                        .frame(width: 16, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Self.pageNames[index])
+                .accessibilityAddTraits(index == selectedPage ? [.isSelected] : [])
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Page indicator")
+        .accessibilityValue("Page \(selectedPage + 1) of 3, \(Self.pageNames[selectedPage])")
     }
 
 

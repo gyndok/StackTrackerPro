@@ -21,6 +21,9 @@ struct BBBadge: View {
         .padding(.vertical, 5)
         .background(zone.color.opacity(0.15))
         .clipShape(Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Big blinds")
+        .accessibilityValue(String(format: "%.1f, %@", bbCount, zone.rawValue))
         .onChange(of: zone) { oldZone, newZone in
             guard previousZone != nil else {
                 previousZone = newZone
@@ -57,6 +60,9 @@ struct MRatioBadge: View {
         .padding(.vertical, 5)
         .background(zone.color.opacity(0.15))
         .clipShape(Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("M-ratio")
+        .accessibilityValue(String(format: "%.1f, %@", mRatio, zone.rawValue))
     }
 }
 

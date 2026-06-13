@@ -19,9 +19,8 @@ struct SessionRecapCardView: View {
     }
 
     private var roiPercent: Double? {
-        guard tournament.totalInvestment > 0, let payout = tournament.payout else { return nil }
-        let totalReturn = payout + (tournament.bountiesCollected * tournament.bountyAmount)
-        return (Double(totalReturn - tournament.totalInvestment) / Double(tournament.totalInvestment)) * 100
+        guard tournament.totalInvestment > 0, let profit = tournament.profit else { return nil }
+        return (Double(profit) / Double(tournament.totalInvestment)) * 100
     }
 
     private var duration: String {
@@ -33,8 +32,8 @@ struct SessionRecapCardView: View {
     }
 
     private var bountyText: String? {
-        guard tournament.bountiesCollected > 0, tournament.bountyAmount > 0 else { return nil }
-        let total = tournament.bountiesCollected * tournament.bountyAmount
+        let total = tournament.bountyWinnings
+        guard tournament.bountiesCollected > 0, total > 0 else { return nil }
         return "\(tournament.bountiesCollected) bounties ($\(total.formatted()))"
     }
 

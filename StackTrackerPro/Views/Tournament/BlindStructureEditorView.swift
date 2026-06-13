@@ -7,7 +7,10 @@ struct BlindStructureEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var tournament: Tournament
 
-    var scannedLevels: [ScannedBlindLevel] = []
+    /// Pending scanned levels from the setup flow. Consumed exactly once on
+    /// appear — cleared back through the binding so reopening the editor
+    /// never wipes manual edits.
+    @Binding var scannedLevels: [ScannedBlindLevel]
 
     @State private var showingTemplates = false
 
@@ -60,6 +63,7 @@ struct BlindStructureEditorView: View {
                     Image(systemName: "ellipsis.circle")
                         .foregroundColor(.goldAccent)
                 }
+                .accessibilityLabel("Structure options")
             }
         }
         .confirmationDialog("Load Template", isPresented: $showingTemplates) {
@@ -114,8 +118,10 @@ struct BlindStructureEditorView: View {
         }
         .onAppear {
             if !scannedLevels.isEmpty {
+                let pending = scannedLevels
+                scannedLevels = []
                 DispatchQueue.main.async {
-                    loadScannedLevels(scannedLevels)
+                    loadScannedLevels(pending)
                 }
             }
         }
@@ -250,18 +256,24 @@ struct BlindStructureEditorView: View {
         for index in offsets {
             let level = sorted[index]
             tournament.blindLevels?.removeAll { $0.persistentModelID == level.persistentModelID }
+            modelContext.delete(level)
         }
     }
 
     private func loadTemplate(_ template: BlindTemplate) {
-        // Clear existing
+        // Delete existing levels from context
+        for existing in tournament.blindLevels ?? [] {
+            modelContext.delete(existing)
+        }
         tournament.blindLevels?.removeAll()
 
-        // Load template levels
+        // Load template levels with explicit context insertion
         for level in template.levels {
-            tournament.blindLevels?.append(level)
+            level.tournament = tournament
+            modelContext.insert(level)
         }
 
+        try? modelContext.save()
         HapticFeedback.success()
     }
 
@@ -341,6 +353,13 @@ struct EditableNumber: View {
                     value = Int(text) ?? value
                 }
             }
+            .onChange(of: value) { _, newValue in
+                // Keep text in sync when the bound value changes externally
+                // (e.g. template load) while not being edited.
+                if !isFocused {
+                    text = "\(newValue)"
+                }
+            }
     }
 }
 
@@ -409,7 +428,7 @@ enum BlindTemplate {
 
 #Preview {
     NavigationStack {
-        BlindStructureEditorView(tournament: Tournament(name: "Preview"))
+        BlindStructureEditorView(tournament: Tournament(name: "Preview"), scannedLevels: .constant([]))
     }
     .modelContainer(for: Tournament.self, inMemory: true)
 }

@@ -64,13 +64,15 @@ struct ActiveSessionView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Chat input (fixed bottom, all panes)
-            ChatInputView(
-                text: $messageText,
-                isProcessing: chatManager.isProcessing,
-                onSend: sendMessage,
-                onQuickAction: handleQuickAction
-            )
+            // Chat input (fixed bottom, hidden for completed tournaments)
+            if tournament.status != .completed {
+                ChatInputView(
+                    text: $messageText,
+                    isProcessing: chatManager.isProcessing,
+                    onSend: sendMessage,
+                    onQuickAction: handleQuickAction
+                )
+            }
         }
         .background(Color.backgroundPrimary)
         .onChange(of: keepScreenAwake, initial: true) { _, newValue in
@@ -86,10 +88,13 @@ struct ActiveSessionView: View {
                     Circle()
                         .fill(tournament.status == .active ? Color.mZoneGreen : Color.mZoneYellow)
                         .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
                     Text(tournament.status.label)
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Tournament status: \(tournament.status.label)")
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -108,21 +113,23 @@ struct ActiveSessionView: View {
                         }
                     }
 
-                    Button {
-                        Task {
-                            await chatManager.handleQuickAction(.stats)
+                    if tournament.status != .completed {
+                        Button {
+                            Task {
+                                await chatManager.handleQuickAction(.stats)
+                            }
+                        } label: {
+                            Label("Session Summary", systemImage: "chart.bar")
                         }
-                    } label: {
-                        Label("Session Summary", systemImage: "chart.bar")
-                    }
 
-                    Button {
-                        showBreakTimer = true
-                    } label: {
-                        Label(
-                            tournamentManager.isOnBreak ? "Break Timer" : "Take a Break",
-                            systemImage: "cup.and.saucer"
-                        )
+                        Button {
+                            showBreakTimer = true
+                        } label: {
+                            Label(
+                                tournamentManager.isOnBreak ? "Break Timer" : "Take a Break",
+                                systemImage: "cup.and.saucer"
+                            )
+                        }
                     }
 
                     Button {
@@ -167,32 +174,39 @@ struct ActiveSessionView: View {
                         }
                     }
 
-                    Divider()
+                    if tournament.status != .completed {
+                        Divider()
 
-                    Button(role: .destructive) {
-                        tournamentManager.showEndTournamentSheet()
-                    } label: {
-                        Label("End Tournament", systemImage: "flag.checkered")
+                        Button(role: .destructive) {
+                            tournamentManager.showEndTournamentSheet()
+                        } label: {
+                            Label("End Tournament", systemImage: "flag.checkered")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .foregroundColor(.goldAccent)
                 }
+                .accessibilityLabel("Session options")
             }
         }
         .onAppear {
+            // Completed tournaments are shown read-only (pushed from history/
+            // results) — never touch manager state for them.
+            guard tournament.status != .completed else { return }
             tournamentManager.activeTournament = tournament
             if tournament.status == .setup {
                 tournamentManager.startTournament(tournament)
-            } else if tournament.status == .paused {
-                tournamentManager.resumeTournament()
             }
+            // Paused tournaments stay paused — resuming requires the explicit
+            // Resume action in the toolbar menu.
         }
-        .sheet(isPresented: Bindable(tournamentManager).showSessionRecap) {
-            if let recapTournament = tournamentManager.completedTournamentForRecap {
-                SessionRecapSheet(tournament: recapTournament) {
-                    tournamentManager.dismissRecap()
-                }
+        .sheet(item: Binding(
+            get: { tournamentManager.showSessionRecap ? tournamentManager.completedTournamentForRecap : nil },
+            set: { if $0 == nil { tournamentManager.dismissRecap() } }
+        )) { recapTournament in
+            SessionRecapSheet(tournament: recapTournament) {
+                tournamentManager.dismissRecap()
             }
         }
         .sheet(isPresented: Bindable(tournamentManager).showEndTournament) {
@@ -220,16 +234,36 @@ struct ActiveSessionView: View {
 
     // MARK: - Page Indicator
 
+    private static let pageNames = [
+        "Stack chart", "Metrics", "Blind levels", "Photos",
+        "Receipts", "Hand notes", "Chat", "Scouting report"
+    ]
+
     private var pageIndicator: some View {
-        HStack(spacing: 8) {
+        // Buttons are 16pt wide with zero spacing so dot centers stay 16pt
+        // apart — visually identical to the old 8pt dots + 8pt gaps, but with
+        // a larger tappable area per dot.
+        HStack(spacing: 0) {
             ForEach(0..<8, id: \.self) { index in
-                Circle()
-                    .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
-                    .frame(width: 8, height: 8)
-                    .animation(.spring(response: 0.3), value: selectedPage)
+                Button {
+                    selectedPage = index
+                } label: {
+                    Circle()
+                        .fill(index == selectedPage ? Color.goldAccent : Color.textSecondary.opacity(0.3))
+                        .frame(width: 8, height: 8)
+                        .animation(.spring(response: 0.3), value: selectedPage)
+                        .frame(width: 16, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Self.pageNames[index])
+                .accessibilityAddTraits(index == selectedPage ? [.isSelected] : [])
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Page indicator")
+        .accessibilityValue("Page \(selectedPage + 1) of 8, \(Self.pageNames[selectedPage])")
     }
 
     // MARK: - Actions

@@ -2,10 +2,15 @@ import Foundation
 import SwiftData
 import Observation
 import UserNotifications
+import os
 
 @MainActor @Observable
 final class TournamentManager {
-    var activeTournament: Tournament?
+    private static let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "TournamentManager")
+
+    var activeTournament: Tournament? {
+        didSet { restoreBreakState() }
+    }
     var modelContext: ModelContext?
 
     // Session recap state
@@ -13,9 +18,13 @@ final class TournamentManager {
     var showEndTournament = false
     private(set) var completedTournamentForRecap: Tournament?
 
-    // Break timer state (transient — not persisted)
+    // Break timer state (transient — derived from BreakEntry on restore)
     var isOnBreak = false
     var breakEndTime: Date?
+
+    // Surfaced errors/state for the UI
+    private(set) var lastSaveError: String?
+    private(set) var notificationsDenied = false
 
     init() {}
 
@@ -27,6 +36,9 @@ final class TournamentManager {
 
     func startTournament(_ tournament: Tournament) {
         tournament.status = .active
+        if tournament.actualStartDate == nil {
+            tournament.actualStartDate = .now
+        }
         activeTournament = tournament
 
         // Record initial stack entry
@@ -37,12 +49,14 @@ final class TournamentManager {
                 currentSB: blinds.smallBlind,
                 currentBB: blinds.bigBlind,
                 currentAnte: blinds.ante,
+                seatsAtTable: currentSeatsPerTable,
                 source: .initial
             )
             tournament.stackEntries?.append(entry)
         } else {
             let entry = StackEntry(
                 chipCount: tournament.startingChips,
+                seatsAtTable: currentSeatsPerTable,
                 source: .initial
             )
             tournament.stackEntries?.append(entry)
@@ -52,17 +66,22 @@ final class TournamentManager {
     }
 
     func pauseTournament() {
-        activeTournament?.status = .paused
+        guard let tournament = activeTournament, tournament.status == .active else { return }
+        tournament.status = .paused
+        tournament.pausedAt = .now
         save()
     }
 
     func resumeTournament() {
-        activeTournament?.status = .active
+        guard let tournament = activeTournament, tournament.status != .completed else { return }
+        foldInPauseTime(for: tournament)
+        tournament.status = .active
         save()
     }
 
     func completeTournament(position: Int? = nil, payout: Int? = nil, endDate: Date = .now) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = activeTournament, tournament.status != .completed else { return }
+        foldInPauseTime(for: tournament, until: endDate)
         tournament.status = .completed
         tournament.finishPosition = position
         tournament.payout = payout ?? 0
@@ -71,6 +90,13 @@ final class TournamentManager {
         // Keep tournament alive for recap — do NOT clear activeTournament yet
         completedTournamentForRecap = tournament
         showSessionRecap = true
+    }
+
+    /// Folds any in-flight pause interval into accumulatedPauseSeconds.
+    private func foldInPauseTime(for tournament: Tournament, until reference: Date = .now) {
+        guard let pausedAt = tournament.pausedAt else { return }
+        tournament.accumulatedPauseSeconds += max(0, Int(reference.timeIntervalSince(pausedAt)))
+        tournament.pausedAt = nil
     }
 
     func showEndTournamentSheet() {
@@ -85,8 +111,19 @@ final class TournamentManager {
 
     // MARK: - Updates
 
+    /// True when there is a live (non-completed) tournament that may be mutated.
+    private var mutableTournament: Tournament? {
+        guard let tournament = activeTournament, tournament.status != .completed else { return nil }
+        return tournament
+    }
+
+    /// Current seats-per-table setting, read once per call site.
+    private var currentSeatsPerTable: Int {
+        UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
+    }
+
     func updateStack(chipCount: Int) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
 
         let blinds = tournament.currentBlinds
         let entry = StackEntry(
@@ -95,6 +132,7 @@ final class TournamentManager {
             currentSB: blinds?.smallBlind ?? 0,
             currentBB: blinds?.bigBlind ?? 0,
             currentAnte: blinds?.ante ?? 0,
+            seatsAtTable: currentSeatsPerTable,
             source: .chat
         )
         tournament.stackEntries?.append(entry)
@@ -102,7 +140,7 @@ final class TournamentManager {
     }
 
     func updateBlinds(levelNumber: Int? = nil, sb: Int? = nil, bb: Int? = nil, ante: Int? = nil, isDisplayLevel: Bool = false) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
 
         if let levelNumber {
             // Convert display level to internal level if needed (e.g. user says "level 4" in chat)
@@ -120,10 +158,11 @@ final class TournamentManager {
                 return
             }
 
-            // Level doesn't exist in structure — create it with provided or zero values
+            // Level doesn't exist in structure — create it with provided or zero values,
+            // using the same resolved level number we just set as current.
             if let sb, let bb {
                 let newLevel = BlindLevel(
-                    levelNumber: levelNumber,
+                    levelNumber: resolvedLevel,
                     smallBlind: sb,
                     bigBlind: bb,
                     ante: ante ?? 0
@@ -163,7 +202,7 @@ final class TournamentManager {
     }
 
     func updateField(totalEntries: Int? = nil, playersRemaining: Int? = nil) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
 
         if let totalEntries {
             tournament.fieldSize = totalEntries
@@ -186,7 +225,7 @@ final class TournamentManager {
     }
 
     func recordBounty() {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
         tournament.bountiesCollected += 1
 
         let event = BountyEvent(
@@ -198,7 +237,7 @@ final class TournamentManager {
     }
 
     func recordRebuy() {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
         tournament.rebuysUsed += 1
 
         // Reset stack to starting chips
@@ -209,6 +248,7 @@ final class TournamentManager {
             currentSB: blinds?.smallBlind ?? 0,
             currentBB: blinds?.bigBlind ?? 0,
             currentAnte: blinds?.ante ?? 0,
+            seatsAtTable: currentSeatsPerTable,
             source: .chat
         )
         tournament.stackEntries?.append(entry)
@@ -217,7 +257,7 @@ final class TournamentManager {
     }
 
     func recordHandNote(_ text: String) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
         let blinds = tournament.currentBlinds
         let note = HandNote(
             descriptionText: text,
@@ -231,7 +271,7 @@ final class TournamentManager {
     }
 
     func addHandNote(text: String, stackBefore: Int? = nil) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
         let blinds = tournament.currentBlinds
         let note = HandNote(
             descriptionText: text,
@@ -257,7 +297,7 @@ final class TournamentManager {
     }
 
     func setCurrentLevel(_ levelNumber: Int) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
         tournament.currentBlindLevelNumber = skipBreaks(from: levelNumber, in: tournament)
         save()
     }
@@ -279,7 +319,7 @@ final class TournamentManager {
     }
 
     func addBlindLevel(smallBlind: Int, bigBlind: Int, ante: Int = 0, durationMinutes: Int = 30) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
         let nextNum = ((tournament.blindLevels ?? []).map(\.levelNumber).max() ?? 0) + 1
         let level = BlindLevel(
             levelNumber: nextNum,
@@ -302,7 +342,7 @@ final class TournamentManager {
     // MARK: - Break Timer
 
     func startBreak(tableNumber: String, seatNumber: String, chipCount: Int, duration: Int, photoData: Data? = nil) {
-        guard let tournament = activeTournament else { return }
+        guard let tournament = mutableTournament else { return }
 
         let blinds = tournament.currentBlinds
         let entry = BreakEntry(
@@ -330,6 +370,22 @@ final class TournamentManager {
         save()
     }
 
+    /// Re-derives transient break state from the latest persisted BreakEntry,
+    /// so an in-progress break survives app relaunch. Called whenever
+    /// `activeTournament` is assigned/restored.
+    func restoreBreakState() {
+        isOnBreak = false
+        breakEndTime = nil
+        guard let tournament = activeTournament,
+              tournament.status != .completed,
+              let latest = tournament.sortedBreakEntries.last else { return }
+        let end = latest.timestamp.addingTimeInterval(TimeInterval(latest.breakDurationSeconds))
+        if end > .now {
+            isOnBreak = true
+            breakEndTime = end
+        }
+    }
+
     func deleteBreakEntry(_ entry: BreakEntry) {
         guard let tournament = activeTournament else { return }
         tournament.breakEntries?.removeAll { $0.persistentModelID == entry.persistentModelID }
@@ -340,7 +396,17 @@ final class TournamentManager {
     private func scheduleBreakNotifications(tableNumber: String, seatNumber: String, chipCount: Int, duration: Int) {
         let center = UNUserNotificationCenter.current()
 
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
+            Task { @MainActor in
+                if let error {
+                    Self.logger.error("Notification authorization failed: \(error.localizedDescription)")
+                }
+                if !granted {
+                    Self.logger.notice("Notification authorization denied — break alerts will not be delivered")
+                }
+                self?.notificationsDenied = !granted
+            }
+        }
 
         // 2-minute warning (only if break is longer than 2 minutes)
         if duration > 120 {
@@ -382,6 +448,13 @@ final class TournamentManager {
     // MARK: - Persistence
 
     private func save() {
-        try? modelContext?.save()
+        guard let modelContext else { return }
+        do {
+            try modelContext.save()
+            lastSaveError = nil
+        } catch {
+            Self.logger.error("Failed to save model context: \(error.localizedDescription)")
+            lastSaveError = error.localizedDescription
+        }
     }
 }

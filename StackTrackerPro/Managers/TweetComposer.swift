@@ -95,7 +95,70 @@ struct TweetComposer {
     // MARK: - Character Counting
 
     static func remainingCharacters(for text: String) -> Int {
-        280 - text.count
+        280 - weightedTweetLength(of: text)
+    }
+
+    /// X does not count Swift Characters — it counts weighted code points:
+    /// every URL is wrapped in t.co and costs a fixed 23, CJK and emoji
+    /// count as 2, and most other code points count as 1.
+    static func weightedTweetLength(of text: String) -> Int {
+        var weighted = 0
+
+        // URLs: fixed weight of 23 each, regardless of actual length.
+        var urlRanges: [Range<String.Index>] = []
+        if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) {
+            let fullRange = NSRange(text.startIndex..., in: text)
+            for match in detector.matches(in: text, range: fullRange) {
+                if let range = Range(match.range, in: text) {
+                    urlRanges.append(range)
+                    weighted += 23
+                }
+            }
+        }
+
+        var index = text.startIndex
+        while index < text.endIndex {
+            if let url = urlRanges.first(where: { $0.contains(index) }) {
+                index = url.upperBound
+                continue
+            }
+            weighted += weight(of: text[index])
+            index = text.index(after: index)
+        }
+        return weighted
+    }
+
+    /// Weight of a single grapheme cluster outside a URL.
+    private static func weight(of char: Character) -> Int {
+        // Emoji count as 2 no matter how many scalars compose them
+        // (skin tones, ZWJ sequences, flags, etc.).
+        let isEmoji = char.unicodeScalars.contains {
+            $0.properties.isEmojiPresentation || ($0.properties.isEmoji && $0.value > 0x238C)
+        }
+        if isEmoji { return 2 }
+
+        return char.unicodeScalars.reduce(0) { $0 + scalarWeight($1) }
+    }
+
+    /// X's weighted ranges: CJK and other wide scripts are 2, the rest 1.
+    private static func scalarWeight(_ scalar: Unicode.Scalar) -> Int {
+        switch scalar.value {
+        case 0x1100...0x11FF,    // Hangul Jamo
+             0x2E80...0x303E,    // CJK radicals, Kangxi, CJK symbols & punctuation
+             0x3041...0x33FF,    // Hiragana, Katakana, CJK compatibility
+             0x3400...0x4DBF,    // CJK extension A
+             0x4E00...0x9FFF,    // CJK unified ideographs
+             0xA960...0xA97F,    // Hangul Jamo extended A
+             0xAC00...0xD7FF,    // Hangul syllables & Jamo extended B
+             0xF900...0xFAFF,    // CJK compatibility ideographs
+             0xFE30...0xFE4F,    // CJK compatibility forms
+             0xFF00...0xFFEF,    // Full-width / half-width forms
+             0x20000...0x2FFFD,  // CJK extensions B-F
+             0x30000...0x3FFFD:  // CJK extension G
+            return 2
+        default:
+            return 1
+        }
     }
 
     // MARK: - Helpers

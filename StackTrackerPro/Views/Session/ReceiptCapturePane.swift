@@ -28,6 +28,7 @@ struct ReceiptCapturePane: View {
                                         .stroke(Color.borderSubtle, lineWidth: 0.5)
                                 )
                         }
+                        .accessibilityLabel("View receipt full screen")
 
                         // Re-capture buttons
                         VStack(spacing: 8) {
@@ -41,7 +42,10 @@ struct ReceiptCapturePane: View {
                                     .background(Color.goldAccent.opacity(0.9))
                                     .clipShape(Circle())
                                     .shadow(radius: 4)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
+                            .accessibilityLabel("Share receipt")
 
                             Button {
                                 showCamera = true
@@ -53,7 +57,10 @@ struct ReceiptCapturePane: View {
                                     .background(Color.goldAccent.opacity(0.9))
                                     .clipShape(Circle())
                                     .shadow(radius: 4)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
+                            .accessibilityLabel("Retake receipt photo")
 
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 Image(systemName: "photo.on.rectangle")
@@ -63,7 +70,10 @@ struct ReceiptCapturePane: View {
                                     .background(Color.goldAccent.opacity(0.9))
                                     .clipShape(Circle())
                                     .shadow(radius: 4)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
+                            .accessibilityLabel("Choose receipt from library")
                         }
                         .padding(12)
                     }
@@ -169,11 +179,13 @@ struct ReceiptCapturePane: View {
                         .foregroundColor(.white.opacity(0.8))
                         .padding(.trailing, 4)
                 }
+                .accessibilityLabel("Share receipt")
                 Button { showFullScreen = false } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title)
                         .foregroundColor(.white.opacity(0.8))
                 }
+                .accessibilityLabel("Close")
             }
             .padding(16)
         }

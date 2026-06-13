@@ -5,38 +5,47 @@ struct ScoutingReportView: View {
     @State private var showShareSheet = false
     @State private var renderedImage: UIImage?
 
-    private var report: ScoutingReport {
-        ScoutingReportEngine.generate(for: tournament)
-    }
+    // Generated once on appear — regenerating on every body evaluation is
+    // wasteful and the inputs don't change while this view is on screen.
+    @State private var report: ScoutingReport?
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                headerSection
-                keyMetricsGrid
-                criticalLevelsSection
+            if let report {
+                VStack(spacing: 20) {
+                    headerSection(report)
+                    keyMetricsGrid(report)
+                    criticalLevelsSection(report)
 
-                if report.hasBounty {
-                    bountySection
+                    if report.hasBounty {
+                        bountySection(report)
+                    }
+
+                    gameStrategySection(report)
+                    approachSection(report)
+                    shareButton
                 }
-
-                gameStrategySection
-                approachSection
-                shareButton
+                .padding(16)
             }
-            .padding(16)
         }
         .background(Color.backgroundPrimary)
         .navigationTitle("Scouting Report")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if report == nil {
+                report = ScoutingReportEngine.generate(for: tournament)
+            }
+        }
         .sheet(isPresented: $showShareSheet) {
-            ScoutingReportShareSheet(tournament: tournament, report: report)
+            if let report {
+                ScoutingReportShareSheet(tournament: tournament, report: report)
+            }
         }
     }
 
     // MARK: - Header
 
-    private var headerSection: some View {
+    private func headerSection(_ report: ScoutingReport) -> some View {
         HStack {
             Text("SCOUTING REPORT")
                 .font(PokerTypography.sectionHeader)
@@ -45,7 +54,7 @@ struct ScoutingReportView: View {
             Spacer()
 
             Text(report.structureSpeed.rawValue.uppercased())
-                .font(.system(size: 12, weight: .bold))
+                .font(.caption.weight(.bold))
                 .foregroundColor(.backgroundPrimary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 4)
@@ -58,7 +67,7 @@ struct ScoutingReportView: View {
 
     // MARK: - Key Metrics
 
-    private var keyMetricsGrid: some View {
+    private func keyMetricsGrid(_ report: ScoutingReport) -> some View {
         let bbColor: Color = {
             if report.startingBBs >= 30 { return .mZoneGreen }
             else if report.startingBBs >= 15 { return .mZoneYellow }
@@ -91,7 +100,7 @@ struct ScoutingReportView: View {
 
     // MARK: - Critical Levels
 
-    private var criticalLevelsSection: some View {
+    private func criticalLevelsSection(_ report: ScoutingReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("CRITICAL LEVELS")
                 .font(PokerTypography.sectionHeader)
@@ -145,7 +154,7 @@ struct ScoutingReportView: View {
 
             // Zone badge
             Text(level.zone)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .foregroundColor(level.zoneColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -161,7 +170,7 @@ struct ScoutingReportView: View {
 
     // MARK: - Bounty Analysis
 
-    private var bountySection: some View {
+    private func bountySection(_ report: ScoutingReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("BOUNTY ANALYSIS")
                 .font(PokerTypography.sectionHeader)
@@ -204,7 +213,7 @@ struct ScoutingReportView: View {
 
     // MARK: - Game Strategy
 
-    private var gameStrategySection: some View {
+    private func gameStrategySection(_ report: ScoutingReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("GAME STRATEGY")
                 .font(PokerTypography.sectionHeader)
@@ -217,6 +226,7 @@ struct ScoutingReportView: View {
                             .fill(Color.goldAccent)
                             .frame(width: 6, height: 6)
                             .padding(.top, 6)
+                            .accessibilityHidden(true)
                         Text(note)
                             .font(PokerTypography.chatBody)
                             .foregroundColor(.textPrimary)
@@ -231,7 +241,7 @@ struct ScoutingReportView: View {
 
     // MARK: - Recommended Approach
 
-    private var approachSection: some View {
+    private func approachSection(_ report: ScoutingReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("YOUR APPROACH")
                 .font(PokerTypography.sectionHeader)
@@ -241,9 +251,9 @@ struct ScoutingReportView: View {
                 ForEach(Array(report.approachBullets.enumerated()), id: \.offset) { index, bullet in
                     HStack(alignment: .top, spacing: 8) {
                         Text("\(index + 1).")
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .font(.footnote.weight(.bold).monospaced())
                             .foregroundColor(.goldAccent)
-                            .frame(width: 20, alignment: .trailing)
+                            .frame(minWidth: 20, alignment: .trailing)
                         Text(bullet)
                             .font(PokerTypography.chatBody)
                             .foregroundColor(.textPrimary)

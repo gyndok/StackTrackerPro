@@ -59,6 +59,7 @@ struct ChatInputView: View {
                     }
                 }
                 .disabled(!canSend || isProcessing)
+                .accessibilityLabel("Send")
             }
             .padding(.horizontal, 16)
         }

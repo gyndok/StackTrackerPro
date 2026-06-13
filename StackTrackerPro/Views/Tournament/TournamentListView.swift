@@ -28,6 +28,7 @@ struct TournamentListView: View {
                     Image(systemName: "plus.circle.fill")
                         .foregroundColor(.goldAccent)
                 }
+                .accessibilityLabel("Add tournament")
             }
         }
         .sheet(isPresented: $showingSetup) {
@@ -40,6 +41,7 @@ struct TournamentListView: View {
             Image(systemName: "suit.spade.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.goldAccent.opacity(0.5))
+                .accessibilityHidden(true)
 
             Text("No Tournaments")
                 .font(.title2.weight(.semibold))

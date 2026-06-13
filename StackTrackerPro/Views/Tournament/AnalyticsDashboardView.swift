@@ -4,6 +4,9 @@ import Charts
 struct AnalyticsDashboardView: View {
     let tournaments: [Tournament]
 
+    // Chart scrubbing (session number under the touch point)
+    @State private var scrubSession: Int?
+
     // MARK: - Computed Properties
 
     private var totalProfit: Int {
@@ -14,30 +17,37 @@ struct AnalyticsDashboardView: View {
         tournaments.map(\.totalInvestment).reduce(0, +)
     }
 
+    // Tournaments with a recorded result; nil-payout records are excluded
+    // from ROI and win-rate so they don't read as $0 cashes or losses.
+    private var resolvedTournaments: [Tournament] {
+        tournaments.filter { $0.payout != nil }
+    }
+
     private var totalReturn: Int {
-        tournaments.compactMap { t -> Int? in
+        resolvedTournaments.compactMap { t -> Int? in
             guard let payout = t.payout else { return nil }
-            return payout + (t.bountiesCollected * t.bountyAmount)
+            return payout + t.bountyWinnings
         }.reduce(0, +)
     }
 
     private var overallROI: Double {
-        guard totalInvestment > 0 else { return 0 }
-        return Double(totalReturn - totalInvestment) / Double(totalInvestment) * 100
+        let resolvedInvestment = resolvedTournaments.map(\.totalInvestment).reduce(0, +)
+        guard resolvedInvestment > 0 else { return 0 }
+        return Double(totalReturn - resolvedInvestment) / Double(resolvedInvestment) * 100
     }
 
     private var winRate: Double {
-        let sessions = tournaments.count
-        guard sessions > 0 else { return 0 }
-        let wins = tournaments.filter { ($0.profit ?? 0) > 0 }.count
-        return Double(wins) / Double(sessions) * 100
+        let resolved = resolvedTournaments
+        guard !resolved.isEmpty else { return 0 }
+        let wins = resolved.filter { ($0.profit ?? 0) > 0 }.count
+        return Double(wins) / Double(resolved.count) * 100
     }
 
     private var totalHoursPlayed: Double {
         tournaments.compactMap(\.duration).reduce(0, +) / 3600
     }
 
-    private var profitTimeSeries: [(session: Int, cumulative: Int)] {
+    private var profitTimeSeries: [(session: Int, date: Date, cumulative: Int)] {
         let sorted = tournaments
             .filter { $0.endDate != nil && $0.profit != nil }
             .sorted { ($0.endDate ?? .distantPast) < ($1.endDate ?? .distantPast) }
@@ -45,7 +55,36 @@ struct AnalyticsDashboardView: View {
         var running = 0
         return sorted.enumerated().map { index, t in
             running += t.profit ?? 0
-            return (session: index + 1, cumulative: running)
+            return (session: index + 1, date: t.endDate ?? .distantPast, cumulative: running)
+        }
+    }
+
+    /// ROI per buy-in bucket, computed from resolved (payout-entered)
+    /// tournaments only — same basis as `overallROI`. Empty buckets are skipped.
+    private var buyInRangeStats: [(label: String, sessions: Int, profit: Int, roi: Double)] {
+        let buckets: [(label: String, lower: Int, upper: Int?)] = [
+            ("Under $150", 0, 150),
+            ("$150 – $500", 150, 500),
+            ("$500 – $1.5k", 500, 1500),
+            ("Over $1.5k", 1500, nil)
+        ]
+
+        return buckets.compactMap { bucket in
+            let group = resolvedTournaments.filter { t in
+                let investment = t.totalInvestment
+                guard investment >= bucket.lower else { return false }
+                if let upper = bucket.upper {
+                    return investment < upper
+                }
+                return true
+            }
+            guard !group.isEmpty else { return nil }
+
+            let invested = group.map(\.totalInvestment).reduce(0, +)
+            let returned = group.reduce(0) { $0 + (($1.payout ?? 0) + $1.bountyWinnings) }
+            let profit = group.compactMap(\.profit).reduce(0, +)
+            let roi = invested > 0 ? Double(returned - invested) / Double(invested) * 100 : 0
+            return (label: bucket.label, sessions: group.count, profit: profit, roi: roi)
         }
     }
 
@@ -55,8 +94,9 @@ struct AnalyticsDashboardView: View {
             guard let group = grouped[type], !group.isEmpty else { return nil }
             let sessions = group.count
             let profit = group.compactMap(\.profit).reduce(0, +)
-            let wins = group.filter { ($0.profit ?? 0) > 0 }.count
-            let wr = Double(wins) / Double(sessions) * 100
+            let resolved = group.filter { $0.profit != nil }
+            let wins = resolved.filter { ($0.profit ?? 0) > 0 }.count
+            let wr = resolved.isEmpty ? 0 : Double(wins) / Double(resolved.count) * 100
             return (type, sessions, profit, wr)
         }
         .sorted { $0.2 > $1.2 }
@@ -68,8 +108,9 @@ struct AnalyticsDashboardView: View {
             guard group.count >= 2 else { return nil }
             let sessions = group.count
             let profit = group.compactMap(\.profit).reduce(0, +)
-            let wins = group.filter { ($0.profit ?? 0) > 0 }.count
-            let wr = Double(wins) / Double(sessions) * 100
+            let resolved = group.filter { $0.profit != nil }
+            let wins = resolved.filter { ($0.profit ?? 0) > 0 }.count
+            let wr = resolved.isEmpty ? 0 : Double(wins) / Double(resolved.count) * 100
             return (venue, sessions, profit, wr)
         }
         .sorted { $0.2 > $1.2 }
@@ -141,10 +182,15 @@ struct AnalyticsDashboardView: View {
         return "\(minutes)m"
     }
 
-    private var monthlyStats: [(month: String, profit: Int, sessions: Int)] {
-        let calendar = Calendar.current
+    private static let monthFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
+        return formatter
+    }()
+
+    private var monthlyStats: [(month: String, profit: Int, sessions: Int)] {
+        let calendar = Calendar.current
+        let formatter = Self.monthFormatter
 
         let grouped = Dictionary(grouping: tournaments.filter { $0.endDate != nil }) { t -> String in
             let components = calendar.dateComponents([.year, .month], from: t.endDate!)
@@ -175,6 +221,7 @@ struct AnalyticsDashboardView: View {
                 LazyVStack(spacing: 16) {
                     summaryCards
                     profitChart
+                    roiByBuyInSection
                     gameTypeBreakdown
                     venueBreakdown
                     keyStatsGrid
@@ -298,8 +345,52 @@ struct AnalyticsDashboardView: View {
                     RuleMark(y: .value("Zero", 0))
                         .foregroundStyle(Color.textSecondary.opacity(0.5))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+
+                    if let scrub = scrubSession,
+                       let point = profitTimeSeries.first(where: { $0.session == scrub }) {
+                        RuleMark(x: .value("Session", point.session))
+                            .foregroundStyle(Color.goldAccent.opacity(0.6))
+                            .lineStyle(StrokeStyle(lineWidth: 1))
+
+                        PointMark(
+                            x: .value("Session", point.session),
+                            y: .value("Profit", point.cumulative)
+                        )
+                        .foregroundStyle(Color.goldAccent)
+                        .symbolSize(70)
+                        .annotation(
+                            position: .top,
+                            overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                        ) {
+                            ChartScrubCallout(
+                                title: point.date.formatted(date: .abbreviated, time: .omitted),
+                                value: formatCurrency(point.cumulative),
+                                valueColor: point.cumulative >= 0 ? .mZoneGreen : .chipRed
+                            )
+                        }
+                    }
                 }
                 .frame(height: 200)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(Color.clear)
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { drag in
+                                        guard let plotFrame = proxy.plotFrame else { return }
+                                        let x = drag.location.x - geo[plotFrame].origin.x
+                                        if let session: Int = proxy.value(atX: x) {
+                                            scrubSession = profitTimeSeries.min {
+                                                abs($0.session - session) < abs($1.session - session)
+                                            }?.session
+                                        }
+                                    }
+                                    .onEnded { _ in scrubSession = nil }
+                            )
+                    }
+                }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisValueLabel {
@@ -331,6 +422,57 @@ struct AnalyticsDashboardView: View {
                 }
             } else {
                 chartPlaceholder("Need at least 2 sessions to show profit trend")
+            }
+        }
+        .pokerCard()
+    }
+
+    // MARK: - Section 2b: ROI by Buy-in Range
+
+    private var roiByBuyInSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("ROI BY BUY-IN")
+                .font(PokerTypography.sectionHeader)
+                .foregroundColor(.textSecondary)
+
+            if buyInRangeStats.isEmpty {
+                HStack {
+                    Spacer()
+                    Text("Enter payouts to see ROI by buy-in")
+                        .font(PokerTypography.chatCaption)
+                        .foregroundColor(.textSecondary)
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+            } else {
+                ForEach(buyInRangeStats, id: \.label) { stat in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(stat.label)
+                                .font(PokerTypography.chatBody)
+                                .foregroundColor(.textPrimary)
+
+                            HStack(spacing: 8) {
+                                Text("\(stat.sessions) session\(stat.sessions == 1 ? "" : "s")")
+                                    .font(PokerTypography.chatCaption)
+                                    .foregroundColor(.textSecondary)
+
+                                Text(String(format: "%.1f%% ROI", stat.roi))
+                                    .font(PokerTypography.chatCaption)
+                                    .foregroundColor(stat.roi >= 0 ? .mZoneGreen : .chipRed)
+                            }
+                        }
+
+                        Spacer()
+
+                        Text(formatCurrency(stat.profit))
+                            .font(PokerTypography.statValue)
+                            .foregroundColor(stat.profit >= 0 ? .mZoneGreen : .chipRed)
+                    }
+                    .padding(10)
+                    .background(Color.cardSurface.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
         }
         .pokerCard()
@@ -524,12 +666,19 @@ struct AnalyticsDashboardView: View {
     }
 
     private func formatCurrencyShort(_ amount: Int) -> String {
-        let abs = abs(amount)
+        let absAmount = abs(amount)
         let sign = amount < 0 ? "-" : ""
-        if abs >= 1000 {
-            return "\(sign)$\(abs / 1000)k"
+        if absAmount >= 10_000 {
+            return "\(sign)$\(Int((Double(absAmount) / 1000).rounded()))k"
         }
-        return "\(sign)$\(abs)"
+        if absAmount >= 1000 {
+            let thousands = (Double(absAmount) / 100).rounded() / 10
+            let formatted = thousands == thousands.rounded()
+                ? "\(Int(thousands))"
+                : String(format: "%.1f", thousands)
+            return "\(sign)$\(formatted)k"
+        }
+        return "\(sign)$\(absAmount)"
     }
 }
 

@@ -22,6 +22,7 @@ enum SettingsKeys {
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(TournamentManager.self) private var tournamentManager
+    @Environment(CashSessionManager.self) private var cashSessionManager
 
     // Session Defaults
     @AppStorage(SettingsKeys.defaultGameType) private var defaultGameType = GameType.nlh.rawValue
@@ -52,6 +53,7 @@ struct SettingsView: View {
     @State private var exportResult: CSVExportResult?
     @State private var showExportShare = false
     @State private var exportFileURL: URL?
+    @State private var showExportError = false
 
     private var gameTypeRawBinding: Binding<String> {
         Binding(
@@ -90,7 +92,9 @@ struct SettingsView: View {
             ForEach(AppTheme.allCases) { theme in
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        appTheme = theme.rawValue
+                        // Writing through ThemeManager notifies all observing
+                        // views; its didSet persists the choice to UserDefaults.
+                        ThemeManager.shared.theme = theme
                     }
                 } label: {
                     HStack(spacing: 12) {
@@ -100,6 +104,7 @@ struct SettingsView: View {
                             Circle().fill(theme.palette.cardSurface).frame(width: 18, height: 18)
                             Circle().fill(theme.palette.goldAccent).frame(width: 18, height: 18)
                         }
+                        .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(theme.rawValue)
@@ -115,10 +120,12 @@ struct SettingsView: View {
                         if appTheme == theme.rawValue {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.goldAccent)
-                                .font(.system(size: 20))
+                                .font(.title3)
+                                .accessibilityHidden(true)
                         }
                     }
                 }
+                .accessibilityAddTraits(appTheme == theme.rawValue ? [.isSelected] : [])
             }
         } header: {
             Text("THEME")
@@ -236,7 +243,7 @@ struct SettingsView: View {
             Button("OK") {}
         } message: {
             if let r = importResult {
-                Text("Imported \(r.cashSessionsCreated) cash session\(r.cashSessionsCreated == 1 ? "" : "s") and \(r.tournamentsCreated) tournament\(r.tournamentsCreated == 1 ? "" : "s").\(r.rowsSkipped > 0 ? " \(r.rowsSkipped) row\(r.rowsSkipped == 1 ? "" : "s") skipped." : "")")
+                Text("Imported \(r.cashSessionsCreated) cash session\(r.cashSessionsCreated == 1 ? "" : "s") and \(r.tournamentsCreated) tournament\(r.tournamentsCreated == 1 ? "" : "s").\(r.duplicatesSkipped > 0 ? " \(r.duplicatesSkipped) duplicate\(r.duplicatesSkipped == 1 ? "" : "s") skipped." : "")\(r.rowsSkipped > 0 ? " \(r.rowsSkipped) row\(r.rowsSkipped == 1 ? "" : "s") skipped." : "")")
             }
         }
         .sheet(isPresented: $showExportShare) {
@@ -244,6 +251,11 @@ struct SettingsView: View {
                 ShareSheetView(items: [url])
                     .presentationDetents([.medium])
             }
+        }
+        .alert("Export Failed", isPresented: $showExportError) {
+            Button("OK") {}
+        } message: {
+            Text("Your session history could not be exported. Please try again.")
         }
     }
 
@@ -309,7 +321,7 @@ struct SettingsView: View {
             }
 
             ShareLink(
-                item: URL(string: "https://apps.apple.com/app/stacktrackerpro/id0000000000")!
+                item: URL(string: "https://apps.apple.com/us/app/pokerstacktrackerpro/id6760260251")!
             ) {
                 HStack {
                     Image(systemName: "square.and.arrow.up")
@@ -344,6 +356,11 @@ struct SettingsView: View {
         exportResult = result
 
         if result.totalRows == 0 {
+            // Surface a failure if there is data but the exporter produced nothing.
+            let cashCount = (try? modelContext.fetchCount(FetchDescriptor<CashSession>())) ?? 0
+            if !allTournaments.isEmpty || cashCount > 0 {
+                showExportError = true
+            }
             return
         }
 
@@ -354,12 +371,15 @@ struct SettingsView: View {
             try result.csvString.write(to: tempURL, atomically: true, encoding: .utf8)
             exportFileURL = tempURL
             showExportShare = true
-        } catch {}
+        } catch {
+            showExportError = true
+        }
     }
 
     private func deleteAllData() {
-        // Clear active tournament reference
+        // Clear active references so managers don't touch deleted objects
         tournamentManager.activeTournament = nil
+        cashSessionManager.activeSession = nil
 
         // Delete all tournaments (cascades to BlindLevel, StackEntry, ChatMessage, HandNote, BountyEvent, FieldSnapshot, ChipStackPhoto)
         for tournament in allTournaments {
@@ -384,6 +404,7 @@ struct SettingsView: View {
 
         // Reset milestone tracker
         UserDefaults.standard.removeObject(forKey: "MilestoneTracker.shownMilestones")
+        UserDefaults.standard.removeObject(forKey: "MilestoneTracker.bestCashAmount")
 
         // Save
         try? modelContext.save()
@@ -423,4 +444,5 @@ extension DateFormatter {
     SettingsView()
         .modelContainer(for: Tournament.self, inMemory: true)
         .environment(TournamentManager())
+        .environment(CashSessionManager())
 }
