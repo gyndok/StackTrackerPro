@@ -222,6 +222,32 @@ final class TournamentMathTests: XCTestCase {
     }
 
     @MainActor
+    func testAverageStackAtBubble() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "Bubble", buyIn: 200)
+        container.mainContext.insert(t)
+        t.startingChips = 20_000
+        t.fieldSize = 100
+        t.payoutPercent = 15.0
+
+        // 100 entries × 20,000 = 2,000,000 chips. 15% of 100 = 15 paid spots.
+        // 2,000,000 / 15 = 133,333.
+        XCTAssertEqual(t.paidSpots, 15)
+        XCTAssertEqual(t.averageStackAtBubble, 133_333)
+    }
+
+    @MainActor
+    func testAverageStackAtBubbleZeroUntilKnown() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "Empty", buyIn: 100)
+        container.mainContext.insert(t)
+        t.startingChips = 20_000
+        t.fieldSize = 0 // unknown field
+        XCTAssertEqual(t.averageStackAtBubble, 0)
+        XCTAssertEqual(t.paidSpots, 0)
+    }
+
+    @MainActor
     func testBountyWinningsPrefersBountyEvents() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

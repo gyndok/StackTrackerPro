@@ -287,11 +287,32 @@ final class Tournament {
         fieldSize * startingChips
     }
 
+    /// Number of paid finishing positions, derived from the payout
+    /// percentage. 0 until both field size and payout % are known.
+    var paidSpots: Int {
+        guard fieldSize > 0, payoutPercent > 0 else { return 0 }
+        return Int(ceil(Double(fieldSize) * payoutPercent / 100.0))
+    }
+
     /// Players left until the money bubble. 0 once in the money.
     var estimatedBubbleDistance: Int {
-        guard fieldSize > 0, payoutPercent > 0 else { return 0 }
-        let itm = Int(ceil(Double(fieldSize) * payoutPercent / 100.0))
+        let itm = paidSpots
+        guard itm > 0 else { return 0 }
         return max(0, playersRemaining - itm)
+    }
+
+    /// Projected average stack at the moment the money bubble bursts. Chips
+    /// never leave a tournament, so when the field is reduced to exactly the
+    /// paid spots, the average stack is all chips in play spread across those
+    /// seats. A useful target: a stack near or above this number coasts into
+    /// the money. 0 until field size and payout % are known.
+    ///
+    /// Assumes `fieldSize` reflects total entries; in re-entry events the
+    /// extra chips beyond the tracked field size aren't counted.
+    var averageStackAtBubble: Int {
+        let spots = paidSpots
+        guard spots > 0 else { return 0 }
+        return totalChipsInPlay / spots
     }
 
     var averageStackInBB: Double {

@@ -164,6 +164,12 @@ struct TournamentMetricsView: View {
                 value: bubbleDisplayValue
             )
 
+            // Avg Stack @ Bubble (projected)
+            StatBlockView(
+                label: "Avg @ Bubble",
+                value: bubbleAvgStackDisplayValue
+            )
+
             // House Rake
             StatBlockView(
                 label: "House Rake",
@@ -347,6 +353,14 @@ struct TournamentMetricsView: View {
             return "\(distance) (\(paid) paid)"
         }
         return "ITM! (\(paid) paid)"
+    }
+
+    // Projected average stack at the moment the money bubble bursts.
+    private var bubbleAvgStackDisplayValue: String {
+        guard tournament.fieldSize > 0, tournament.payoutPercent > 0 else { return "---" }
+        let avg = tournament.averageStackAtBubble
+        guard avg > 0 else { return "---" }
+        return formatChipsShort(avg)
     }
 
     // MARK: - Formatters
