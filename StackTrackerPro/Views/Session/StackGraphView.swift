@@ -304,12 +304,16 @@ struct StackGraphView: View {
 
     // MARK: - Scrub Gesture
 
-    /// Drag gesture that maps the touch X position to a level label so the
-    /// matching stack entry can be inspected. Cleared on release.
+    /// Scrub gesture that maps the touch X position to a level label so the
+    /// matching stack entry can be inspected. Requires a brief press-and-hold
+    /// before it activates so a quick horizontal swipe still pages the parent
+    /// TabView instead of being captured for scrubbing. Cleared on release.
     private func scrubGesture(proxy: ChartProxy, geo: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { drag in
-                guard let plotFrame = proxy.plotFrame else { return }
+        LongPressGesture(minimumDuration: 0.18)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                guard case .second(true, let drag?) = value,
+                      let plotFrame = proxy.plotFrame else { return }
                 let x = drag.location.x - geo[plotFrame].origin.x
                 if let label: String = proxy.value(atX: x) {
                     scrubLabel = label
