@@ -224,6 +224,15 @@ final class TournamentManager {
         save()
     }
 
+    /// Updates the observed field-wide add-on count and/or the player's own
+    /// add-on count. No-op on a completed tournament.
+    func updateAddOns(fieldCount: Int? = nil, playerCount: Int? = nil) {
+        guard let tournament = mutableTournament else { return }
+        if let fieldCount { tournament.addOnsCount = max(0, fieldCount) }
+        if let playerCount { tournament.playerAddOnsUsed = max(0, playerCount) }
+        save()
+    }
+
     func recordBounty() {
         guard let tournament = mutableTournament else { return }
         tournament.bountiesCollected += 1

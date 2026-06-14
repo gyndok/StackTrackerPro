@@ -270,6 +270,74 @@ final class TournamentMathTests: XCTestCase {
     }
 
     @MainActor
+    func testAddOnsAffectChipsPoolRakeAndInvestment() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "AddOn", buyIn: 250, entryFee: 195)
+        container.mainContext.insert(t)
+        t.startingChips = 30_000
+        t.fieldSize = 100
+        t.addOnAvailable = true
+        t.addOnCost = 100
+        t.addOnRake = 10
+        t.addOnChips = 30_000
+        t.addOnsCount = 40      // 40 of the field took the add-on
+        t.playerAddOnsUsed = 1  // I took one
+
+        // Derived split: 100 - 10 = 90 to the pool.
+        XCTAssertEqual(t.addOnToPrizePool, 90)
+
+        // Chips: 100 × 30,000 + 40 × 30,000 = 4,200,000.
+        XCTAssertEqual(t.totalChipsInPlay, 4_200_000)
+
+        // Prize pool: per-player (250 - 195 = 55) × 100 + 40 × 90
+        //           = 5,500 + 3,600 = 9,100.
+        XCTAssertEqual(t.prizePool, 9_100)
+
+        // House rake: 195 × 100 + 40 × 10 = 19,500 + 400 = 19,900.
+        XCTAssertEqual(t.houseRake, 19_900)
+
+        // Investment: 250 buy-in + 1 add-on × 100 = 350.
+        XCTAssertEqual(t.totalInvestment, 350)
+    }
+
+    @MainActor
+    func testAddOnsIgnoredWhenUnavailable() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "NoAddOn", buyIn: 250, entryFee: 195)
+        container.mainContext.insert(t)
+        t.startingChips = 30_000
+        t.fieldSize = 100
+        // Stale add-on values present but the feature is off — must be ignored.
+        t.addOnAvailable = false
+        t.addOnChips = 30_000
+        t.addOnsCount = 40
+        t.playerAddOnsUsed = 1
+        t.addOnCost = 100
+
+        XCTAssertEqual(t.totalChipsInPlay, 3_000_000)   // 100 × 30,000 only
+        XCTAssertEqual(t.prizePool, 5_500)              // 55 × 100 only
+        XCTAssertEqual(t.totalInvestment, 250)          // no add-on cost
+    }
+
+    @MainActor
+    func testAddOnsRaiseAverageStackProjections() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "AddOnAvg", buyIn: 250)
+        container.mainContext.insert(t)
+        t.startingChips = 30_000
+        t.fieldSize = 100
+        t.payoutPercent = 15.0
+        t.addOnAvailable = true
+        t.addOnChips = 30_000
+        t.addOnsCount = 100 // everyone added on → 6,000,000 chips total
+
+        // 6,000,000 ÷ 15 paid = 400,000 at the bubble.
+        XCTAssertEqual(t.averageStackAtBubble, 400_000)
+        // 6,000,000 ÷ 9 = 666,666 at the final table.
+        XCTAssertEqual(t.averageStackAtFinalTable, 666_666)
+    }
+
+    @MainActor
     func testBountyWinningsPrefersBountyEvents() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

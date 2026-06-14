@@ -29,6 +29,10 @@ struct TournamentSetupView: View {
     @State private var startingBB = "200"
     @State private var reentryPolicy = "None"
     @State private var payoutPercent = "15"
+    @State private var addOnAvailable = false
+    @State private var addOnCost = ""
+    @State private var addOnRake = ""
+    @State private var addOnChips = ""
     @State private var showBlindEditor = false
     @State private var createdTournament: Tournament?
 
@@ -63,6 +67,7 @@ struct TournamentSetupView: View {
                     venueSection
                     financialsSection
                     structureSection
+                    addOnSection
                     blindsSection
                 }
                 .scrollContentBackground(.hidden)
@@ -296,6 +301,38 @@ struct TournamentSetupView: View {
         .listRowBackground(Color.cardSurface)
     }
 
+    private var addOnSection: some View {
+        Section {
+            Toggle("Add-On Available", isOn: $addOnAvailable)
+                .tint(.goldAccent)
+                .foregroundColor(.textSecondary)
+
+            if addOnAvailable {
+                numberField("Cost ($)", text: $addOnCost)
+                numberField("House Rake ($)", text: $addOnRake)
+                numberField("Chips", text: $addOnChips)
+
+                HStack {
+                    Text("To Prize Pool")
+                        .foregroundColor(.textSecondary)
+                    Spacer()
+                    Text("$\(addOnToPrizePoolPreview)")
+                        .foregroundColor(.goldAccent)
+                }
+            }
+        } header: {
+            Text("ADD-ON")
+                .font(PokerTypography.sectionHeader)
+                .foregroundColor(.goldAccent)
+        }
+        .listRowBackground(Color.cardSurface)
+    }
+
+    /// Live preview of the per-add-on prize-pool contribution (cost − rake).
+    private var addOnToPrizePoolPreview: Int {
+        max(0, (Int(addOnCost) ?? 0) - (Int(addOnRake) ?? 0))
+    }
+
     private var blindsSection: some View {
         Section {
             HStack {
@@ -354,6 +391,24 @@ struct TournamentSetupView: View {
 
     // MARK: - Helpers
 
+    /// Writes the add-on configuration onto a tournament. When the add-on is
+    /// turned off, the related fields are zeroed so stale values can't leak
+    /// into the prize-pool/chip math.
+    private func applyAddOnFields(to t: Tournament) {
+        t.addOnAvailable = addOnAvailable
+        if addOnAvailable {
+            t.addOnCost = Int(addOnCost) ?? 0
+            t.addOnRake = Int(addOnRake) ?? 0
+            t.addOnChips = Int(addOnChips) ?? 0
+        } else {
+            t.addOnCost = 0
+            t.addOnRake = 0
+            t.addOnChips = 0
+            t.addOnsCount = 0
+            t.playerAddOnsUsed = 0
+        }
+    }
+
     private func numberField(_ label: String, text: Binding<String>) -> some View {
         HStack {
             Text(label)
@@ -379,6 +434,10 @@ struct TournamentSetupView: View {
         startingChips = "\(tournament.startingChips)"
         reentryPolicy = tournament.reentryPolicy
         payoutPercent = "\(Int(tournament.payoutPercent))"
+        addOnAvailable = tournament.addOnAvailable
+        addOnCost = tournament.addOnCost > 0 ? "\(tournament.addOnCost)" : ""
+        addOnRake = tournament.addOnRake > 0 ? "\(tournament.addOnRake)" : ""
+        addOnChips = tournament.addOnChips > 0 ? "\(tournament.addOnChips)" : ""
 
         if let firstBlind = tournament.sortedBlindLevels.first {
             startingSB = "\(firstBlind.smallBlind)"
@@ -475,6 +534,7 @@ struct TournamentSetupView: View {
         t.venueName = venueName.isEmpty ? nil : venueName
         t.payoutPercent = Double(payoutPercent) ?? 15.0
         t.deductions = Int(deductions) ?? 0
+        applyAddOnFields(to: t)
         modelContext.insert(t)
 
         if !scannedBlindLevels.isEmpty {
@@ -535,6 +595,7 @@ struct TournamentSetupView: View {
             existing.reentryPolicy = reentryPolicy
             existing.venueName = venueName.isEmpty ? nil : venueName
             existing.payoutPercent = Double(payoutPercent) ?? 15.0
+            applyAddOnFields(to: existing)
             applyScannedBlindLevels(to: existing)
             t = existing
         } else {

@@ -19,6 +19,14 @@ final class Tournament {
     var reentryPolicy: String = "None"
     var rebuysUsed: Int = 0
 
+    // Add-on (all gated on addOnAvailable; CloudKit-safe defaults)
+    var addOnAvailable: Bool = false
+    var addOnCost: Int = 0          // total price (e.g. 100)
+    var addOnRake: Int = 0          // house cut (e.g. 10)
+    var addOnChips: Int = 0         // chips granted per add-on (e.g. 30,000)
+    var addOnsCount: Int = 0        // field-wide add-ons taken; observed/editable
+    var playerAddOnsUsed: Int = 0   // add-ons the player took; feeds investment
+
     // Status
     var statusRaw: String = "setup"
     var finishPosition: Int?
@@ -205,7 +213,17 @@ final class Tournament {
     }
 
     var totalInvestment: Int {
-        buyIn * (1 + rebuysUsed)
+        buyIn * (1 + rebuysUsed) + (addOnAvailable ? playerAddOnsUsed * addOnCost : 0)
+    }
+
+    /// Per-add-on amount that goes to the prize pool (price minus house cut).
+    var addOnToPrizePool: Int {
+        max(0, addOnCost - addOnRake)
+    }
+
+    /// Total prize-pool money contributed by add-ons across the field.
+    private var addOnPrizePoolTotal: Int {
+        addOnAvailable ? addOnsCount * addOnToPrizePool : 0
     }
 
     /// Total bounty winnings. Prefers persisted per-event amounts (supports
@@ -264,11 +282,11 @@ final class Tournament {
     }
 
     var prizePool: Int {
-        prizePoolContributionPerPlayer * fieldSize
+        prizePoolContributionPerPlayer * fieldSize + addOnPrizePoolTotal
     }
 
     var houseRake: Int {
-        entryFee * fieldSize
+        entryFee * fieldSize + (addOnAvailable ? addOnsCount * addOnRake : 0)
     }
 
     var overlay: Int {
@@ -279,12 +297,14 @@ final class Tournament {
     var playersNeededForGuarantee: Int {
         let prizePoolPerPlayer = prizePoolContributionPerPlayer
         guard guarantee > 0, prizePoolPerPlayer > 0 else { return 0 }
-        let needed = Int(ceil(Double(guarantee) / Double(prizePoolPerPlayer))) - fieldSize
+        // Add-on money already in the pool reduces the buy-ins still needed.
+        let remaining = max(0, guarantee - addOnPrizePoolTotal)
+        let needed = Int(ceil(Double(remaining) / Double(prizePoolPerPlayer))) - fieldSize
         return max(0, needed)
     }
 
     var totalChipsInPlay: Int {
-        fieldSize * startingChips
+        fieldSize * startingChips + (addOnAvailable ? addOnsCount * addOnChips : 0)
     }
 
     /// Number of paid finishing positions, derived from the payout

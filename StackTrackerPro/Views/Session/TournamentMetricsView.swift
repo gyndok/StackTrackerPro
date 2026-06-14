@@ -15,6 +15,11 @@ struct TournamentMetricsView: View {
     @State private var editTotalEntries = ""
     @State private var editPlayersRemaining = ""
 
+    // Add-on editor state
+    @State private var showAddOnEditor = false
+    @State private var editAddOnsCount = ""
+    @State private var editPlayerAddOns = ""
+
     private let columns = [
         GridItem(.flexible(), spacing: 8),
         GridItem(.flexible(), spacing: 8)
@@ -34,6 +39,9 @@ struct TournamentMetricsView: View {
         }
         .sheet(isPresented: $showPlayersEditor) {
             playersEditorSheet
+        }
+        .sheet(isPresented: $showAddOnEditor) {
+            addOnEditorSheet
         }
     }
 
@@ -197,6 +205,20 @@ struct TournamentMetricsView: View {
                 label: "Total Investment",
                 value: formatCurrency(tournament.totalInvestment)
             )
+
+            // Add-Ons (editable) — only when the tournament offers an add-on
+            if tournament.addOnAvailable {
+                StatBlockView(
+                    label: "Add-Ons",
+                    value: addOnsDisplayValue,
+                    isEditable: true,
+                    onTap: {
+                        editAddOnsCount = tournament.addOnsCount > 0 ? "\(tournament.addOnsCount)" : ""
+                        editPlayerAddOns = tournament.playerAddOnsUsed > 0 ? "\(tournament.playerAddOnsUsed)" : ""
+                        showAddOnEditor = true
+                    }
+                )
+            }
         }
     }
 
@@ -279,7 +301,57 @@ struct TournamentMetricsView: View {
         .presentationDetents([.medium])
     }
 
+    // MARK: - Add-On Editor Sheet
+
+    private var addOnEditorSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Add-ons taken", text: $editAddOnsCount)
+                        .keyboardType(.numberPad)
+                } header: {
+                    Text("Field Add-Ons")
+                } footer: {
+                    Text("Total add-ons taken across the field. Each adds \(formatChipsShort(tournament.addOnChips)) chips and \(formatCurrency(tournament.addOnToPrizePool)) to the prize pool.")
+                }
+
+                Section {
+                    TextField("My add-ons", text: $editPlayerAddOns)
+                        .keyboardType(.numberPad)
+                } header: {
+                    Text("My Add-Ons")
+                } footer: {
+                    Text("Add-ons you took. Each adds \(formatCurrency(tournament.addOnCost)) to your investment. Update your stack separately.")
+                }
+            }
+            .navigationTitle("Edit Add-Ons")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showAddOnEditor = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveAddOnEdit()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
     // MARK: - Save Actions
+
+    private func saveAddOnEdit() {
+        tournamentManager.updateAddOns(
+            fieldCount: Int(editAddOnsCount) ?? 0,
+            playerCount: Int(editPlayerAddOns) ?? 0
+        )
+        HapticFeedback.success()
+        showAddOnEditor = false
+    }
 
     private func saveStackEdit() {
         guard let chips = Int(editChipCount), chips > 0 else { return }
@@ -374,6 +446,14 @@ struct TournamentMetricsView: View {
         let avg = tournament.averageStackAtFinalTable
         guard avg > 0 else { return "---" }
         return formatChipsShort(avg)
+    }
+
+    // Field add-on count, with the player's own add-ons noted when taken.
+    private var addOnsDisplayValue: String {
+        let field = tournament.addOnsCount
+        let mine = tournament.playerAddOnsUsed
+        if field == 0 && mine == 0 { return "---" }
+        return mine > 0 ? "\(field) (\(mine) me)" : "\(field)"
     }
 
     // MARK: - Formatters
