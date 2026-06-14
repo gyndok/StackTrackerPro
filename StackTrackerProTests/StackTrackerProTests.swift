@@ -124,6 +124,75 @@ final class RegexPokerParserTests: XCTestCase {
     }
 }
 
+// MARK: - ParsedEntities sanitization (defense in depth)
+
+final class ParsedEntitiesSanitizationTests: XCTestCase {
+
+    func testDropsNonPositiveAndImplausiblyHugeChipCount() {
+        var e = ParsedEntities()
+        e.chipCount = 0
+        XCTAssertNil(e.sanitized().chipCount)
+
+        e.chipCount = -500
+        XCTAssertNil(e.sanitized().chipCount)
+
+        e.chipCount = 5_000_000_000 // 5 billion chips — garbage from a bad parse
+        XCTAssertNil(e.sanitized().chipCount)
+
+        e.chipCount = 32_000 // valid
+        XCTAssertEqual(e.sanitized().chipCount, 32_000)
+    }
+
+    func testDropsInconsistentBlinds() {
+        var e = ParsedEntities()
+        e.smallBlind = 1000
+        e.bigBlind = 500 // BB < SB is a misparse — drop both
+        let s = e.sanitized()
+        XCTAssertNil(s.smallBlind)
+        XCTAssertNil(s.bigBlind)
+    }
+
+    func testKeepsValidBlinds() {
+        var e = ParsedEntities()
+        e.smallBlind = 500
+        e.bigBlind = 1000
+        e.ante = 1000
+        let s = e.sanitized()
+        XCTAssertEqual(s.smallBlind, 500)
+        XCTAssertEqual(s.bigBlind, 1000)
+        XCTAssertEqual(s.ante, 1000)
+    }
+
+    func testDropsRemainingExceedingField() {
+        var e = ParsedEntities()
+        e.totalEntries = 500
+        e.playersRemaining = 5000 // impossible — more left than entered
+        let s = e.sanitized()
+        XCTAssertEqual(s.totalEntries, 500)
+        XCTAssertNil(s.playersRemaining)
+    }
+
+    func testDropsNonPositiveFieldCounts() {
+        var e = ParsedEntities()
+        e.totalEntries = 0
+        e.playersRemaining = -3
+        let s = e.sanitized()
+        XCTAssertNil(s.totalEntries)
+        XCTAssertNil(s.playersRemaining)
+    }
+
+    func testPreservesFlagsAndNote() {
+        var e = ParsedEntities()
+        e.bountyCollected = true
+        e.tookRebuy = true
+        e.handNote = "cooler vs kings"
+        let s = e.sanitized()
+        XCTAssertTrue(s.bountyCollected)
+        XCTAssertTrue(s.tookRebuy)
+        XCTAssertEqual(s.handNote, "cooler vs kings")
+    }
+}
+
 // MARK: - Tournament math
 
 final class TournamentMathTests: XCTestCase {

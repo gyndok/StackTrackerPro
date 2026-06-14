@@ -52,21 +52,26 @@ struct ParsedPokerInput {
 final class AIPokerParser: @unchecked Sendable {
     static let shared = AIPokerParser()
 
-    /// Guards all mutable state below. The class is @unchecked Sendable;
-    /// soundness relies on every access to these properties going through
-    /// `lock`.
+    /// Guards the availability cache below. The class is @unchecked Sendable;
+    /// soundness relies on every access going through `lock`.
     private let lock = NSLock()
-    private var session: LanguageModelSession?
-    private var parsesOnCurrentSession = 0
     private var _isAvailable = false
     private var lastAvailabilityCheck: Date?
 
     /// Re-check model availability at most this often (the model may have
     /// finished downloading since the last check, or become unavailable).
     private let availabilityRecheckInterval: TimeInterval = 60
-    /// Proactively recycle the session after this many parses so the
-    /// growing transcript never exceeds the model's context window.
-    private let maxParsesPerSession = 20
+
+    /// Extraction instructions. The isolation clause is critical: a
+    /// `LanguageModelSession` is multi-turn, so without it the model carries
+    /// over and recomputes values from earlier messages.
+    private static let instructions = """
+        Extract structured poker data from ONLY the single message provided. \
+        Treat each message in isolation — never infer, calculate, total, or \
+        carry over values from any other message. If a value is not explicitly \
+        stated in this message, leave it null. k = thousands (18k = 18000), \
+        M = millions. Blinds use SB/BB format (500/1000 means SB=500, BB=1000).
+        """
 
     private init() {}
 
@@ -98,39 +103,10 @@ final class AIPokerParser: @unchecked Sendable {
         }
     }
 
-    /// Returns the current session, creating or recycling one as needed.
-    private func currentSession() -> LanguageModelSession {
+    /// Forces a fresh availability check on the next `isAvailable` read.
+    private func forceAvailabilityRecheck() {
         lock.lock()
         defer { lock.unlock() }
-
-        if parsesOnCurrentSession >= maxParsesPerSession {
-            session = nil
-            parsesOnCurrentSession = 0
-        }
-
-        if let session {
-            parsesOnCurrentSession += 1
-            return session
-        }
-
-        let instructions = """
-            Extract poker tournament data. k=thousands, M=millions. \
-            Blinds: SB/BB format (500/1000 means SB=500, BB=1000).
-            """
-
-        let newSession = LanguageModelSession(instructions: instructions)
-        session = newSession
-        parsesOnCurrentSession = 1
-        return newSession
-    }
-
-    /// Discards the current session and forces a fresh availability check
-    /// on the next `isAvailable` read.
-    private func resetAfterFailure() {
-        lock.lock()
-        defer { lock.unlock() }
-        session = nil
-        parsesOnCurrentSession = 0
         lastAvailabilityCheck = nil
     }
 
@@ -139,7 +115,13 @@ final class AIPokerParser: @unchecked Sendable {
             throw AIParserError.modelUnavailable
         }
 
-        let session = currentSession()
+        // A fresh session per message. `LanguageModelSession` is multi-turn and
+        // retains a transcript, so reusing one across chat messages makes the
+        // model carry over and recompute values from earlier turns — corrupting
+        // extractions and writing wrong numbers into the live session. Each
+        // message must be parsed in complete isolation. A per-call session also
+        // means the transcript can never grow into the context window.
+        let session = LanguageModelSession(instructions: Self.instructions)
 
         do {
             let response = try await session.respond(
@@ -148,12 +130,9 @@ final class AIPokerParser: @unchecked Sendable {
             )
             return response.content.toEntities()
         } catch {
-            // A grown transcript can exceed the context window, leaving the
-            // session permanently broken (every subsequent parse would throw
-            // and silently regress to regex). Recreate the session on the
-            // next parse and re-evaluate availability instead of trusting
-            // the cached value.
-            resetAfterFailure()
+            // Re-evaluate availability on the next parse instead of trusting
+            // the cached value (the model may have become unavailable).
+            forceAvailabilityRecheck()
             throw error
         }
     }

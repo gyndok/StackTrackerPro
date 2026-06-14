@@ -22,6 +22,48 @@ struct ParsedEntities {
         payoutAmount != nil || bountyCollected || tookRebuy ||
         isEliminated || handNote != nil
     }
+
+    /// Returns a copy with implausible or internally inconsistent values
+    /// dropped. Defense in depth: a single bad parse — especially a
+    /// hallucinated value from the on-device AI model — must never write
+    /// garbage into the live session. Applied at the parse boundary so both
+    /// the AI and regex paths (and the generated response) use clean values.
+    func sanitized() -> ParsedEntities {
+        var e = self
+
+        // A single poker stack never approaches a billion chips; blinds share
+        // the same ceiling. Fields/positions use a separate, smaller ceiling.
+        let chipCeiling = 1_000_000_000
+        let fieldCeiling = 1_000_000
+
+        // Stack: strictly positive and within a sane ceiling.
+        if let c = e.chipCount, c <= 0 || c > chipCeiling { e.chipCount = nil }
+
+        // Blinds: strictly positive; a big blind below the small blind is a
+        // misparse, so drop both. Ante is non-negative.
+        if let sb = e.smallBlind, sb <= 0 || sb > chipCeiling { e.smallBlind = nil }
+        if let bb = e.bigBlind, bb <= 0 || bb > chipCeiling { e.bigBlind = nil }
+        if let sb = e.smallBlind, let bb = e.bigBlind, bb < sb {
+            e.smallBlind = nil
+            e.bigBlind = nil
+        }
+        if let a = e.ante, a < 0 || a > chipCeiling { e.ante = nil }
+
+        // Field counts: strictly positive and sane; players remaining can't
+        // exceed total entries when both arrive in the same message.
+        if let t = e.totalEntries, t <= 0 || t > fieldCeiling { e.totalEntries = nil }
+        if let r = e.playersRemaining, r <= 0 || r > fieldCeiling { e.playersRemaining = nil }
+        if let t = e.totalEntries, let r = e.playersRemaining, r > t {
+            e.playersRemaining = nil
+        }
+
+        // Level / finish position / payout.
+        if let l = e.levelNumber, l <= 0 || l > 1000 { e.levelNumber = nil }
+        if let f = e.finishPosition, f <= 0 || f > fieldCeiling { e.finishPosition = nil }
+        if let p = e.payoutAmount, p < 0 || p > chipCeiling { e.payoutAmount = nil }
+
+        return e
+    }
 }
 
 final class RegexPokerParser: @unchecked Sendable {

@@ -107,16 +107,19 @@ final class ChatManager {
     // MARK: - Parsing
 
     private func parseMessage(_ text: String) async -> ParsedEntities {
-        // Try AI first, fall back to regex
+        // Try AI first, fall back to regex. Sanitize at the boundary so a bad
+        // extraction (especially a hallucinated value from the AI model) can
+        // never write garbage into the live session, and so the generated
+        // response is built from the same clean values.
         if aiParser.isAvailable {
             do {
-                return try await aiParser.parse(text)
+                return try await aiParser.parse(text).sanitized()
             } catch {
                 // Fall through to regex
             }
         }
 
-        return regexParser.parse(text)
+        return regexParser.parse(text).sanitized()
     }
 
     // MARK: - Apply Entities
