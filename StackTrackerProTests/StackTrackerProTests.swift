@@ -320,6 +320,26 @@ final class TournamentMathTests: XCTestCase {
     }
 
     @MainActor
+    func testLiveAverageStackIncludesAddOnChips() throws {
+        // Regression: live Avg Stack must include add-on chips, not just
+        // buy-in chips. Mirrors the reported case (120 entries × 30k + 65
+        // add-ons × 30k = 5,550,000 chips, 110 left → 50,454, not 32,727).
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "Live", buyIn: 250)
+        container.mainContext.insert(t)
+        t.startingChips = 30_000
+        t.fieldSize = 120
+        t.playersRemaining = 110
+        t.addOnAvailable = true
+        t.addOnChips = 30_000
+        t.addOnsCount = 65
+
+        XCTAssertEqual(t.totalChipsInPlay, 5_550_000)
+        XCTAssertEqual(t.averageStack, 5_550_000 / 110) // 50,454
+        XCTAssertNotEqual(t.averageStack, 32_727)
+    }
+
+    @MainActor
     func testAddOnsRaiseAverageStackProjections() throws {
         let container = try makeInMemoryContainer()
         let t = Tournament(name: "AddOnAvg", buyIn: 250)

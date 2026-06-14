@@ -208,8 +208,8 @@ final class Tournament {
 
     var averageStack: Int {
         guard playersRemaining > 0, fieldSize > 0 else { return 0 }
-        let totalChips = fieldSize * startingChips
-        return totalChips / playersRemaining
+        // Use the single source of truth so add-on chips are included.
+        return totalChipsInPlay / playersRemaining
     }
 
     var totalInvestment: Int {
