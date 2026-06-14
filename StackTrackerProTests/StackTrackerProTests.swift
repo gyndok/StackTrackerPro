@@ -248,6 +248,28 @@ final class TournamentMathTests: XCTestCase {
     }
 
     @MainActor
+    func testAverageStackAtFinalTable() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "FT", buyIn: 200)
+        container.mainContext.insert(t)
+        t.startingChips = 20_000
+        t.fieldSize = 100
+
+        // 100 × 20,000 = 2,000,000 chips ÷ 9 seats = 222,222.
+        XCTAssertEqual(t.averageStackAtFinalTable, 222_222)
+    }
+
+    @MainActor
+    func testAverageStackAtFinalTableZeroWhenFieldBelowNine() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "Small", buyIn: 100)
+        container.mainContext.insert(t)
+        t.startingChips = 20_000
+        t.fieldSize = 6 // smaller than a full final table
+        XCTAssertEqual(t.averageStackAtFinalTable, 0)
+    }
+
+    @MainActor
     func testBountyWinningsPrefersBountyEvents() throws {
         let container = try makeInMemoryContainer()
         let context = container.mainContext

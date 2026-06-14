@@ -315,6 +315,20 @@ final class Tournament {
         return totalChipsInPlay / spots
     }
 
+    /// Seats at a standard full-ring final table.
+    static let finalTableSeats = 9
+
+    /// Projected average stack at a 9-handed final table: all chips in play
+    /// spread across the final 9 seats. 0 until field size is known, or when
+    /// the field is smaller than a full final table.
+    ///
+    /// Same assumption as `averageStackAtBubble`: `fieldSize` is treated as
+    /// total entries.
+    var averageStackAtFinalTable: Int {
+        guard fieldSize >= Self.finalTableSeats else { return 0 }
+        return totalChipsInPlay / Self.finalTableSeats
+    }
+
     var averageStackInBB: Double {
         guard let blinds = currentBlinds, blinds.bigBlind > 0 else { return 0 }
         return Double(averageStack) / Double(blinds.bigBlind)
