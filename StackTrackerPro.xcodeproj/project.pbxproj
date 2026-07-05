@@ -95,6 +95,7 @@
 		7E5700000000000000000104 /* StructureLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000102 /* StructureLibraryView.swift */; };
 		7E5700000000000000000106 /* TournamentEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000105 /* TournamentEvent.swift */; };
 		7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000107 /* TournamentRecapExporter.swift */; };
+		7E570000000000000000010A /* BlindStructureParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000109 /* BlindStructureParsing.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -200,6 +201,7 @@
 		7E5700000000000000000102 /* StructureLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructureLibraryView.swift; sourceTree = "<group>"; };
 		7E5700000000000000000105 /* TournamentEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentEvent.swift; sourceTree = "<group>"; };
 		7E5700000000000000000107 /* TournamentRecapExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentRecapExporter.swift; sourceTree = "<group>"; };
+		7E5700000000000000000109 /* BlindStructureParsing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureParsing.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -269,6 +271,7 @@
 		778F8A5CCA605DF481933210 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				7E5700000000000000000109 /* BlindStructureParsing.swift */,
 				7E5700000000000000000107 /* TournamentRecapExporter.swift */,
 				44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */,
 				33B35406E3FF9BE8A5AD8C49 /* TournamentManager.swift */,
@@ -534,6 +537,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */,
+				7E570000000000000000010A /* BlindStructureParsing.swift in Sources */,
 				7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */,
 				7E5700000000000000000106 /* TournamentEvent.swift in Sources */,
 				7E5700000000000000000103 /* BlindStructureTemplate.swift in Sources */,
