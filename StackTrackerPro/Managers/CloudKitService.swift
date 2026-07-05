@@ -211,25 +211,19 @@ final class CloudKitService: @unchecked Sendable {
     // MARK: - Fetch Nearby
 
     func fetchNearby(latitude: Double, longitude: Double, radiusMiles: Double = 50) async throws -> [SharedTournamentListing] {
-        let radiusDegrees = radiusMiles / 69.0 // ~69 miles per degree latitude
-        let lonRadiusDegrees = radiusMiles / (69.0 * cos(latitude * .pi / 180))
-
-        let minLat = latitude - radiusDegrees
-        let maxLat = latitude + radiusDegrees
-        let minLon = longitude - lonRadiusDegrees
-        let maxLon = longitude + lonRadiusDegrees
-
         // Fixed UTC calendar so every device computes the same "today" window
         // (matches the UTC-based deduplication key).
         let today = Self.utcCalendar.startOfDay(for: Date())
         let endOfToday = Self.utcCalendar.date(byAdding: .day, value: 1, to: today)!
 
+        // Query on a SINGLE indexed field (eventDate) and filter lat/lon
+        // client-side. Range filters on multiple fields each require their own
+        // queryable index in the production environment and are a common cause
+        // of queries that work in development but fail (or return nothing) in
+        // production. Today's records are bounded (resultsLimit: 100), so the
+        // client-side distance filter is cheap.
         let predicate = NSPredicate(
-            format: "%K >= %@ AND %K <= %@ AND %K >= %@ AND %K <= %@ AND %K >= %@ AND %K < %@",
-            Fields.latitude, NSNumber(value: minLat),
-            Fields.latitude, NSNumber(value: maxLat),
-            Fields.longitude, NSNumber(value: minLon),
-            Fields.longitude, NSNumber(value: maxLon),
+            format: "%K >= %@ AND %K < %@",
             Fields.eventDate, today as NSDate,
             Fields.eventDate, endOfToday as NSDate
         )
@@ -246,12 +240,19 @@ final class CloudKitService: @unchecked Sendable {
             return []
         }
 
+        // Client-side bounding box (~69 miles per degree latitude).
+        let radiusDegrees = radiusMiles / 69.0
+        let lonRadiusDegrees = radiusMiles / (69.0 * cos(latitude * .pi / 180))
+        let latRange = (latitude - radiusDegrees)...(latitude + radiusDegrees)
+        let lonRange = (longitude - lonRadiusDegrees)...(longitude + lonRadiusDegrees)
+
         var listings: [SharedTournamentListing] = []
         for (_, result) in results {
-            if let record = try? result.get() {
-                if let listing = parseListing(from: record) {
-                    listings.append(listing)
-                }
+            if let record = try? result.get(),
+               let listing = parseListing(from: record),
+               latRange.contains(listing.latitude),
+               lonRange.contains(listing.longitude) {
+                listings.append(listing)
             }
         }
 

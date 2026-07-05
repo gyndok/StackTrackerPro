@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import CoreLocation
+import os
 
 struct TournamentSetupView: View {
     @Environment(\.modelContext) private var modelContext
@@ -609,6 +610,7 @@ struct TournamentSetupView: View {
             let scanResult = buildCurrentScanResult()
             let venue = venueName
             Task {
+                let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "CloudKitShare")
                 do {
                     let location: CLLocation
                     if let geocoded = await LocationManager.shared.geocodeVenue(
@@ -620,6 +622,7 @@ struct TournamentSetupView: View {
                     } else if let userLoc = try? await LocationManager.shared.requestLocationOnce() {
                         location = userLoc
                     } else {
+                        logger.notice("Tournament share skipped: no venue geocode and no user location")
                         return
                     }
                     try await CloudKitService.shared.saveTournament(
@@ -630,8 +633,14 @@ struct TournamentSetupView: View {
                         venueCity: "",
                         venueState: ""
                     )
+                    logger.info("Tournament shared to CloudKit public database")
+                } catch CloudKitServiceError.duplicateSkipped {
+                    logger.info("Tournament share skipped: duplicate already exists")
                 } catch {
-                    // Sharing is best-effort — silently handle errors
+                    // Sharing is best-effort (the tournament still starts), but
+                    // the failure must be diagnosable — a missing production
+                    // schema shows up here as a CKError.
+                    logger.error("Tournament share failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
