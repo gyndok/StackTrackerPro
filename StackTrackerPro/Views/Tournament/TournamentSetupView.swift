@@ -737,20 +737,25 @@ struct TournamentSetupView: View {
         if shareToCloudKit {
             let scanResult = buildCurrentScanResult()
             let venue = venueName
+            // Prefer the saved venue's city/state so multi-location chains
+            // ("Texas Card House") geocode to the right city. Looked up here,
+            // before dismiss, so the Task never touches the model context.
+            let savedVenue = (try? modelContext.fetch(FetchDescriptor<Venue>()))?
+                .first { $0.name.localizedCaseInsensitiveCompare(venue) == .orderedSame }
+            let venueCity = savedVenue?.city ?? ""
+            let venueState = savedVenue?.state ?? ""
             Task {
                 let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "CloudKitShare")
                 do {
-                    let location: CLLocation
-                    if let geocoded = await LocationManager.shared.geocodeVenue(
+                    // The venue's coordinates drive the 50-mile nearby browser,
+                    // so never substitute the sharer's current location — a
+                    // wrong-city listing is worse than no listing.
+                    guard let location = await LocationManager.shared.geocodeVenue(
                         name: venue,
-                        city: "",
-                        state: ""
-                    ) {
-                        location = geocoded
-                    } else if let userLoc = try? await LocationManager.shared.requestLocationOnce() {
-                        location = userLoc
-                    } else {
-                        logger.notice("Tournament share skipped: no venue geocode and no user location")
+                        city: venueCity,
+                        state: venueState
+                    ) else {
+                        logger.notice("Tournament share skipped: could not geocode venue '\(venue, privacy: .public)'")
                         return
                     }
                     try await CloudKitService.shared.saveTournament(
@@ -758,8 +763,8 @@ struct TournamentSetupView: View {
                         eventDate: Date(),
                         latitude: location.coordinate.latitude,
                         longitude: location.coordinate.longitude,
-                        venueCity: "",
-                        venueState: ""
+                        venueCity: venueCity,
+                        venueState: venueState
                     )
                     logger.info("Tournament shared to CloudKit public database")
                 } catch CloudKitServiceError.duplicateSkipped {

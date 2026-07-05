@@ -60,15 +60,25 @@ final class LocationManager: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     func geocodeVenue(name: String, city: String, state: String) async -> CLLocation? {
-        // Try full venue name + city + state first
-        let fullAddress = "\(name), \(city), \(state)"
-        if let location = await geocodeAddress(fullAddress) {
+        // Build the query from non-empty components only. The old code sent
+        // "Name, , " (and fell back to ", ") when city/state were blank —
+        // queries that can resolve to arbitrary places near the user.
+        let components = [name, city, state]
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard !components.isEmpty else { return nil }
+
+        if let location = await geocodeAddress(components.joined(separator: ", ")) {
             return location
         }
 
-        // Fall back to city + state only
-        let fallback = "\(city), \(state)"
-        return await geocodeAddress(fallback)
+        // Fall back to city/state only when we actually have them — a city-
+        // center pin is fine for the 50-mile nearby browser.
+        let cityComponents = [city, state]
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard !cityComponents.isEmpty, cityComponents.count < components.count else { return nil }
+        return await geocodeAddress(cityComponents.joined(separator: ", "))
     }
 
     private func geocodeAddress(_ address: String) async -> CLLocation? {
