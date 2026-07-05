@@ -14,6 +14,11 @@ struct BlindStructureEditorView: View {
 
     @State private var showingTemplates = false
 
+    // Structure library state
+    @State private var showingLibrary = false
+    @State private var showingSavePrompt = false
+    @State private var saveTemplateName = ""
+
     // Scanner state
     @State private var showingPhotoSource = false
     @State private var showingPhotoPicker = false
@@ -59,6 +64,19 @@ struct BlindStructureEditorView: View {
                     } label: {
                         Label("Scan from Screenshot", systemImage: "camera.viewfinder")
                     }
+                    Divider()
+                    Button {
+                        showingLibrary = true
+                    } label: {
+                        Label("Load from Library", systemImage: "books.vertical")
+                    }
+                    Button {
+                        saveTemplateName = tournament.name
+                        showingSavePrompt = true
+                    } label: {
+                        Label("Save to Library…", systemImage: "square.and.arrow.down")
+                    }
+                    .disabled(sortedLevels.isEmpty)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .foregroundColor(.goldAccent)
@@ -104,6 +122,18 @@ struct BlindStructureEditorView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(scanError ?? "Unknown error")
+        }
+        .sheet(isPresented: $showingLibrary) {
+            StructureLibraryView { template in
+                loadScannedLevels(template.levels.map { $0.toScannedBlindLevel() })
+            }
+        }
+        .alert("Save to Library", isPresented: $showingSavePrompt) {
+            TextField("Structure name", text: $saveTemplateName)
+            Button("Save") { saveToLibrary() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Saves the current blind structure for reuse in future tournaments.")
         }
         .overlay {
             if isScanning {
@@ -304,6 +334,20 @@ struct BlindStructureEditorView: View {
                 }
             }
         }
+    }
+
+    /// Snapshots the current structure into the searchable library.
+    private func saveToLibrary() {
+        let trimmed = saveTemplateName.trimmingCharacters(in: .whitespaces)
+        let template = BlindStructureTemplate(
+            name: trimmed.isEmpty ? "Untitled Structure" : trimmed,
+            venueName: tournament.venueName,
+            startingChips: tournament.startingChips,
+            levels: sortedLevels.map { BlindLevelCodable(from: $0) }
+        )
+        modelContext.insert(template)
+        try? modelContext.save()
+        HapticFeedback.success()
     }
 
     private func loadScannedLevels(_ levels: [ScannedBlindLevel]) {

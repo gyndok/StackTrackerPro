@@ -27,6 +27,7 @@ struct StackTrackerProApp: App {
             Venue.self,
             ChipStackPhoto.self,
             BreakEntry.self,
+            BlindStructureTemplate.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

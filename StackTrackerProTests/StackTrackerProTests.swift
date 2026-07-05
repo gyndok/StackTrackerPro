@@ -19,6 +19,7 @@ private func makeInMemoryContainer() throws -> ModelContainer {
         Venue.self,
         ChipStackPhoto.self,
         BreakEntry.self,
+        BlindStructureTemplate.self,
     ])
     let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
     return try ModelContainer(for: schema, configurations: [config])
@@ -640,6 +641,64 @@ final class TweetComposerTests: XCTestCase {
     func testRemainingCharacters() {
         XCTAssertEqual(TweetComposer.remainingCharacters(for: "hello"), 275)
         XCTAssertEqual(TweetComposer.remainingCharacters(for: ""), 280)
+    }
+}
+
+// MARK: - Structure library
+
+final class BlindStructureTemplateTests: XCTestCase {
+
+    @MainActor
+    func testLevelsRoundTripThroughJSONBlob() throws {
+        let container = try makeInMemoryContainer()
+
+        var l1 = BlindLevelCodable(from: ScannedBlindLevel(
+            levelNumber: 1, smallBlind: 100, bigBlind: 200, ante: 200,
+            durationMinutes: 30, isBreak: false, breakLabel: nil
+        ))
+        l1.ante = 200
+        let breakLevel = BlindLevelCodable(from: ScannedBlindLevel(
+            levelNumber: 2, smallBlind: 0, bigBlind: 0, ante: 0,
+            durationMinutes: 15, isBreak: true, breakLabel: "Break"
+        ))
+
+        let template = BlindStructureTemplate(
+            name: "WSOP $1,500 Freezeout",
+            venueName: "Horseshoe",
+            startingChips: 25_000,
+            levels: [l1, breakLevel]
+        )
+        container.mainContext.insert(template)
+        try container.mainContext.save()
+
+        let decoded = template.levels
+        XCTAssertEqual(decoded.count, 2)
+        XCTAssertEqual(decoded[0].smallBlind, 100)
+        XCTAssertEqual(decoded[0].bigBlind, 200)
+        XCTAssertEqual(decoded[1].isBreak, true)
+        XCTAssertEqual(decoded[1].breakLabel, "Break")
+        XCTAssertEqual(template.playingLevelCount, 1, "breaks excluded from level count")
+
+        // Conversion back to the scan pipeline's type keeps values intact.
+        let scanned = decoded.map { $0.toScannedBlindLevel() }
+        XCTAssertEqual(scanned[0].levelNumber, 1)
+        XCTAssertEqual(scanned[0].ante, 200)
+        XCTAssertEqual(scanned[1].durationMinutes, 15)
+    }
+
+    @MainActor
+    func testSnapshotFromPersistedBlindLevel() throws {
+        let container = try makeInMemoryContainer()
+        let level = BlindLevel(levelNumber: 5, smallBlind: 400, bigBlind: 800, ante: 800, durationMinutes: 40)
+        container.mainContext.insert(level)
+
+        let codable = BlindLevelCodable(from: level)
+        XCTAssertEqual(codable.levelNumber, 5)
+        XCTAssertEqual(codable.smallBlind, 400)
+        XCTAssertEqual(codable.bigBlind, 800)
+        XCTAssertEqual(codable.ante, 800)
+        XCTAssertEqual(codable.durationMinutes, 40)
+        XCTAssertFalse(codable.isBreak)
     }
 }
 

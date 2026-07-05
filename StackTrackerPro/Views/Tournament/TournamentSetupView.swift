@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import CoreLocation
+import PDFKit
+import UniformTypeIdentifiers
 import os
 
 struct TournamentSetupView: View {
@@ -51,6 +53,8 @@ struct TournamentSetupView: View {
     // CloudKit sharing
     @State private var showingBrowser = false
     @State private var shareToCloudKit = false
+    @State private var showingStructureLibrary = false
+    @State private var showingPDFImporter = false
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -143,6 +147,23 @@ struct TournamentSetupView: View {
             } message: {
                 Text(scanError ?? "Unknown error")
             }
+            .sheet(isPresented: $showingStructureLibrary) {
+                StructureLibraryView { template in
+                    applyLibraryTemplate(template)
+                }
+            }
+            .fileImporter(
+                isPresented: $showingPDFImporter,
+                allowedContentTypes: [UTType.pdf]
+            ) { result in
+                switch result {
+                case .success(let url):
+                    importStructurePDF(from: url)
+                case .failure(let error):
+                    scanError = error.localizedDescription
+                    showingScanError = true
+                }
+            }
             .onAppear {
                 if tournament != nil {
                     loadExisting()
@@ -203,6 +224,54 @@ struct TournamentSetupView: View {
                 .foregroundColor(.goldAccent)
             }
             .disabled(isScanning)
+
+            Button {
+                showingPDFImporter = true
+            } label: {
+                HStack {
+                    Image(systemName: "doc.viewfinder")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Import Structure PDF")
+                            .fontWeight(.semibold)
+                        Text("WSOP and venue structure sheets from Files")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                    Spacer()
+                    if isScanning {
+                        ProgressView()
+                            .tint(.goldAccent)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                }
+                .foregroundColor(.goldAccent)
+            }
+            .disabled(isScanning)
+
+            Button {
+                showingStructureLibrary = true
+            } label: {
+                HStack {
+                    Image(systemName: "books.vertical")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Load from Library")
+                            .fontWeight(.semibold)
+                        Text("Reuse a saved blind structure")
+                            .font(.caption)
+                            .foregroundColor(.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+                .foregroundColor(.goldAccent)
+            }
 
             Button {
                 showingBrowser = true
@@ -444,6 +513,65 @@ struct TournamentSetupView: View {
             startingSB = "\(firstBlind.smallBlind)"
             startingBB = "\(firstBlind.bigBlind)"
         }
+    }
+
+    // MARK: - Structure Library
+
+    /// Applies a saved library structure the same way a successful scan does:
+    /// the levels flow through `scannedBlindLevels` into the create/update
+    /// path and the blind editor.
+    private func applyLibraryTemplate(_ template: BlindStructureTemplate) {
+        scannedBlindLevels = template.levels.map { $0.toScannedBlindLevel() }
+        if template.startingChips > 0 {
+            startingChips = "\(template.startingChips)"
+        }
+        if name.trimmingCharacters(in: .whitespaces).isEmpty {
+            name = template.name
+        }
+        if venueName.trimmingCharacters(in: .whitespaces).isEmpty,
+           let venue = template.venueName {
+            venueName = venue
+        }
+        HapticFeedback.success()
+    }
+
+    // MARK: - PDF Import
+
+    /// Renders the first pages of a structure PDF (WSOP sheets etc.) at high
+    /// resolution and feeds them through the existing OCR scan pipeline —
+    /// clean full-page renders OCR far better than screenshots of a PDF.
+    private func importStructurePDF(from url: URL) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess { url.stopAccessingSecurityScopedResource() }
+        }
+
+        guard let document = PDFDocument(url: url), document.pageCount > 0 else {
+            scanError = "Couldn't open that PDF."
+            showingScanError = true
+            return
+        }
+
+        // Structure sheets are short; 6 pages covers any of them while
+        // bounding render + OCR time.
+        let pageLimit = min(document.pageCount, 6)
+        var images: [UIImage] = []
+        for index in 0..<pageLimit {
+            guard let page = document.page(at: index) else { continue }
+            let bounds = page.bounds(for: .mediaBox)
+            // ~3x scale ≈ 216 DPI for a US-letter sheet — plenty for OCR.
+            let scale: CGFloat = 3.0
+            let size = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+            images.append(page.thumbnail(of: size, for: .mediaBox))
+        }
+
+        guard !images.isEmpty else {
+            scanError = "Couldn't render any pages from that PDF."
+            showingScanError = true
+            return
+        }
+
+        scanImages(images)
     }
 
     // MARK: - Scanning

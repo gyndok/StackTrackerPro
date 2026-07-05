@@ -22,6 +22,7 @@
 		5C861C6B087D7C366E5B376E /* StatBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5031858C5B57B0AA2752CBD5 /* StatBlockView.swift */; };
 		684260D0D6D98D5B04B2EA9B /* TournamentSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */; };
 		7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FAD3C56832ABC0362A2A56 /* StackTrackerProApp.swift */; };
+		7E5700000000000000000003 /* StackTrackerProTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000002 /* StackTrackerProTests.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -84,15 +85,25 @@
 		F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A3B4C5D6E7F8A9B0C1D2E3 /* TweetComposer.swift */; };
 		F2E1D0C9A8B7C6D5E4F3A2B1 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* PokerAtlasScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */; };
-		F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */; };
 		F48405EEA08ECC5BC150B453 /* TournamentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C8CDE38102F8460DA98886 /* TournamentListView.swift */; };
 		F4C74639839441BC35FF00D8 /* BlindLevelsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D3896E0647F46119FE3E30 /* BlindLevelsPane.swift */; };
 		F4D85740940552CD46001EA9 /* HandNotesPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E49A7F1758A57220FF4F31 /* HandNotesPane.swift */; };
 		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
 		FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C122E458D953010331B7239C /* TournamentMetricsView.swift */; };
-		7E5700000000000000000003 /* StackTrackerProTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000002 /* StackTrackerProTests.swift */; };
+		7E5700000000000000000103 /* BlindStructureTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000101 /* BlindStructureTemplate.swift */; };
+		7E5700000000000000000104 /* StructureLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000102 /* StructureLibraryView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7E5700000000000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E6921F438ED91165739C4837 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8796EC6A87564C187A908CD6;
+			remoteInfo = StackTrackerPro;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		01CF7122D121AD978C3265B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -120,6 +131,8 @@
 		5D98A08EDB70CA37265C9783 /* ChatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputView.swift; sourceTree = "<group>"; };
 		660ACA799D4150711CF58317 /* VideoExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExportSheet.swift; sourceTree = "<group>"; };
 		66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StackTrackerPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E5700000000000000000001 /* StackTrackerProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StackTrackerProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E5700000000000000000002 /* StackTrackerProTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackTrackerProTests.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -181,8 +194,8 @@
 		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
 		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
 		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		7E5700000000000000000001 /* StackTrackerProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StackTrackerProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7E5700000000000000000002 /* StackTrackerProTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackTrackerProTests.swift; sourceTree = "<group>"; };
+		7E5700000000000000000101 /* BlindStructureTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureTemplate.swift; sourceTree = "<group>"; };
+		7E5700000000000000000102 /* StructureLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructureLibraryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -272,6 +285,14 @@
 			path = Managers;
 			sourceTree = "<group>";
 		};
+		7E5700000000000000000004 /* StackTrackerProTests */ = {
+			isa = PBXGroup;
+			children = (
+				7E5700000000000000000002 /* StackTrackerProTests.swift */,
+			);
+			path = StackTrackerProTests;
+			sourceTree = "<group>";
+		};
 		90B9C057C14993016BDDE174 = {
 			isa = PBXGroup;
 			children = (
@@ -285,6 +306,7 @@
 		A4A4961A3FCFC36AEBBBB40A /* Tournament */ = {
 			isa = PBXGroup;
 			children = (
+				7E5700000000000000000102 /* StructureLibraryView.swift */,
 				50C8CDE38102F8460DA98886 /* TournamentListView.swift */,
 				F1F2F3F4F5F6F7F8F9F0F1F2 /* TournamentHistoryView.swift */,
 				D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */,
@@ -298,6 +320,7 @@
 		AAC7DC5DCD23638D271D3093 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				7E5700000000000000000101 /* BlindStructureTemplate.swift */,
 				B14932DF6EB69E66004CFE48 /* Enums.swift */,
 				E7450AB8F51603F31BC6348C /* Tournament.swift */,
 				CA5H000000000000000001 /* CashSession.swift */,
@@ -417,34 +440,9 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		7E5700000000000000000004 /* StackTrackerProTests */ = {
-			isa = PBXGroup;
-			children = (
-				7E5700000000000000000002 /* StackTrackerProTests.swift */,
-			);
-			path = StackTrackerProTests;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		8796EC6A87564C187A908CD6 /* StackTrackerPro */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 312262D80325CADA70A3272B /* Build configuration list for PBXNativeTarget "StackTrackerPro" */;
-			buildPhases = (
-				2466343B6FD6A9A6B3BC8BEC /* Sources */,
-				2EE5141556C7852B30E87123 /* Frameworks */,
-				B17084E4EC1E2C66BB4538F1 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = StackTrackerPro;
-			productName = StackTrackerPro;
-			productReference = 66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */;
-			productType = "com.apple.product-type.application";
-		};
 		7E5700000000000000000005 /* StackTrackerProTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7E570000000000000000000C /* Build configuration list for PBXNativeTarget "StackTrackerProTests" */;
@@ -462,32 +460,31 @@
 			productReference = 7E5700000000000000000001 /* StackTrackerProTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		8796EC6A87564C187A908CD6 /* StackTrackerPro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 312262D80325CADA70A3272B /* Build configuration list for PBXNativeTarget "StackTrackerPro" */;
+			buildPhases = (
+				2466343B6FD6A9A6B3BC8BEC /* Sources */,
+				2EE5141556C7852B30E87123 /* Frameworks */,
+				B17084E4EC1E2C66BB4538F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = StackTrackerPro;
+			productName = StackTrackerPro;
+			productReference = 66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
-
-/* Begin PBXContainerItemProxy section */
-		7E5700000000000000000008 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E6921F438ED91165739C4837 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8796EC6A87564C187A908CD6;
-			remoteInfo = StackTrackerPro;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		7E5700000000000000000009 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8796EC6A87564C187A908CD6 /* StackTrackerPro */;
-			targetProxy = 7E5700000000000000000008 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		E6921F438ED91165739C4837 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					7E5700000000000000000005 = {
 						TestTargetID = 8796EC6A87564C187A908CD6;
@@ -531,6 +528,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */,
+				7E5700000000000000000103 /* BlindStructureTemplate.swift in Sources */,
+				7E5700000000000000000104 /* StructureLibraryView.swift in Sources */,
 				853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */,
 				5320A8E9CEA0972EA33D5783 /* Theme.swift in Sources */,
 				D4905381184A18BEA671BBEE /* Enums.swift in Sources */,
@@ -583,7 +582,6 @@
 				E3F4A5B6C7D8E9F0A1B2C3D4 /* XShareComposeView.swift in Sources */,
 				E1E2E3E4E5E6E7E8E9E0E1E2 /* TournamentHistoryView.swift in Sources */,
 				F1A2B3C4D5E6F7A8B9C0D1E2 /* TweetComposer.swift in Sources */,
-				F3A4B5C6D7E8F9A0B1C2D3E4 /* XShareComposeView.swift in Sources */,
 				D1A2B3C4D5E6F7A8B9C0D1E3 /* ScoutingReportEngine.swift in Sources */,
 				44C9DCA32F5DCC8500C52F6B /* VideoComposer.swift in Sources */,
 				EEC659928F0C9B02682F666A /* VideoRecapView.swift in Sources */,
@@ -624,6 +622,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7E5700000000000000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8796EC6A87564C187A908CD6 /* StackTrackerPro */;
+			targetProxy = 7E5700000000000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		044EFCA05EA43619939F1711 /* Debug */ = {
@@ -749,74 +755,6 @@
 			};
 			name = Release;
 		};
-		C3074A4E02C06B242063A057 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = StackTrackerPro/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		EDDE73F2AA4D1788882F0992 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = StackTrackerPro/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
 		7E570000000000000000000A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -850,6 +788,74 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StackTrackerPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StackTrackerPro";
+			};
+			name = Release;
+		};
+		C3074A4E02C06B242063A057 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StackTrackerPro/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		EDDE73F2AA4D1788882F0992 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StackTrackerPro/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.7;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
