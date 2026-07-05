@@ -645,6 +645,105 @@ final class TweetComposerTests: XCTestCase {
     }
 }
 
+// MARK: - Recap export
+
+final class TournamentRecapExporterTests: XCTestCase {
+
+    @MainActor
+    func testMarkdownContainsAllSectionsAndData() throws {
+        let container = try makeInMemoryContainer()
+        defer { withExtendedLifetime(container) {} }
+        let context = container.mainContext
+
+        let t = Tournament(name: "25K GTD Saturday Special", buyIn: 250, entryFee: 195)
+        context.insert(t)
+        t.venueName = "Champions Club"
+        t.startingChips = 30_000
+        t.fieldSize = 120
+        t.addOnAvailable = true
+        t.addOnCost = 100
+        t.addOnRake = 10
+        t.addOnChips = 30_000
+        t.addOnsCount = 65
+        t.playerAddOnsUsed = 1
+
+        let base = Date(timeIntervalSince1970: 1_780_000_000)
+        t.actualStartDate = base
+        t.endDate = base.addingTimeInterval(4 * 3600)
+        t.statusRaw = "completed"
+        t.finishPosition = 14
+        t.payout = 0
+
+        // Structure
+        let level = BlindLevel(levelNumber: 1, smallBlind: 100, bigBlind: 200, ante: 200)
+        level.tournament = t
+        context.insert(level)
+
+        // Timeline pieces, deliberately inserted out of order
+        let laterStack = StackEntry(timestamp: base.addingTimeInterval(3600), chipCount: 60_000, blindLevelNumber: 2, currentSB: 200, currentBB: 300, currentAnte: 300)
+        let earlyStack = StackEntry(timestamp: base.addingTimeInterval(60), chipCount: 30_000, blindLevelNumber: 1, currentSB: 100, currentBB: 200, currentAnte: 200)
+        t.stackEntries = [laterStack, earlyStack]
+
+        let event = TournamentEvent(type: .rebuy, intValue: 1, timestamp: base.addingTimeInterval(1800))
+        t.events = [event]
+
+        let note = HandNote(descriptionText: "Flopped a set vs the table captain", stackBefore: 45_000, stackAfter: nil, blindLevelNumber: 2, blindsDisplay: "200/300")
+        note.timestamp = base.addingTimeInterval(2400)
+        t.handNotes = [note]
+
+        let message = ChatMessage(sender: .user, text: "60k now")
+        message.timestamp = base.addingTimeInterval(3610)
+        t.chatMessages = [message]
+
+        let markdown = TournamentRecapExporter.markdown(for: t)
+
+        // All sections present
+        for heading in ["# Tournament Recap Data", "## Summary", "## Blind Structure",
+                        "## Timeline", "## Stack Series (CSV)", "## Hand Notes", "## Chat Transcript"] {
+            XCTAssertTrue(markdown.contains(heading), "missing section: \(heading)")
+        }
+
+        // Summary facts
+        XCTAssertTrue(markdown.contains("Champions Club"))
+        XCTAssertTrue(markdown.contains("| Entries | 120 |"))
+        XCTAssertTrue(markdown.contains("| Add-ons (field / mine) | 65 / 1 |"))
+        XCTAssertTrue(markdown.contains("| Total invested | $350 |"), "buy-in 250 + 1 add-on × 100")
+
+        // CSV has both stack rows
+        XCTAssertTrue(markdown.contains("timestamp,chips,level,small_blind,big_blind,ante,bb_count"))
+        XCTAssertTrue(markdown.contains(",30000,1,100,200,200,"))
+        XCTAssertTrue(markdown.contains(",60000,2,200,300,300,"))
+
+        // Timeline is chronological: the 30k stack row precedes the rebuy,
+        // which precedes the 60k stack row.
+        let earlyRange = try XCTUnwrap(markdown.range(of: "Stack: 30,000"))
+        let rebuyRange = try XCTUnwrap(markdown.range(of: "Rebuy / re-entry taken"))
+        let lateRange = try XCTUnwrap(markdown.range(of: "Stack: 60,000"))
+        XCTAssertLessThan(earlyRange.lowerBound, rebuyRange.lowerBound)
+        XCTAssertLessThan(rebuyRange.lowerBound, lateRange.lowerBound)
+
+        // Hand note and chat present
+        XCTAssertTrue(markdown.contains("Flopped a set vs the table captain"))
+        XCTAssertTrue(markdown.contains("**Player:** 60k now"))
+    }
+
+    @MainActor
+    func testWriteRecapFileProducesNamedMarkdownFile() throws {
+        let container = try makeInMemoryContainer()
+        defer { withExtendedLifetime(container) {} }
+        let t = Tournament(name: "WSOP $1,500 Freezeout!", buyIn: 1500)
+        container.mainContext.insert(t)
+
+        let url = try TournamentRecapExporter.writeRecapFile(for: t)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertEqual(url.lastPathComponent, "WSOP-1-500-Freezeout-recap.md",
+                       "non-alphanumerics collapsed into dashes")
+        let contents = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(contents.hasPrefix("# Tournament Recap Data"))
+    }
+}
+
 // MARK: - Tournament event timeline
 
 final class TournamentEventTests: XCTestCase {

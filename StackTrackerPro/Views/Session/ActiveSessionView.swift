@@ -14,6 +14,8 @@ struct ActiveSessionView: View {
     @State private var showBreakTimer = false
     @State private var showVideoExport = false
     @State private var showEditResult = false
+    @State private var recapFile: RecapFile?
+    @State private var recapExportError = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -172,6 +174,12 @@ struct ActiveSessionView: View {
                         } label: {
                             Label("Edit Result", systemImage: "pencil.circle")
                         }
+
+                        Button {
+                            exportRecapFile()
+                        } label: {
+                            Label("Export Recap File", systemImage: "doc.text")
+                        }
                     }
 
                     if tournament.status != .completed {
@@ -226,6 +234,14 @@ struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showEditResult) {
             EditResultSheet(tournament: tournament)
+        }
+        .sheet(item: $recapFile) { file in
+            RecapShareSheet(file: file, tournamentName: tournament.name)
+        }
+        .alert("Export Failed", isPresented: $recapExportError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Couldn't write the recap file. Please try again.")
         }
         .fullScreenCover(isPresented: $showVideoExport) {
             VideoExportSheet(tournament: tournament)
@@ -364,6 +380,71 @@ struct LiveShareSheet: View {
     private func renderCard() {
         let card = LiveStackFlexView(tournament: tournament, size: selectedSize)
         renderedImage = ShareCardRenderer.render(card, size: selectedSize)
+    }
+}
+
+// MARK: - Recap Export
+
+/// Identifiable wrapper so the written recap file can drive sheet(item:).
+struct RecapFile: Identifiable {
+    let url: URL
+    var id: String { url.path }
+}
+
+extension ActiveSessionView {
+    fileprivate func exportRecapFile() {
+        do {
+            let url = try TournamentRecapExporter.writeRecapFile(for: tournament)
+            recapFile = RecapFile(url: url)
+        } catch {
+            recapExportError = true
+        }
+    }
+}
+
+/// Minimal share surface for the exported recap markdown file.
+struct RecapShareSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let file: RecapFile
+    let tournamentName: String
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "doc.text")
+                .font(.system(size: 44))
+                .foregroundColor(.goldAccent)
+                .accessibilityHidden(true)
+
+            Text("Recap File Ready")
+                .font(PokerTypography.statValue)
+                .foregroundColor(.textPrimary)
+
+            Text("Share it into Claude (or any AI assistant) and it will produce a full PDF recap of \(tournamentName) — charts, key hands, and financials. The instructions are already in the file.")
+                .font(PokerTypography.chipLabel)
+                .foregroundColor(.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            ShareLink(item: file.url) {
+                HStack {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Share Recap File")
+                }
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.backgroundPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.goldAccent)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .padding(.horizontal, 24)
+
+            Button("Done") { dismiss() }
+                .foregroundColor(.textSecondary)
+        }
+        .padding(.vertical, 32)
+        .presentationDetents([.medium])
+        .presentationBackground(Color.backgroundPrimary)
     }
 }
 
