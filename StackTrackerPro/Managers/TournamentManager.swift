@@ -69,6 +69,7 @@ final class TournamentManager {
         guard let tournament = activeTournament, tournament.status == .active else { return }
         tournament.status = .paused
         tournament.pausedAt = .now
+        logEvent(.pause, on: tournament)
         save()
     }
 
@@ -76,6 +77,7 @@ final class TournamentManager {
         guard let tournament = activeTournament, tournament.status != .completed else { return }
         foldInPauseTime(for: tournament)
         tournament.status = .active
+        logEvent(.resume, on: tournament)
         save()
     }
 
@@ -86,6 +88,7 @@ final class TournamentManager {
         tournament.finishPosition = position
         tournament.payout = payout ?? 0
         tournament.endDate = endDate
+        logEvent(.completed, value: position ?? 0, on: tournament)
         save()
         // Keep tournament alive for recap — do NOT clear activeTournament yet
         completedTournamentForRecap = tournament
@@ -122,6 +125,19 @@ final class TournamentManager {
         UserDefaults.standard.object(forKey: SettingsKeys.defaultSeatsPerTable) as? Int ?? 9
     }
 
+    /// Appends a timestamped event to the tournament's history. Callers save
+    /// afterward as part of their own mutation.
+    private func logEvent(_ type: TournamentEventType, value: Int = 0, on tournament: Tournament) {
+        let event = TournamentEvent(type: type, intValue: value)
+        tournament.events?.append(event)
+    }
+
+    /// Logs a level-change event only when the level actually moved.
+    private func logLevelChange(from previousLevel: Int, on tournament: Tournament) {
+        guard tournament.currentBlindLevelNumber != previousLevel else { return }
+        logEvent(.levelChange, value: tournament.currentBlindLevelNumber, on: tournament)
+    }
+
     func updateStack(chipCount: Int) {
         guard let tournament = mutableTournament else { return }
 
@@ -141,6 +157,7 @@ final class TournamentManager {
 
     func updateBlinds(levelNumber: Int? = nil, sb: Int? = nil, bb: Int? = nil, ante: Int? = nil, isDisplayLevel: Bool = false) {
         guard let tournament = mutableTournament else { return }
+        let previousLevel = tournament.currentBlindLevelNumber
 
         if let levelNumber {
             // Convert display level to internal level if needed (e.g. user says "level 4" in chat)
@@ -154,6 +171,7 @@ final class TournamentManager {
                 if let sb { existing.smallBlind = sb }
                 if let bb { existing.bigBlind = bb }
                 if let ante { existing.ante = ante }
+                logLevelChange(from: previousLevel, on: tournament)
                 save()
                 return
             }
@@ -169,6 +187,7 @@ final class TournamentManager {
                 )
                 tournament.blindLevels?.append(newLevel)
             }
+            logLevelChange(from: previousLevel, on: tournament)
             save()
             return
         }
@@ -198,6 +217,7 @@ final class TournamentManager {
             tournament.currentBlindLevelNumber = nextLevelNum
         }
 
+        logLevelChange(from: previousLevel, on: tournament)
         save()
     }
 
@@ -228,8 +248,14 @@ final class TournamentManager {
     /// add-on count. No-op on a completed tournament.
     func updateAddOns(fieldCount: Int? = nil, playerCount: Int? = nil) {
         guard let tournament = mutableTournament else { return }
-        if let fieldCount { tournament.addOnsCount = max(0, fieldCount) }
-        if let playerCount { tournament.playerAddOnsUsed = max(0, playerCount) }
+        if let fieldCount, max(0, fieldCount) != tournament.addOnsCount {
+            tournament.addOnsCount = max(0, fieldCount)
+            logEvent(.addOnField, value: tournament.addOnsCount, on: tournament)
+        }
+        if let playerCount, max(0, playerCount) != tournament.playerAddOnsUsed {
+            tournament.playerAddOnsUsed = max(0, playerCount)
+            logEvent(.addOnPlayer, value: tournament.playerAddOnsUsed, on: tournament)
+        }
         save()
     }
 
@@ -248,6 +274,7 @@ final class TournamentManager {
     func recordRebuy() {
         guard let tournament = mutableTournament else { return }
         tournament.rebuysUsed += 1
+        logEvent(.rebuy, value: tournament.rebuysUsed, on: tournament)
 
         // Reset stack to starting chips
         let blinds = tournament.currentBlinds
@@ -307,7 +334,9 @@ final class TournamentManager {
 
     func setCurrentLevel(_ levelNumber: Int) {
         guard let tournament = mutableTournament else { return }
+        let previousLevel = tournament.currentBlindLevelNumber
         tournament.currentBlindLevelNumber = skipBreaks(from: levelNumber, in: tournament)
+        logLevelChange(from: previousLevel, on: tournament)
         save()
     }
 

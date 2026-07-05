@@ -20,6 +20,7 @@ private func makeInMemoryContainer() throws -> ModelContainer {
         ChipStackPhoto.self,
         BreakEntry.self,
         BlindStructureTemplate.self,
+        TournamentEvent.self,
     ])
     let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
     return try ModelContainer(for: schema, configurations: [config])
@@ -641,6 +642,83 @@ final class TweetComposerTests: XCTestCase {
     func testRemainingCharacters() {
         XCTAssertEqual(TweetComposer.remainingCharacters(for: "hello"), 275)
         XCTAssertEqual(TweetComposer.remainingCharacters(for: ""), 280)
+    }
+}
+
+// MARK: - Tournament event timeline
+
+final class TournamentEventTests: XCTestCase {
+
+    @MainActor
+    private func makeManagerAndTournament() throws -> (TournamentManager, Tournament, ModelContainer) {
+        let container = try makeInMemoryContainer()
+        let manager = TournamentManager()
+        manager.setContext(container.mainContext)
+        let t = Tournament(name: "Event Log", buyIn: 250)
+        container.mainContext.insert(t)
+        manager.startTournament(t)
+        return (manager, t, container)
+    }
+
+    @MainActor
+    func testRebuyLogsTimestampedEvent() throws {
+        let (manager, t, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+
+        manager.recordRebuy()
+        manager.recordRebuy()
+
+        let rebuys = t.sortedEvents.filter { $0.type == .rebuy }
+        XCTAssertEqual(rebuys.count, 2)
+        XCTAssertEqual(rebuys.last?.intValue, 2, "carries the running total")
+    }
+
+    @MainActor
+    func testLevelChangeLoggedOnlyWhenLevelMoves() throws {
+        let (manager, t, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+
+        manager.setCurrentLevel(3)
+        manager.setCurrentLevel(3) // no move — must not double-log
+
+        let changes = t.sortedEvents.filter { $0.type == .levelChange }
+        XCTAssertEqual(changes.count, 1)
+        XCTAssertEqual(changes.first?.intValue, 3)
+    }
+
+    @MainActor
+    func testPauseResumeAndCompletionLogged() throws {
+        let (manager, t, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+
+        manager.pauseTournament()
+        manager.resumeTournament()
+        manager.completeTournament(position: 14, payout: 0)
+
+        let types = t.sortedEvents.compactMap(\.type)
+        XCTAssertTrue(types.contains(.pause))
+        XCTAssertTrue(types.contains(.resume))
+        XCTAssertTrue(types.contains(.completed))
+        XCTAssertEqual(t.sortedEvents.last?.type, .completed)
+        XCTAssertEqual(t.sortedEvents.last?.intValue, 14)
+    }
+
+    @MainActor
+    func testAddOnCountChangesLogged() throws {
+        let (manager, t, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        t.addOnAvailable = true
+        t.addOnCost = 100
+
+        manager.updateAddOns(fieldCount: 40, playerCount: 1)
+        manager.updateAddOns(fieldCount: 40) // unchanged — no event
+
+        let fieldEvents = t.sortedEvents.filter { $0.type == .addOnField }
+        let playerEvents = t.sortedEvents.filter { $0.type == .addOnPlayer }
+        XCTAssertEqual(fieldEvents.count, 1)
+        XCTAssertEqual(fieldEvents.first?.intValue, 40)
+        XCTAssertEqual(playerEvents.count, 1)
+        XCTAssertEqual(playerEvents.first?.intValue, 1)
     }
 }
 

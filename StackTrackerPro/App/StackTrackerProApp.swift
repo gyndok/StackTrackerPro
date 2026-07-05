@@ -28,6 +28,7 @@ struct StackTrackerProApp: App {
             ChipStackPhoto.self,
             BreakEntry.self,
             BlindStructureTemplate.self,
+            TournamentEvent.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

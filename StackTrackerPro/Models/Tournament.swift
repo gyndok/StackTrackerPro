@@ -76,6 +76,9 @@ final class Tournament {
     @Relationship(deleteRule: .cascade, inverse: \ChipStackPhoto.tournament)
     var chipStackPhotos: [ChipStackPhoto]? = []
 
+    @Relationship(deleteRule: .cascade, inverse: \TournamentEvent.tournament)
+    var events: [TournamentEvent]? = []
+
     // End of session
     var endDate: Date?
 
@@ -159,6 +162,10 @@ final class Tournament {
 
     var sortedBreakEntries: [BreakEntry] {
         (breakEntries ?? []).sorted { $0.timestamp < $1.timestamp }
+    }
+
+    var sortedEvents: [TournamentEvent] {
+        (events ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     var sortedBlindLevels: [BlindLevel] {
