@@ -260,25 +260,25 @@ func runPublish(files: [String], environment: String, execute: Bool) async throw
         let iso = ISO8601DateFormatter()
         func f(_ type: String, _ value: Any) -> [String: Any] { ["type": type, "value": value] }
         let fields: [String: Any] = [
-            "tournamentName": f("STRING", draft.tournamentName),
-            "venueName": f("STRING", draft.venueName),
-            "venueCity": f("STRING", draft.venueCity),
-            "venueState": f("STRING", draft.venueState),
-            "gameTypeRaw": f("STRING", draft.gameTypeRaw),
-            "buyIn": f("INT64", draft.buyIn),
-            "entryFee": f("INT64", draft.entryFee),
-            "bountyAmount": f("INT64", draft.bountyAmount),
-            "guarantee": f("INT64", draft.guarantee),
-            "startingChips": f("INT64", draft.startingChips),
-            "startingSB": f("INT64", draft.startingSB),
-            "startingBB": f("INT64", draft.startingBB),
-            "reentryPolicy": f("STRING", draft.reentryPolicy),
-            "eventDate": f("TIMESTAMP", iso.string(from: eventDate)),
-            "latitude": f("DOUBLE", location.coordinate.latitude),
-            "longitude": f("DOUBLE", location.coordinate.longitude),
-            "blindLevelsJSON": f("STRING", levelsJSON),
-            "deduplicationKey": f("STRING", dedupKey),
-            "contributedAt": f("TIMESTAMP", iso.string(from: Date()))
+            "tournamentName": f("stringType", draft.tournamentName),
+            "venueName": f("stringType", draft.venueName),
+            "venueCity": f("stringType", draft.venueCity),
+            "venueState": f("stringType", draft.venueState),
+            "gameTypeRaw": f("stringType", draft.gameTypeRaw),
+            "buyIn": f("int64Type", draft.buyIn),
+            "entryFee": f("int64Type", draft.entryFee),
+            "bountyAmount": f("int64Type", draft.bountyAmount),
+            "guarantee": f("int64Type", draft.guarantee),
+            "startingChips": f("int64Type", draft.startingChips),
+            "startingSB": f("int64Type", draft.startingSB),
+            "startingBB": f("int64Type", draft.startingBB),
+            "reentryPolicy": f("stringType", draft.reentryPolicy),
+            "eventDate": f("timestampType", iso.string(from: eventDate)),
+            "latitude": f("doubleType", location.coordinate.latitude),
+            "longitude": f("doubleType", location.coordinate.longitude),
+            "blindLevelsJSON": f("stringType", levelsJSON),
+            "deduplicationKey": f("stringType", dedupKey),
+            "contributedAt": f("timestampType", iso.string(from: Date()))
         ]
         let fieldsData = try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])
         let fieldsPath = FileManager.default.temporaryDirectory
