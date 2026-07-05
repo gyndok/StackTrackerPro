@@ -645,6 +645,158 @@ final class TweetComposerTests: XCTestCase {
     }
 }
 
+// MARK: - WSOP structure sheet parsing
+
+final class WSOPStructureParserTests: XCTestCase {
+
+    private let scanner = PokerAtlasScanner.shared
+
+    // Captured verbatim from the app's OCR pipeline (3x render + Vision)
+    // run against the 2026 WSOP Main Event structure PDF. Two-column
+    // layout: schedule text merges into structure rows.
+    private let page1Lines = [
+        "POKER",
+        "HORSESHOE. A Paris",
+        "LAS VEGAS LAS VEGAS",
+        "2026 WORLD SERIES OF POKER",
+        "EVENT #82: $10,000 SOP MAIN EVENT",
+        "57TH NO-LIMIT HOLD'EM WORLD CHAMPIONSHIP (TELEVISED)",
+        "THURSDAY - JULY 2; FRIDAY - JULY 3,",
+        "SATURDAY - JULY 4, SUNDAY - JULY 5, 2026 AT 11 AM",
+        "Starting Chips: 60,000 Day 3 - July 8, 2026 (Wednesday):",
+        "Level Duration: 120 minutes 2:00 p.m. Star",
+        "Late Registration: 7 levels (2 levels into July 6 & 7)",
+        "Day 1A - July 2, 2026 (Thursday): 11:00 a.m. Start",
+        "11:00 a.m. Start",
+        "Play 5 levels",
+        "Breaks TBA LEVEL BB ANTE BLINDS",
+        "1 200 100-200",
+        "Day 1B - July 3, 2026 (Friday): 2 300 200-300",
+        "11:00 a.m. Start 3 400 200-400",
+        "Play 5 levels 4 500 300-500",
+        "Breaks TBA 5 600 300-600",
+        "End of Days 1A, 1B, 1C, & 1D",
+        "Day 1C - July 4, 2026 (Saturday): 6 800 400-800",
+        "11:00 a.m. Start 7 1,000 500-1,000",
+        "Play 5 levels 8 1,200 600-1,200",
+        "Breaks TBA Remove 100 Chips",
+        "9 1,500 1,000-1,500",
+        "Day 1D - July 5, 2026 (Sunday): 10 2,000 1,000-2,000",
+        "11:00 a.m. Start 11 2,500 1,000-2,500",
+        "Play 5 levels 12 3,000 1,500-3,000",
+        "Breaks TBA 4,000 2,000-4,000",
+        "Remove 500 Chips",
+        "Day 2A, 2B, & 2C - July 6, 2026 (Monday): 14 5,000 3,000-5,000",
+        "Remaining players from Day 1A + 1B + 1C (combined) 6,000 3,000-6,000",
+        "11:00 a.m. Start New entrants who have yet to enter any previous flight 16 8,000 4,000-8,000",
+        "Play 5 levels 17 10,000 5,000-10,000",
+        "Breaks TBA",
+        "To register online, please visit: https://www.wsop.com/registration/"
+    ]
+
+    private let page2Lines = [
+        "Day 6 - July 11, 2026 (Saturday): 46 8,000,000 4,000,000-8,000,000",
+        "11:00 a.m. Start 47 10,000,000 5,000,000-10,000,000",
+        "Play 5 levels",
+        "Day 8 - July 13, 2026 (Monday):",
+        "Michael Mizrachi - $10,000,000",
+        "LEVEL ANTE BLINDS",
+        "18 12,000 6,000-12,000",
+        "Remove 1,000 Chips",
+        "19 15,000 10,000-15,000",
+        "20,000 10,000-20,000",
+        "21 25,000 10,000-25,000",
+        "30,000 15,000-30,000",
+        "23 40,000 20,000-40,000",
+        "24 50,000 25,000-50,000",
+        "37 1,000,000",
+        "44 5,000,000"
+    ]
+
+    func testParsesWSOPPage1WithMergedColumnsAndMissingLevelNumbers() {
+        let levels = scanner.parseBlindLevels(from: page1Lines)
+
+        XCTAssertEqual(levels.count, 17, "levels 1-17, no break rows, race-offs skipped")
+        XCTAssertEqual(levels.first?.levelNumber, 1)
+        XCTAssertEqual(levels.first?.smallBlind, 100)
+        XCTAssertEqual(levels.first?.bigBlind, 200)
+        XCTAssertEqual(levels.first?.ante, 200)
+        XCTAssertEqual(levels.first?.durationMinutes, 120, "sheet-wide Level Duration applied")
+
+        // Row merged with schedule text: "Day 1B - ... (Friday): 2 300 200-300"
+        let l2 = levels.first { $0.levelNumber == 2 }
+        XCTAssertEqual(l2?.smallBlind, 200)
+        XCTAssertEqual(l2?.bigBlind, 300)
+
+        // OCR dropped the "13": "4,000 2,000-4,000" must infer level 13.
+        let l13 = levels.first { $0.levelNumber == 13 }
+        XCTAssertEqual(l13?.smallBlind, 2_000)
+        XCTAssertEqual(l13?.bigBlind, 4_000)
+        XCTAssertEqual(l13?.ante, 4_000)
+
+        // Same for level 15 ("6,000 3,000-6,000" merged into schedule text).
+        let l15 = levels.first { $0.levelNumber == 15 }
+        XCTAssertEqual(l15?.bigBlind, 6_000)
+
+        XCTAssertEqual(levels.last?.levelNumber, 17)
+        XCTAssertEqual(levels.last?.bigBlind, 10_000)
+    }
+
+    func testParsesWSOPPage2IncludingAnteOnlyRows() {
+        let levels = scanner.parseBlindLevels(from: page2Lines)
+
+        // 18, 19, 20 (inferred), 21, 22 (inferred), 23, 24, 37, 44, 46, 47
+        XCTAssertEqual(levels.count, 11)
+        XCTAssertEqual(levels.map(\.levelNumber), [18, 19, 20, 21, 22, 23, 24, 37, 44, 46, 47],
+                       "sorted by level despite 46/47 appearing first in OCR order")
+
+        let l20 = levels.first { $0.levelNumber == 20 }
+        XCTAssertEqual(l20?.smallBlind, 10_000)
+        XCTAssertEqual(l20?.bigBlind, 20_000)
+
+        // Ante-only row: BB = BB ante, SB approximated as half.
+        let l37 = levels.first { $0.levelNumber == 37 }
+        XCTAssertEqual(l37?.bigBlind, 1_000_000)
+        XCTAssertEqual(l37?.ante, 1_000_000)
+        XCTAssertEqual(l37?.smallBlind, 500_000)
+
+        // Merged with day text at the top of the page.
+        let l47 = levels.first { $0.levelNumber == 47 }
+        XCTAssertEqual(l47?.smallBlind, 5_000_000)
+        XCTAssertEqual(l47?.bigBlind, 10_000_000)
+
+        // No duration line on this page — sentinel awaiting normalization.
+        XCTAssertEqual(levels.first?.durationMinutes, 0)
+    }
+
+    func testNormalizeDurationsPropagatesSheetDuration() {
+        let page1 = scanner.parseBlindLevels(from: page1Lines)
+        let page2 = scanner.parseBlindLevels(from: page2Lines)
+        let normalized = scanner.normalizeDurations(page1 + page2)
+
+        XCTAssertTrue(normalized.allSatisfy { $0.durationMinutes == 120 },
+                      "page 2 rows inherit the duration stated on page 1")
+    }
+
+    func testPokerAtlasFormatUnaffectedByWSOPPath() {
+        // A Poker Atlas-style table (no dash blinds) must not route through
+        // the WSOP parser.
+        let lines = [
+            "Name Length SB BB Ante",
+            "Level 1 30 100 200 200",
+            "Level 2 30 200 300 300",
+            "Break 15",
+            "Level 3 30 200 400 400"
+        ]
+        let levels = scanner.parseBlindLevels(from: lines)
+
+        XCTAssertEqual(levels.count, 4)
+        XCTAssertEqual(levels.filter { !$0.isBreak }.count, 3)
+        XCTAssertEqual(levels.first?.durationMinutes, 30)
+        XCTAssertEqual(levels.first?.smallBlind, 100)
+    }
+}
+
 // MARK: - Recap export
 
 final class TournamentRecapExporterTests: XCTestCase {

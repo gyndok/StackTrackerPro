@@ -117,7 +117,11 @@ final class PokerAtlasScanner: @unchecked Sendable {
             allResults.append(result)
         }
 
-        return merge(allResults)
+        var merged = merge(allResults)
+        // WSOP sheets state the level duration once (often not on every
+        // page) — propagate it across all pages after the merge.
+        merged.blindLevels = normalizeDurations(merged.blindLevels)
+        return merged
     }
 
     // MARK: - Merge
@@ -602,7 +606,14 @@ final class PokerAtlasScanner: @unchecked Sendable {
 
     // MARK: - Blind Level Parser
 
-    private func parseBlindLevels(from lines: [String]) -> [ScannedBlindLevel] {
+    /// Internal (not private) for unit testing against captured OCR fixtures.
+    func parseBlindLevels(from lines: [String]) -> [ScannedBlindLevel] {
+        // WSOP-style structure sheets use a different table format than
+        // Poker Atlas — try that interpretation first.
+        if let wsopLevels = parseWSOPStructure(from: lines) {
+            return wsopLevels
+        }
+
         var levels: [ScannedBlindLevel] = []
         var isPokerAtlasFormat = false
         var levelCounter = 1
@@ -683,6 +694,109 @@ final class PokerAtlasScanner: @unchecked Sendable {
         }
 
         return levels
+    }
+
+    // MARK: - WSOP Structure Sheets
+
+    /// Detects and parses WSOP-style structure tables:
+    /// `LEVEL | [BB] ANTE | BLINDS` with blinds written as "SB-BB"
+    /// (e.g. "500-1,000"). Returns nil when the lines don't look like a
+    /// WSOP sheet, so Poker Atlas screenshots never route through here.
+    ///
+    /// WSOP sheets are two-column posters, so OCR rows frequently merge
+    /// schedule text with structure rows ("Day 1B — July 3 (Friday): 2 300
+    /// 200-300"); all matching is therefore anchored to the END of the line.
+    /// The level duration is stated once per sheet ("Level Duration: 120
+    /// minutes"); rows on pages without that line get duration 0, which
+    /// `normalizeDurations` resolves after the multi-page merge.
+    func parseWSOPStructure(from lines: [String]) -> [ScannedBlindLevel]? {
+        let lowered = lines.map { $0.lowercased() }
+
+        let hasHeader = lowered.contains {
+            $0.contains("level") && $0.contains("ante") && $0.contains("blinds")
+        }
+
+        // Sheet-wide level duration.
+        var sheetDuration = 0
+        for line in lowered {
+            if let match = line.firstMatch(of: /level\s*duration:?\s*(\d{1,3})\s*min/) {
+                sheetDuration = Int(match.1) ?? 0
+                break
+            }
+        }
+
+        // Row patterns, all end-anchored (text to the left is page chrome).
+        let fullRow = /(?:^|\s)(\d{1,2})\s+([\d,]{3,})\s+([\d,]{3,})\s*-\s*([\d,]{3,})\s*$/
+        let numberlessRow = /(?:^|\s)([\d,]{3,})\s+([\d,]{3,})\s*-\s*([\d,]{3,})\s*$/
+        let anteOnlyRow = /(?:^|\s)(\d{1,2})\s+((?:\d{1,3},)+\d{3})\s*$/
+
+        func chips(_ s: Substring) -> Int {
+            Int(s.replacingOccurrences(of: ",", with: "")) ?? 0
+        }
+
+        var levels: [ScannedBlindLevel] = []
+        var lastLevel = 0
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Chip race-off rows ("Remove 500 Chips") are not levels.
+            if trimmed.lowercased().contains("remove") { continue }
+
+            if let match = trimmed.firstMatch(of: fullRow) {
+                let level = Int(match.1) ?? 0
+                let ante = chips(match.2)
+                let sb = chips(match.3)
+                let bb = chips(match.4)
+                guard level > 0, level <= 60, sb > 0, bb >= sb else { continue }
+                levels.append(ScannedBlindLevel(
+                    levelNumber: level, smallBlind: sb, bigBlind: bb, ante: ante,
+                    durationMinutes: sheetDuration, isBreak: false, breakLabel: nil
+                ))
+                lastLevel = level
+            } else if let match = trimmed.firstMatch(of: numberlessRow) {
+                // OCR dropped the level number; infer from the previous row.
+                guard lastLevel > 0 else { continue }
+                let ante = chips(match.1)
+                let sb = chips(match.2)
+                let bb = chips(match.3)
+                guard sb > 0, bb >= sb else { continue }
+                lastLevel += 1
+                levels.append(ScannedBlindLevel(
+                    levelNumber: lastLevel, smallBlind: sb, bigBlind: bb, ante: ante,
+                    durationMinutes: sheetDuration, isBreak: false, breakLabel: nil
+                ))
+            } else if let match = trimmed.firstMatch(of: anteOnlyRow) {
+                // OCR lost the blinds column. On WSOP big-blind-ante sheets
+                // the ante always equals the big blind; the small blind is
+                // approximated as half and can be corrected in the editor.
+                let level = Int(match.1) ?? 0
+                let ante = chips(match.2)
+                guard level > 0, level <= 60, ante > 0 else { continue }
+                levels.append(ScannedBlindLevel(
+                    levelNumber: level, smallBlind: ante / 2, bigBlind: ante, ante: ante,
+                    durationMinutes: sheetDuration, isBreak: false, breakLabel: nil
+                ))
+                lastLevel = level
+            }
+        }
+
+        // Require the WSOP header or a convincing number of dash-format rows
+        // so this never hijacks a Poker Atlas structure.
+        guard hasHeader || levels.count >= 3, !levels.isEmpty else { return nil }
+        return levels.sorted { $0.levelNumber < $1.levelNumber }
+    }
+
+    /// Replaces the duration-0 sentinel (WSOP pages without a "Level
+    /// Duration" line) with the duration found elsewhere on the sheet,
+    /// falling back to 30 minutes.
+    func normalizeDurations(_ levels: [ScannedBlindLevel]) -> [ScannedBlindLevel] {
+        guard levels.contains(where: { $0.durationMinutes <= 0 }) else { return levels }
+        let known = levels.first(where: { !$0.isBreak && $0.durationMinutes > 0 })?.durationMinutes ?? 30
+        return levels.map { level in
+            var normalized = level
+            if normalized.durationMinutes <= 0 { normalized.durationMinutes = known }
+            return normalized
+        }
     }
 
     /// Poker Atlas column order: [LevelNumber, Duration, SB, BB, Ante]
