@@ -301,7 +301,7 @@ func runPublish(files: [String], environment: String, execute: Bool) async throw
             try process.run()
             process.waitUntilExit()
             print(process.terminationStatus == 0 ? "PUBLISHED \(draft.tournamentName)"
-                                                 : "FAILED (exit \(process.terminationStatus)) — is a cktool token saved?")
+                                                 : "FAILED (exit \(process.terminationStatus)) — is a fresh USER token saved? (xcrun cktool save-token --type user)")
         } else {
             print("DRY RUN — would execute:")
             print("  xcrun " + args.joined(separator: " "))

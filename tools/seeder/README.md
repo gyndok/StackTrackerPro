@@ -15,13 +15,18 @@ logic the app ships with.
    ```
    tools/seeder/build.sh
    ```
-2. Create a **CloudKit management token**: [CloudKit Console](https://icloud.developer.apple.com)
-   → container `iCloud.com.gyndok.stacktrackerpro` → Settings → **Tokens & Keys**
-   → New Management Token. Then save it locally:
+2. Create a **CloudKit user token** (management tokens cannot write data):
+   [CloudKit Console](https://icloud.developer.apple.com) → click your
+   **account name (top right)** → **Tokens & Keys** (the account-level page,
+   not the one inside the container) → **User Tokens** → create one. Save it:
    ```
-   xcrun cktool save-token
+   xcrun cktool save-token --type user
    ```
-   (paste the token when prompted; it lands in your keychain)
+   (paste when prompted; it lands in your keychain)
+
+   User tokens are short-lived (a few hours) — regenerate at the start of
+   each seeding session. Records you publish are owned by your iCloud
+   account, same as sharing from your phone.
 
 ## Workflow
 
