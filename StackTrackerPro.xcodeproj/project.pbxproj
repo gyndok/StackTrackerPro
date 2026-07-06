@@ -23,6 +23,15 @@
 		684260D0D6D98D5B04B2EA9B /* TournamentSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D285C648680C87D156FA0CE5 /* TournamentSetupView.swift */; };
 		7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2FAD3C56832ABC0362A2A56 /* StackTrackerProApp.swift */; };
 		7E5700000000000000000003 /* StackTrackerProTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000002 /* StackTrackerProTests.swift */; };
+		7E5700000000000000000103 /* BlindStructureTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000101 /* BlindStructureTemplate.swift */; };
+		7E5700000000000000000104 /* StructureLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000102 /* StructureLibraryView.swift */; };
+		7E5700000000000000000106 /* TournamentEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000105 /* TournamentEvent.swift */; };
+		7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000107 /* TournamentRecapExporter.swift */; };
+		7E570000000000000000010A /* BlindStructureParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000109 /* BlindStructureParsing.swift */; };
+		7E570000000000000000010C /* Hand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010B /* Hand.swift */; };
+		7E570000000000000000010E /* HandEntryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010D /* HandEntryModel.swift */; };
+		7E5700000000000000000110 /* HandEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010F /* HandEntryView.swift */; };
+		7E5700000000000000000112 /* HandsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000111 /* HandsPane.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -91,15 +100,6 @@
 		F5A6B7C8D9E0F1A2B3C4D5E6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D0E1F2A3B4C5D6 /* SettingsView.swift */; };
 		FCE457A6F2D4E0B77C281228 /* RegexPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBC9A4AEDD570DC02D8EB90 /* RegexPokerParser.swift */; };
 		FE8B6DEFB08D5D79DFAD395F /* TournamentMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C122E458D953010331B7239C /* TournamentMetricsView.swift */; };
-		7E5700000000000000000103 /* BlindStructureTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000101 /* BlindStructureTemplate.swift */; };
-		7E5700000000000000000104 /* StructureLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000102 /* StructureLibraryView.swift */; };
-		7E5700000000000000000106 /* TournamentEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000105 /* TournamentEvent.swift */; };
-		7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000107 /* TournamentRecapExporter.swift */; };
-		7E570000000000000000010A /* BlindStructureParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000109 /* BlindStructureParsing.swift */; };
-		7E570000000000000000010C /* Hand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010B /* Hand.swift */; };
-		7E570000000000000000010E /* HandEntryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010D /* HandEntryModel.swift */; };
-		7E5700000000000000000110 /* HandEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010F /* HandEntryView.swift */; };
-		7E5700000000000000000112 /* HandsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000111 /* HandsPane.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -140,6 +140,15 @@
 		66B604378AD2E8C74FD75F6D /* StackTrackerPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StackTrackerPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E5700000000000000000001 /* StackTrackerProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StackTrackerProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E5700000000000000000002 /* StackTrackerProTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackTrackerProTests.swift; sourceTree = "<group>"; };
+		7E5700000000000000000101 /* BlindStructureTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureTemplate.swift; sourceTree = "<group>"; };
+		7E5700000000000000000102 /* StructureLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructureLibraryView.swift; sourceTree = "<group>"; };
+		7E5700000000000000000105 /* TournamentEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentEvent.swift; sourceTree = "<group>"; };
+		7E5700000000000000000107 /* TournamentRecapExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentRecapExporter.swift; sourceTree = "<group>"; };
+		7E5700000000000000000109 /* BlindStructureParsing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureParsing.swift; sourceTree = "<group>"; };
+		7E570000000000000000010B /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
+		7E570000000000000000010D /* HandEntryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryModel.swift; sourceTree = "<group>"; };
+		7E570000000000000000010F /* HandEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryView.swift; sourceTree = "<group>"; };
+		7E5700000000000000000111 /* HandsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsPane.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -201,15 +210,6 @@
 		F4A5B6C7D8E9F0A1B2C3D4E5 /* XShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XShareComposeView.swift; sourceTree = "<group>"; };
 		FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Venue.swift; sourceTree = "<group>"; };
 		FA7982009E333C484553515D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		7E5700000000000000000101 /* BlindStructureTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureTemplate.swift; sourceTree = "<group>"; };
-		7E5700000000000000000102 /* StructureLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StructureLibraryView.swift; sourceTree = "<group>"; };
-		7E5700000000000000000105 /* TournamentEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentEvent.swift; sourceTree = "<group>"; };
-		7E5700000000000000000107 /* TournamentRecapExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentRecapExporter.swift; sourceTree = "<group>"; };
-		7E5700000000000000000109 /* BlindStructureParsing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureParsing.swift; sourceTree = "<group>"; };
-		7E570000000000000000010B /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
-		7E570000000000000000010D /* HandEntryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryModel.swift; sourceTree = "<group>"; };
-		7E570000000000000000010F /* HandEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryView.swift; sourceTree = "<group>"; };
-		7E5700000000000000000111 /* HandsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsPane.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -826,7 +826,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
@@ -844,7 +844,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -860,7 +860,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
@@ -878,7 +878,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
