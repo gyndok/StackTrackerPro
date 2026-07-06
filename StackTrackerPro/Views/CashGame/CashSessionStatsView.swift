@@ -80,7 +80,7 @@ struct CashSessionStatsView: View {
                     )
 
                     StatBlockView(
-                        label: "Hand Notes",
+                        label: "Notes",
                         value: "\(session.sortedHandNotes.count)"
                     )
                 }

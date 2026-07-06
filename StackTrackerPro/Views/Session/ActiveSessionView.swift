@@ -145,11 +145,11 @@ struct ActiveSessionView: View {
                     Button {
                         selectedPage = 5
                     } label: {
-                        Label("Hand Notes", systemImage: "note.text")
+                        Label("Notes", systemImage: "note.text")
                     }
 
                     Button {
-                        selectedPage = 7
+                        selectedPage = 8
                     } label: {
                         Label("Scouting Report", systemImage: "doc.text.magnifyingglass")
                     }
@@ -260,7 +260,7 @@ struct ActiveSessionView: View {
 
     private static let pageNames = [
         "Stack chart", "Metrics", "Blind levels", "Photos",
-        "Receipts", "Hand notes", "Hands", "Chat", "Scouting report"
+        "Receipts", "Notes", "Hands", "Chat", "Scouting report"
     ]
 
     private var pageIndicator: some View {

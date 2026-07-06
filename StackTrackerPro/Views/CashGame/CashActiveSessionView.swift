@@ -97,7 +97,7 @@ struct CashActiveSessionView: View {
                     Button {
                         selectedPage = 2
                     } label: {
-                        Label("Hand Notes", systemImage: "note.text")
+                        Label("Notes", systemImage: "note.text")
                     }
 
                     if session.status != .completed {
@@ -142,7 +142,7 @@ struct CashActiveSessionView: View {
 
     // MARK: - Page Indicator
 
-    private static let pageNames = ["Stack chart", "Stats", "Hand notes", "Hands"]
+    private static let pageNames = ["Stack chart", "Stats", "Notes", "Hands"]
 
     private var pageIndicator: some View {
         // Buttons are 16pt wide with zero spacing so dot centers stay 16pt
