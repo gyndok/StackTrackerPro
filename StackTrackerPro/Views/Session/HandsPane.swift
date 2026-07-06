@@ -1,25 +1,6 @@
 import SwiftUI
 import SwiftData
 
-/// Session-level VPIP/PFR from structured hands. Pure, unit-tested.
-enum HandStats {
-    static func vpipPercent(_ hands: [Hand]) -> Double {
-        guard !hands.isEmpty else { return 0 }
-        let vpip = hands.filter { hand in
-            hand.heroPreflopActions.contains { $0.actionType.isVoluntaryChips }
-        }.count
-        return Double(vpip) / Double(hands.count) * 100
-    }
-
-    static func pfrPercent(_ hands: [Hand]) -> Double {
-        guard !hands.isEmpty else { return 0 }
-        let pfr = hands.filter { hand in
-            hand.heroPreflopActions.contains { $0.actionType == .raise || $0.actionType == .allIn }
-        }.count
-        return Double(pfr) / Double(hands.count) * 100
-    }
-}
-
 /// Pager pane listing the session's structured hands, with a Log Hand
 /// entry point and read-only detail.
 struct HandsPane: View {
@@ -35,7 +16,6 @@ struct HandsPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            statsHeader
             if hands.isEmpty {
                 emptyState
             } else {
@@ -70,26 +50,6 @@ struct HandsPane: View {
         .sheet(isPresented: $showEntry) {
             HandEntryView(tournament: tournament, cashSession: cashSession)
         }
-    }
-
-    private var statsHeader: some View {
-        HStack(spacing: 16) {
-            stat("Hands", "\(hands.count)")
-            stat("VPIP", hands.isEmpty ? "---" : String(format: "%.0f%%", HandStats.vpipPercent(hands)))
-            stat("PFR", hands.isEmpty ? "---" : String(format: "%.0f%%", HandStats.pfrPercent(hands)))
-        }
-        .padding(12)
-    }
-
-    private func stat(_ label: String, _ value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(label).font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
-            Text(value).font(PokerTypography.statValue).foregroundColor(.textPrimary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private var emptyState: some View {
