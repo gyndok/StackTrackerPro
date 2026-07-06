@@ -18,6 +18,7 @@ enum TournamentRecapExporter {
         sections.append(timelineSection(for: tournament))
         sections.append(stackSeriesSection(for: tournament))
         sections.append(handNotesSection(for: tournament))
+        sections.append(structuredHandsSection(for: tournament))
         sections.append(chatTranscriptSection(for: tournament))
         return sections.joined(separator: "\n\n")
     }
@@ -76,8 +77,9 @@ enum TournamentRecapExporter {
         > the blind level on the x-axis context; (3) an entrants vs. players-
         > remaining progression chart from the timeline data; (4) a financial
         > breakdown (buy-in, fees, add-ons, bounties, payout, net); (5) a
-        > narrative of the session's key moments using the timeline and hand
-        > notes — call out swings, the bubble, and any notable hands; (6) the
+        > narrative of the session's key moments using the timeline, hand
+        > notes, and the street-by-street Structured Hands — call out swings,
+        > the bubble, and any notable hands; (6) the
         > blind structure as an appendix table. Keep the tone knowledgeable and
         > concise, like a poker coach's session debrief. All timestamps are
         > local to the player.
@@ -215,6 +217,44 @@ enum TournamentRecapExporter {
             if !note.blindsDisplay.isEmpty { context += " · blinds \(note.blindsDisplay)" }
             if let stack = note.stackBefore { context += " · stack \(stack.formatted())" }
             lines.append("- **\(context)** — \(note.descriptionText)")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Street-by-street structured hands from the hand logger.
+    private static func structuredHandsSection(for tournament: Tournament) -> String {
+        var lines: [String] = ["## Structured Hands", ""]
+        let hands = tournament.sortedHands
+        guard !hands.isEmpty else {
+            lines.append("_No structured hands logged._")
+            return lines.joined(separator: "\n")
+        }
+        for (index, hand) in hands.enumerated() {
+            var header = "### Hand \(index + 1) — \(stamp(hand.timestamp)) — \(hand.heroPosition.rawValue)"
+            header += " — \(hand.heroCards.map(\.display).joined(separator: " "))"
+            lines.append(header)
+            var context = "Blinds \(hand.blindsDisplay)"
+            if hand.levelNumber > 0 { context = "Level \(hand.levelNumber), " + context }
+            if hand.heroStackChips > 0 { context += ", stack \(hand.heroStackChips.formatted())" }
+            if hand.playersRemaining > 0 { context += ", \(hand.playersRemaining) left" }
+            lines.append(context)
+            if !hand.board.isEmpty {
+                lines.append("Board: \(hand.board.map(\.display).joined(separator: " "))")
+            }
+            for street in HandStreet.allCases {
+                let actions = hand.sortedActions.filter { $0.street == street }
+                if !actions.isEmpty {
+                    lines.append("- \(street.label): " + actions.map(\.timelineDescription).joined(separator: " › "))
+                }
+            }
+            var result = "Result: \(hand.result.rawValue)"
+            if hand.potSize > 0 { result += ", pot \(hand.potSize.formatted())" }
+            if hand.amountWon != 0 { result += ", net \(hand.amountWon.formatted())" }
+            lines.append(result)
+            if !hand.villainCards.isEmpty { lines.append("Villain: \(hand.villainCards.map(\.display).joined(separator: " "))") }
+            if !hand.tags.isEmpty { lines.append("Tags: \(hand.tags.joined(separator: ", "))") }
+            if !hand.notes.isEmpty { lines.append("Note: \(hand.notes)") }
+            lines.append("")
         }
         return lines.joined(separator: "\n")
     }

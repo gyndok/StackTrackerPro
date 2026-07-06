@@ -849,6 +849,20 @@ final class TournamentRecapExporterTests: XCTestCase {
         message.timestamp = base.addingTimeInterval(3610)
         t.chatMessages = [message]
 
+        let hand = Hand(heroPosition: .btn, heroCardsRaw: "As Kh",
+                        levelNumber: 2, smallBlind: 200, bigBlind: 300, ante: 300,
+                        heroStackChips: 55_000, playersRemaining: 100, tableSize: 9)
+        hand.timestamp = base.addingTimeInterval(2500)
+        hand.boardRaw = "Ah 7d 2c"
+        hand.resultRaw = HandResult.won.rawValue
+        hand.amountWon = 4200
+        hand.tournament = t
+        context.insert(hand)
+        let act = HandAction(orderIndex: 0, street: .preflop, position: .btn,
+                             actionType: .raise, amount: 900, isHero: true)
+        act.hand = hand
+        context.insert(act)
+
         let markdown = TournamentRecapExporter.markdown(for: t)
 
         // All sections present
@@ -879,6 +893,11 @@ final class TournamentRecapExporterTests: XCTestCase {
         // Hand note and chat present
         XCTAssertTrue(markdown.contains("Flopped a set vs the table captain"))
         XCTAssertTrue(markdown.contains("**Player:** 60k now"))
+
+        // Structured hands section
+        XCTAssertTrue(markdown.contains("## Structured Hands"))
+        XCTAssertTrue(markdown.contains("A♠ K♥"))
+        XCTAssertTrue(markdown.contains("BTN raise 900"))
     }
 
     @MainActor
