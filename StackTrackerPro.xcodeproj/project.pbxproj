@@ -97,6 +97,7 @@
 		7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000107 /* TournamentRecapExporter.swift */; };
 		7E570000000000000000010A /* BlindStructureParsing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000109 /* BlindStructureParsing.swift */; };
 		7E570000000000000000010C /* Hand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010B /* Hand.swift */; };
+		7E570000000000000000010E /* HandEntryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010D /* HandEntryModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -204,6 +205,7 @@
 		7E5700000000000000000107 /* TournamentRecapExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentRecapExporter.swift; sourceTree = "<group>"; };
 		7E5700000000000000000109 /* BlindStructureParsing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindStructureParsing.swift; sourceTree = "<group>"; };
 		7E570000000000000000010B /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
+		7E570000000000000000010D /* HandEntryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -273,6 +275,7 @@
 		778F8A5CCA605DF481933210 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				7E570000000000000000010D /* HandEntryModel.swift */,
 				7E5700000000000000000109 /* BlindStructureParsing.swift */,
 				7E5700000000000000000107 /* TournamentRecapExporter.swift */,
 				44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */,
@@ -540,6 +543,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */,
+				7E570000000000000000010E /* HandEntryModel.swift in Sources */,
 				7E570000000000000000010C /* Hand.swift in Sources */,
 				7E570000000000000000010A /* BlindStructureParsing.swift in Sources */,
 				7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */,
