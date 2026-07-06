@@ -46,6 +46,11 @@ struct EventDraft: Codable {
     /// Optional discriminator appended to the dedup key (e.g. "1C"/"1D")
     /// so same-day flights of one event don't collapse in the browser.
     var dedupSuffix: String?
+    /// Venue-local start time "HH:mm" (24h). Stored into eventDate so the
+    /// browser shows the real start; defaults to noon when absent.
+    var startTimeLocal: String?
+    /// IANA timezone for startTimeLocal (default America/Los_Angeles).
+    var timeZone: String?
     var blindLevels: [LevelDraft]
 
     struct LevelDraft: Codable {
@@ -235,13 +240,24 @@ func runPublish(files: [String], environment: String, execute: Bool) async throw
             continue
         }
 
-        // Event date at noon UTC of the stated day, so the app's UTC "today"
-        // window matches on the event day itself.
-        guard let day = utcDay.date(from: draft.eventDate) else {
-            print("SKIP \(file): eventDate must be yyyy-MM-dd")
+        // Event date at the venue-local start time (the app windows the
+        // browser by the viewer's local day and displays this time).
+        let zone = TimeZone(identifier: draft.timeZone ?? "America/Los_Angeles") ?? TimeZone(identifier: "UTC")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let dayParts = draft.eventDate.split(separator: "-").compactMap { Int($0) }
+        let timeParts = (draft.startTimeLocal ?? "12:00").split(separator: ":").compactMap { Int($0) }
+        guard dayParts.count == 3, timeParts.count == 2 else {
+            print("SKIP \(file): eventDate must be yyyy-MM-dd and startTimeLocal HH:mm")
             continue
         }
-        let eventDate = day.addingTimeInterval(12 * 3600)
+        var components = DateComponents()
+        components.year = dayParts[0]; components.month = dayParts[1]; components.day = dayParts[2]
+        components.hour = timeParts[0]; components.minute = timeParts[1]
+        guard let eventDate = calendar.date(from: components) else {
+            print("SKIP \(file): could not compose event date")
+            continue
+        }
 
         print("Geocoding \(draft.venueName), \(draft.venueCity), \(draft.venueState)…")
         guard let location = await geocode(name: draft.venueName, city: draft.venueCity, state: draft.venueState) else {

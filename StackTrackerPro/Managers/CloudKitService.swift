@@ -211,10 +211,13 @@ final class CloudKitService: @unchecked Sendable {
     // MARK: - Fetch Nearby
 
     func fetchNearby(latitude: Double, longitude: Double, radiusMiles: Double = 50) async throws -> [SharedTournamentListing] {
-        // Fixed UTC calendar so every device computes the same "today" window
-        // (matches the UTC-based deduplication key).
-        let today = Self.utcCalendar.startOfDay(for: Date())
-        let endOfToday = Self.utcCalendar.date(byAdding: .day, value: 1, to: today)!
+        // "Today" in the VIEWER's local calendar. The browser only shows
+        // events within 50 miles, so viewer-local ≈ venue-local — and a UTC
+        // window would drop evening events (7:30 PM in Vegas is already
+        // tomorrow in UTC). Dedup keys still use UTC (they're identifiers,
+        // not display values).
+        let today = Calendar.current.startOfDay(for: Date())
+        let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: today)!
 
         // Query on a SINGLE indexed field (eventDate) and filter lat/lon
         // client-side. Range filters on multiple fields each require their own

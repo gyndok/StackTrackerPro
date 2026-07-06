@@ -558,7 +558,7 @@ struct TournamentBrowserView: View {
                 Spacer()
 
                 if !listing.blindLevels.isEmpty {
-                    Text("\(listing.blindLevels.count) blind levels")
+                    Text("\(listing.blindLevels.filter { !$0.isBreak }.count) blind levels")
                         .font(.caption)
                         .foregroundColor(.textSecondary)
                 }
@@ -581,6 +581,10 @@ struct TournamentBrowserView: View {
     }
 
     private func formatNumber(_ n: Int) -> String {
+        if n >= 1_000_000 {
+            let m = Double(n) / 1_000_000.0
+            return m == Double(Int(m)) ? "\(Int(m))M" : String(format: "%.1fM", m)
+        }
         if n >= 1000 {
             let k = Double(n) / 1000.0
             if k == Double(Int(k)) {
