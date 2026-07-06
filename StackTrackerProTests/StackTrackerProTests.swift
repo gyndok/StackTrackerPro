@@ -21,6 +21,8 @@ private func makeInMemoryContainer() throws -> ModelContainer {
         BreakEntry.self,
         BlindStructureTemplate.self,
         TournamentEvent.self,
+        Hand.self,
+        HandAction.self,
     ])
     let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
     return try ModelContainer(for: schema, configurations: [config])
@@ -893,6 +895,60 @@ final class TournamentRecapExporterTests: XCTestCase {
                        "non-alphanumerics collapsed into dashes")
         let contents = try String(contentsOf: url, encoding: .utf8)
         XCTAssertTrue(contents.hasPrefix("# Tournament Recap Data"))
+    }
+}
+
+// MARK: - Hand model
+
+final class HandModelTests: XCTestCase {
+
+    func testPlayingCardParsing() {
+        XCTAssertEqual(PlayingCard("As")?.display, "A♠")
+        XCTAssertEqual(PlayingCard("Th")?.display, "T♥")
+        XCTAssertNil(PlayingCard("Zx"))
+        XCTAssertNil(PlayingCard("A"))
+        let cards = PlayingCard.parseList("As Kh 7d")
+        XCTAssertEqual(cards.count, 3)
+        XCTAssertEqual(PlayingCard.joinList(cards), "As Kh 7d")
+    }
+
+    @MainActor
+    func testHandPersistsWithActionsAndContext() throws {
+        let container = try makeInMemoryContainer()
+        defer { withExtendedLifetime(container) {} }
+        let context = container.mainContext
+
+        let t = Tournament(name: "Ultra Stack", buyIn: 600)
+        context.insert(t)
+
+        let hand = Hand(
+            heroPosition: .btn,
+            heroCardsRaw: "As Kh",
+            levelNumber: 8, smallBlind: 600, bigBlind: 1200, ante: 1200,
+            heroStackChips: 85_000, playersRemaining: 140, tableSize: 9
+        )
+        hand.boardRaw = "Ah 7d 2c"
+        hand.resultRaw = HandResult.won.rawValue
+        hand.potSize = 24_000
+        hand.amountWon = 12_400
+        hand.tournament = t
+        context.insert(hand)
+
+        let a1 = HandAction(orderIndex: 0, street: .preflop, position: .utg, actionType: .raise, amount: 3000, isHero: false)
+        let a2 = HandAction(orderIndex: 1, street: .preflop, position: .btn, actionType: .raise, amount: 9000, isHero: true)
+        a1.hand = hand; a2.hand = hand
+        context.insert(a1); context.insert(a2)
+        try context.save()
+
+        XCTAssertEqual(t.sortedHands.count, 1)
+        let saved = t.sortedHands[0]
+        XCTAssertEqual(saved.heroCards.map(\.display), ["A♠", "K♥"])
+        XCTAssertEqual(saved.board.count, 3)
+        XCTAssertEqual(saved.sortedActions.map(\.orderIndex), [0, 1])
+        XCTAssertEqual(saved.sortedActions[1].actionType, .raise)
+        XCTAssertTrue(saved.sortedActions[1].isHero)
+        XCTAssertEqual(saved.netResult, 12_400)
+        XCTAssertEqual(saved.result, .won)
     }
 }
 

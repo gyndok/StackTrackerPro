@@ -79,6 +79,9 @@ final class Tournament {
     @Relationship(deleteRule: .cascade, inverse: \TournamentEvent.tournament)
     var events: [TournamentEvent]? = []
 
+    @Relationship(deleteRule: .cascade, inverse: \Hand.tournament)
+    var hands: [Hand]? = []
+
     // End of session
     var endDate: Date?
 
@@ -166,6 +169,10 @@ final class Tournament {
 
     var sortedEvents: [TournamentEvent] {
         (events ?? []).sorted { $0.timestamp < $1.timestamp }
+    }
+
+    var sortedHands: [Hand] {
+        (hands ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     var sortedBlindLevels: [BlindLevel] {

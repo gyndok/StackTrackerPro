@@ -25,6 +25,9 @@ final class CashSession {
     @Relationship(deleteRule: .cascade, inverse: \HandNote.cashSession)
     var handNotes: [HandNote]? = []
 
+    @Relationship(deleteRule: .cascade, inverse: \Hand.cashSession)
+    var hands: [Hand]? = []
+
     init(
         stakes: String = "",
         gameType: GameType = .nlh,
@@ -104,6 +107,10 @@ final class CashSession {
     var hourlyRate: Double? {
         guard let profit, let dur = duration, dur > 0 else { return nil }
         return Double(profit) / (dur / 3600)
+    }
+
+    var sortedHands: [Hand] {
+        (hands ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
     var sortedStackEntries: [StackEntry] {

@@ -29,6 +29,8 @@ struct StackTrackerProApp: App {
             BreakEntry.self,
             BlindStructureTemplate.self,
             TournamentEvent.self,
+            Hand.self,
+            HandAction.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
