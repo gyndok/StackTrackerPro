@@ -43,6 +43,9 @@ struct EventDraft: Codable {
     var eventDate: String
     var startingSB: Int
     var startingBB: Int
+    /// Optional discriminator appended to the dedup key (e.g. "1C"/"1D")
+    /// so same-day flights of one event don't collapse in the browser.
+    var dedupSuffix: String?
     var blindLevels: [LevelDraft]
 
     struct LevelDraft: Codable {
@@ -248,7 +251,8 @@ func runPublish(files: [String], environment: String, execute: Bool) async throw
         print("  → \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
         // Dedup key must match the app exactly: venue|yyyy-MM-dd(UTC)|buyIn|gameType
-        let dedupKey = "\(draft.venueName)|\(utcDay.string(from: eventDate))|\(draft.buyIn)|\(draft.gameTypeRaw)"
+        var dedupKey = "\(draft.venueName)|\(utcDay.string(from: eventDate))|\(draft.buyIn)|\(draft.gameTypeRaw)"
+        if let suffix = draft.dedupSuffix, !suffix.isEmpty { dedupKey += "|\(suffix)" }
 
         let levelsJSON: String = {
             let encoder = JSONEncoder()
