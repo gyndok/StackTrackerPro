@@ -99,6 +99,7 @@
 		7E570000000000000000010C /* Hand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010B /* Hand.swift */; };
 		7E570000000000000000010E /* HandEntryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010D /* HandEntryModel.swift */; };
 		7E5700000000000000000110 /* HandEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000010F /* HandEntryView.swift */; };
+		7E5700000000000000000112 /* HandsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000111 /* HandsPane.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -208,6 +209,7 @@
 		7E570000000000000000010B /* Hand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hand.swift; sourceTree = "<group>"; };
 		7E570000000000000000010D /* HandEntryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryModel.swift; sourceTree = "<group>"; };
 		7E570000000000000000010F /* HandEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandEntryView.swift; sourceTree = "<group>"; };
+		7E5700000000000000000111 /* HandsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsPane.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -254,6 +256,7 @@
 		5EC39F7F309606F34F39AA68 /* Session */ = {
 			isa = PBXGroup;
 			children = (
+				7E5700000000000000000111 /* HandsPane.swift */,
 				7E570000000000000000010F /* HandEntryView.swift */,
 				83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */,
 				DAA93CA56ABFB13685EBA8FC /* StatusBarView.swift */,
@@ -546,6 +549,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A1011E24D55223C7B00EFB2 /* StackTrackerProApp.swift in Sources */,
+				7E5700000000000000000112 /* HandsPane.swift in Sources */,
 				7E5700000000000000000110 /* HandEntryView.swift in Sources */,
 				7E570000000000000000010E /* HandEntryModel.swift in Sources */,
 				7E570000000000000000010C /* Hand.swift in Sources */,

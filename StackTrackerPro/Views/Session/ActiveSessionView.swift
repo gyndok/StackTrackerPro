@@ -56,13 +56,21 @@ struct ActiveSessionView: View {
                 HandNotesPane(tournament: tournament)
                     .tag(5)
 
+                // Structured hands pane
+                HandsPane(
+                    tournament: tournament,
+                    cashSession: nil,
+                    isReadOnly: tournament.status == .completed
+                )
+                .tag(6)
+
                 // Chat pane
                 ChatThreadView(messages: tournament.sortedChatMessages)
-                    .tag(6)
+                    .tag(7)
 
                 // Scouting report pane
                 ScoutingReportView(tournament: tournament)
-                    .tag(7)
+                    .tag(8)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -252,7 +260,7 @@ struct ActiveSessionView: View {
 
     private static let pageNames = [
         "Stack chart", "Metrics", "Blind levels", "Photos",
-        "Receipts", "Hand notes", "Chat", "Scouting report"
+        "Receipts", "Hand notes", "Hands", "Chat", "Scouting report"
     ]
 
     private var pageIndicator: some View {
@@ -260,7 +268,7 @@ struct ActiveSessionView: View {
         // apart — visually identical to the old 8pt dots + 8pt gaps, but with
         // a larger tappable area per dot.
         HStack(spacing: 0) {
-            ForEach(0..<8, id: \.self) { index in
+            ForEach(0..<9, id: \.self) { index in
                 Button {
                     selectedPage = index
                 } label: {
@@ -279,7 +287,7 @@ struct ActiveSessionView: View {
         .padding(.vertical, 2)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Page indicator")
-        .accessibilityValue("Page \(selectedPage + 1) of 8, \(Self.pageNames[selectedPage])")
+        .accessibilityValue("Page \(selectedPage + 1) of 9, \(Self.pageNames[selectedPage])")
     }
 
     // MARK: - Actions

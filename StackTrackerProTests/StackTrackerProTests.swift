@@ -952,6 +952,39 @@ final class HandModelTests: XCTestCase {
     }
 }
 
+// MARK: - Hand stats
+
+final class HandStatsTests: XCTestCase {
+
+    @MainActor
+    private func hand(preflop: [(HandActionType, Bool)]) -> Hand {
+        let h = Hand()
+        h.actions = []
+        for (i, (type, isHero)) in preflop.enumerated() {
+            let a = HandAction(orderIndex: i, street: .preflop, position: .btn,
+                               actionType: type, amount: 0, isHero: isHero)
+            h.actions?.append(a)
+        }
+        return h
+    }
+
+    @MainActor
+    func testVPIPAndPFR() throws {
+        let container = try makeInMemoryContainer()
+        defer { withExtendedLifetime(container) {} }
+        let raised = hand(preflop: [(.raise, true)])                  // VPIP + PFR
+        let called = hand(preflop: [(.raise, false), (.call, true)])  // VPIP only
+        let folded = hand(preflop: [(.fold, true)])                   // neither
+        let checked = hand(preflop: [(.check, true)])                 // neither (BB check)
+        for h in [raised, called, folded, checked] { container.mainContext.insert(h) }
+
+        let hands = [raised, called, folded, checked]
+        XCTAssertEqual(HandStats.vpipPercent(hands), 50.0)
+        XCTAssertEqual(HandStats.pfrPercent(hands), 25.0)
+        XCTAssertEqual(HandStats.vpipPercent([]), 0)
+    }
+}
+
 // MARK: - Hand entry state machine
 
 final class HandEntryModelTests: XCTestCase {
