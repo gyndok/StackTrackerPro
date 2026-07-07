@@ -55,6 +55,7 @@ struct TournamentSetupView: View {
     @State private var shareToCloudKit = false
     @State private var showingStructureLibrary = false
     @State private var showingPDFImporter = false
+    @State private var hasInitializedDefaults = false
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -165,6 +166,13 @@ struct TournamentSetupView: View {
                 }
             }
             .onAppear {
+                // SwiftUI re-fires onAppear after some sheet dismissals
+                // (camera, browser, pickers). Initializing more than once
+                // silently clobbered imported/typed values with Settings
+                // defaults — e.g. a 60k imported starting stack reverting
+                // to the 20k default just before Start.
+                guard !hasInitializedDefaults else { return }
+                hasInitializedDefaults = true
                 if tournament != nil {
                     loadExisting()
                 } else {

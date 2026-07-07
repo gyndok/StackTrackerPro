@@ -244,6 +244,20 @@ final class TournamentManager {
         save()
     }
 
+    /// Corrects the starting stack after the tournament has begun (a wrong
+    /// value poisons average-stack and projection math). Also repairs the
+    /// initial stack entry so the stack graph starts from the right point.
+    func updateStartingChips(_ chips: Int) {
+        guard let tournament = mutableTournament, chips > 0,
+              chips != tournament.startingChips else { return }
+        tournament.startingChips = chips
+        for entry in tournament.stackEntries ?? [] where entry.source == .initial {
+            entry.chipCount = chips
+        }
+        logEvent(.startingChipsCorrected, value: chips, on: tournament)
+        save()
+    }
+
     /// Updates the observed field-wide add-on count and/or the player's own
     /// add-on count. No-op on a completed tournament.
     func updateAddOns(fieldCount: Int? = nil, playerCount: Int? = nil) {

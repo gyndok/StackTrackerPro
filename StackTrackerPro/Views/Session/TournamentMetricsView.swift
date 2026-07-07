@@ -20,6 +20,10 @@ struct TournamentMetricsView: View {
     @State private var editAddOnsCount = ""
     @State private var editPlayerAddOns = ""
 
+    // Starting stack editor state
+    @State private var showStartingStackEditor = false
+    @State private var editStartingChips = ""
+
     private let columns = [
         GridItem(.flexible(), spacing: 8),
         GridItem(.flexible(), spacing: 8)
@@ -42,6 +46,9 @@ struct TournamentMetricsView: View {
         }
         .sheet(isPresented: $showAddOnEditor) {
             addOnEditorSheet
+        }
+        .sheet(isPresented: $showStartingStackEditor) {
+            startingStackEditorSheet
         }
     }
 
@@ -206,6 +213,17 @@ struct TournamentMetricsView: View {
                 value: formatCurrency(tournament.totalInvestment)
             )
 
+            // Starting Stack (editable — a wrong value poisons all chip math)
+            StatBlockView(
+                label: "Starting Stack",
+                value: formatChipsShort(tournament.startingChips),
+                isEditable: true,
+                onTap: {
+                    editStartingChips = "\(tournament.startingChips)"
+                    showStartingStackEditor = true
+                }
+            )
+
             // Add-Ons (editable) — only when the tournament offers an add-on
             if tournament.addOnAvailable {
                 StatBlockView(
@@ -342,7 +360,43 @@ struct TournamentMetricsView: View {
         .presentationDetents([.medium])
     }
 
+    // MARK: - Starting Stack Editor Sheet
+
+    private var startingStackEditorSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Chips", text: $editStartingChips)
+                        .keyboardType(.numberPad)
+                } header: {
+                    Text("Starting Stack")
+                } footer: {
+                    Text("Corrects the stack every player started with. Total chips, average stacks, and the bubble/final-table projections all recalculate from this.")
+                }
+            }
+            .navigationTitle("Edit Starting Stack")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showStartingStackEditor = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveStartingStackEdit() }
+                        .disabled((Int(editStartingChips) ?? 0) <= 0)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
     // MARK: - Save Actions
+
+    private func saveStartingStackEdit() {
+        guard let chips = Int(editStartingChips), chips > 0 else { return }
+        tournamentManager.updateStartingChips(chips)
+        HapticFeedback.success()
+        showStartingStackEditor = false
+    }
 
     private func saveAddOnEdit() {
         tournamentManager.updateAddOns(

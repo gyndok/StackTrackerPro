@@ -12,6 +12,7 @@ enum TournamentEventType: String {
     case pause
     case resume
     case completed
+    case startingChipsCorrected
 }
 
 /// A timestamped tournament event, appended by TournamentManager whenever
@@ -46,6 +47,7 @@ final class TournamentEvent {
         case .pause: return "Session paused"
         case .resume: return "Session resumed"
         case .completed: return intValue > 0 ? "Eliminated in position \(intValue)" : "Tournament completed"
+        case .startingChipsCorrected: return "Starting stack corrected to \(intValue.formatted())"
         case nil: return "Event"
         }
     }

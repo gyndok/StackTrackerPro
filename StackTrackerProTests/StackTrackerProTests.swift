@@ -1156,6 +1156,46 @@ final class TournamentEventTests: XCTestCase {
     }
 
     @MainActor
+    func testUpdateStartingChipsRepairsInitialEntryAndMath() throws {
+        let (manager, t, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        t.fieldSize = 100
+        t.playersRemaining = 100
+        t.payoutPercent = 12.5
+
+        // startTournament recorded an initial entry at the (wrong) default.
+        XCTAssertEqual(t.sortedStackEntries.first?.chipCount, t.startingChips)
+        let wrongChips = t.startingChips
+
+        manager.updateStartingChips(60_000)
+
+        XCTAssertEqual(t.startingChips, 60_000)
+        XCTAssertEqual(t.sortedStackEntries.first?.chipCount, 60_000,
+                       "initial stack entry repaired so the graph starts right")
+        XCTAssertEqual(t.totalChipsInPlay, 6_000_000)
+        XCTAssertEqual(t.averageStack, 60_000)
+        XCTAssertNotEqual(t.totalChipsInPlay, wrongChips * 100)
+
+        let events = t.sortedEvents.filter { $0.type == .startingChipsCorrected }
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.intValue, 60_000)
+    }
+
+    @MainActor
+    func testUpdateStartingChipsNoOpWhenCompletedOrInvalid() throws {
+        let (manager, t, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        let original = t.startingChips
+
+        manager.updateStartingChips(0)
+        XCTAssertEqual(t.startingChips, original, "non-positive rejected")
+
+        manager.completeTournament(position: 10, payout: 0)
+        manager.updateStartingChips(60_000)
+        XCTAssertEqual(t.startingChips, original, "completed tournaments are read-only")
+    }
+
+    @MainActor
     func testAddOnCountChangesLogged() throws {
         let (manager, t, container) = try makeManagerAndTournament()
         defer { withExtendedLifetime(container) {} }
