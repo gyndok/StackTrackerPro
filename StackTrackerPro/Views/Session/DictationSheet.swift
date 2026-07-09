@@ -63,6 +63,11 @@ struct DictationSheet: View {
             // and run the full graceful stop detached. stop() is idempotent
             // for non-listening states via its guard, so the Cancel/Done
             // paths hitting it a second time here is harmless.
+            // Swipe-to-dismiss during .parsing must also block a late
+            // onResult. Safe for the success path: there onResult fires
+            // BEFORE its programmatic dismiss, so this flag only ever blocks
+            // post-dismissal delivery.
+            cancelled = true
             let engine = self.engine
             Task { _ = await engine.stop() }
         }

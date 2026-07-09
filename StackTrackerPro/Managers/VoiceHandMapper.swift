@@ -176,6 +176,9 @@ enum VoiceHandMapper {
         // dictated cards to what's there — a match is a harmless restatement, a
         // difference (or anything unparseable) is a conflict for the user to fix.
         if model.heroCards.count == count {
+            // Nothing dictated at all is the NORMAL stub-enrichment case (the
+            // parser leaves unstated values null) — keep the prefill, no issue.
+            guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
             let dictated = dictatedExactCards(raw, count: count)
             if !dictated.isEmpty, Set(dictated) == Set(model.heroCards) {
                 return

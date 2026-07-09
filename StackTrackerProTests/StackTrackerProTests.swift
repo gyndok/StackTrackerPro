@@ -2890,6 +2890,24 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertFalse(issues.contains { if case .unknownHeroCards = $0 { return true }; return false })
     }
 
+    /// Dictating NO cards over a stub-prefilled model is the normal pending-row
+    /// enrichment case (the parser leaves unstated values null): the prefill
+    /// stays and no hero-cards issue of any kind is emitted.
+    @MainActor
+    func testMapperNoConflictWhenNoCardsDictatedOverStub() {
+        let stub = HandStub(levelNumber: 1, smallBlind: 100, bigBlind: 200, ante: 200,
+                            heroStackBefore: 40_000, playersRemaining: 9,
+                            holeCards: "Ah Kd", origin: .manual)
+        let model = HandCaptureModel(stub: stub, heroCardCount: 2)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = nil   // parser left cards unstated
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.heroCards.map(\.raw), ["Ah", "Kd"], "stub cards must be untouched")
+        XCTAssertFalse(issues.contains { if case .conflictingHeroCards = $0 { return true }; return false })
+        XCTAssertFalse(issues.contains { if case .unknownHeroCards = $0 { return true }; return false })
+    }
+
     // MARK: - DictationEngine (Voice Hand Entry Task 3)
 
     @MainActor
