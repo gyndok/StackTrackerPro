@@ -15,6 +15,7 @@ enum SettingsKeys {
     static let milestoneCelebrations = "settings.display.milestoneCelebrations"
     static let defaultStakes = "settings.defaults.stakes"
     static let appTheme = "settings.display.appTheme"
+    static let swingSensitivity = "settings.hands.swingSensitivity"
 }
 
 // MARK: - Settings View
@@ -30,6 +31,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKeys.defaultPayoutPercent) private var defaultPayoutPercent = 15
     @AppStorage(SettingsKeys.defaultSeatsPerTable) private var defaultSeatsPerTable = 9
     @AppStorage(SettingsKeys.defaultStakes) private var defaultStakes = "1/2"
+    @AppStorage(SettingsKeys.swingSensitivity) private var swingSensitivity = 20
 
     // Display & Appearance
     @AppStorage(SettingsKeys.keepScreenAwake) private var keepScreenAwake = true
@@ -163,6 +165,13 @@ struct SettingsView: View {
             Stepper("Payout %: \(defaultPayoutPercent)", value: $defaultPayoutPercent, in: 1...100, step: 1)
 
             Stepper("Seats Per Table: \(defaultSeatsPerTable)", value: $defaultSeatsPerTable, in: 2...10, step: 1)
+
+            Picker("Big-pot detection", selection: $swingSensitivity) {
+                Text("Off").tag(0)
+                Text("15% of stack").tag(15)
+                Text("20% of stack").tag(20)
+                Text("25% of stack").tag(25)
+            }
         } header: {
             Text("SESSION DEFAULTS")
                 .font(PokerTypography.sectionHeader)

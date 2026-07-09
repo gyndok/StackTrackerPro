@@ -1432,6 +1432,45 @@ final class HoleCardShorthandTests: XCTestCase {
     }
 }
 
+// MARK: - SwingDetector
+
+final class SwingDetectorTests: XCTestCase {
+
+    func testSwingDetectorThreshold() {
+        // 390K → 985K at 25K BB: delta 595K vs max(78K, 200K) → swing
+        XCTAssertTrue(SwingDetector.isSwing(previous: 390_000, new: 985_000,
+                                            currentBB: 25_000, sensitivityPercent: 20))
+        // Routine blind erosion: 390K → 380K → no
+        XCTAssertFalse(SwingDetector.isSwing(previous: 390_000, new: 380_000,
+                                             currentBB: 25_000, sensitivityPercent: 20))
+        // Loss triggers too
+        XCTAssertTrue(SwingDetector.isSwing(previous: 985_000, new: 760_000,
+                                            currentBB: 25_000, sensitivityPercent: 20))
+        // Off
+        XCTAssertFalse(SwingDetector.isSwing(previous: 100_000, new: 500_000,
+                                             currentBB: 1_000, sensitivityPercent: 0))
+        // BB floor dominates for tiny stacks: 10K→13K at BB 1K = 3K < 8K
+        XCTAssertFalse(SwingDetector.isSwing(previous: 10_000, new: 13_000,
+                                             currentBB: 1_000, sensitivityPercent: 20))
+    }
+
+    func testSwingSuppression() {
+        let now = Date()
+        // >45 min since last update → ambiguous drift, suppress
+        XCTAssertTrue(SwingDetector.shouldSuppress(
+            previousEntryDate: now.addingTimeInterval(-46 * 60), now: now,
+            latestPendingStubDate: nil))
+        // Pending stub created 30s ago → duplicate, suppress
+        XCTAssertTrue(SwingDetector.shouldSuppress(
+            previousEntryDate: now.addingTimeInterval(-60), now: now,
+            latestPendingStubDate: now.addingTimeInterval(-30)))
+        // Clean case
+        XCTAssertFalse(SwingDetector.shouldSuppress(
+            previousEntryDate: now.addingTimeInterval(-10 * 60), now: now,
+            latestPendingStubDate: now.addingTimeInterval(-10 * 60)))
+    }
+}
+
 // MARK: - ChatManager
 
 final class ChatManagerTests: XCTestCase {
