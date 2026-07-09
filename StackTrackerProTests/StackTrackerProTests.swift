@@ -2084,3 +2084,200 @@ final class HandCaptureModelTests: XCTestCase {
         XCTAssertEqual(model.heroCards.count, 2)
     }
 }
+
+// MARK: - HandCaptureModel result flow + save (Task 13)
+
+@MainActor
+final class HandCaptureResultTests: XCTestCase {
+
+    // MARK: Brief contract tests
+
+    func testCaptureFullHandKKvs9T() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let t = Tournament(name: "Event 86", buyIn: 500)
+        context.insert(t)
+
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        guard let utg = model.villains.first?.id else { return XCTFail("no villain") }
+
+        model.add(action: .raise, toAmount: 75_000)   // UTG
+        model.add(action: .raise, toAmount: 200_000)  // Hero 3-bets
+        model.add(action: .allIn, toAmount: 390_000)  // UTG jams (covers)
+        model.add(action: .call, toAmount: 0)          // Hero calls all-in
+
+        // All-in preflop → board requested street by street.
+        // NOTE: last board card is "3s", not the brief's "Qs": Jh-8h-...-9h-Th
+        // would make an 8-9-T-J-Q straight for the villain and beat KK. The
+        // evaluator test (testHoldemWinnersKKvs9T) made the same correction.
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertTrue(model.needsShowdown)
+
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertEqual(model.computedWinners, [.hero])
+
+        // Pot: ante 25K + dead sb 10K + dead bb 25K + 390K + 390K = 840K
+        XCTAssertEqual(model.pot, 840_000)
+        // Hero net: 840K − 390K contribution = +450K
+        XCTAssertEqual(model.heroNet, 450_000)
+        XCTAssertEqual(model.heroStackAfter, 840_000)
+
+        let hand = model.save(into: context, tournament: t, cashSession: nil,
+                              sourceStub: nil, tableSize: 9)
+        XCTAssertEqual(hand.result, .won)
+        XCTAssertEqual(hand.potSize, 840_000)
+        XCTAssertEqual(hand.amountWon, 450_000)
+        XCTAssertEqual(hand.heroStackAfter, 840_000)
+        XCTAssertEqual(hand.sortedVillains.first?.shownHolding, "9h Th")
+        XCTAssertEqual(hand.sortedActions.count, 4)
+    }
+
+    func testCaptureNoShowdownWinnerIsLastAggressor() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("7h 2c") { _ = model.addCard(c) }
+        model.addVillain(position: .bb, relative: .coversHero, approxStack: 0)
+        model.add(action: .raise, toAmount: 500)  // hero opens
+        model.add(action: .fold, toAmount: 0)     // bb folds
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertFalse(model.needsShowdown)
+        XCTAssertEqual(model.computedWinners, [.hero])
+        XCTAssertEqual(model.heroNet, model.pot - 500)
+    }
+
+    func testCaptureStubEnrichment() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let t = Tournament(name: "T", buyIn: 100)
+        context.insert(t)
+        let stub = HandStub(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                            ante: 25_000, heroStackBefore: 390_000, holeCards: "Kh Kd")
+        stub.tournament = t
+        context.insert(stub)
+
+        let model = HandCaptureModel(stub: stub, heroCardCount: 2)
+        XCTAssertEqual(model.heroCards.map(\.raw), ["Kh", "Kd"])   // exact cards prefill
+        XCTAssertEqual(model.heroStackBefore, 390_000)
+
+        model.heroPosition = .btn
+        model.addVillain(position: .bb, relative: .shorter, approxStack: 0)
+        model.add(action: .raise, toAmount: 500_000)  // effectively a jam for test
+        model.add(action: .fold, toAmount: 0)
+        let hand = model.save(into: context, tournament: t, cashSession: nil,
+                              sourceStub: stub, tableSize: 9)
+        XCTAssertEqual(stub.status, .enriched)
+        XCTAssertIdentical(stub.enrichedHand, hand)
+        XCTAssertEqual(stub.heroStackAfter, hand.heroStackAfter)
+    }
+
+    // MARK: Suit-agnostic stub leaves hero cards empty
+
+    func testStubSuitAgnosticLeavesCardsEmpty() throws {
+        let stub = HandStub(levelNumber: 5, smallBlind: 100, bigBlind: 200, ante: 200,
+                            heroStackBefore: 30_000, holeCards: "KQs")
+        let model = HandCaptureModel(stub: stub, heroCardCount: 2)
+        XCTAssertTrue(model.heroCards.isEmpty)
+        XCTAssertEqual(model.heroStackBefore, 30_000)
+        XCTAssertEqual(model.levelNumber, 5)
+    }
+
+    // MARK: Chop splits remainder to hero
+
+    func testChopSplitsRemainderToHero() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 25, bigBlind: 25,
+                                     ante: 1, heroCardCount: 2, heroStackBefore: 10_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("2h 3d") { _ = model.addCard(c) }
+        model.addVillain(position: .co, relative: .similar, approxStack: 0)
+        guard let vid = model.villains.first?.id else { return XCTFail("no villain") }
+
+        // Preflop: CO acts first, raises to 100; hero (BTN) calls.
+        model.add(action: .raise, toAmount: 100)   // CO
+        model.add(action: .call, toAmount: 0)      // hero
+        // Broadway straight lands entirely on the board → both play the board.
+        for c in PlayingCard.parseList("As Ks Qd") { _ = model.addBoardCard(c) }
+        model.add(action: .check, toAmount: 0)     // CO
+        model.add(action: .check, toAmount: 0)     // hero
+        _ = model.addBoardCard(PlayingCard("Jc")!)
+        model.add(action: .check, toAmount: 0)
+        model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("Th")!)
+        model.add(action: .check, toAmount: 0)
+        model.add(action: .check, toAmount: 0)
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertTrue(model.needsShowdown)
+
+        model.setShownHolding(PlayingCard.parseList("4c 5s"), for: vid)
+        XCTAssertEqual(Set(model.computedWinners), Set([.hero, .villain(vid)]))
+
+        // Pot: ante 1 + dead sb 25 + dead bb 25 + 100 + 100 = 251 (odd).
+        XCTAssertEqual(model.pot, 251)
+        // Chop: base 125 each, remainder 1 to hero → hero share 126; contribution 100.
+        XCTAssertEqual(model.heroNet, 26)
+
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let hand = model.save(into: context, tournament: nil, cashSession: nil,
+                              sourceStub: nil, tableSize: 9)
+        XCTAssertEqual(hand.result, .chop)
+    }
+
+    // MARK: Mucked villain loses; all-muck → hero wins
+
+    func testMuckedVillainShowdownHeroWins() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        guard let utg = model.villains.first?.id else { return XCTFail("no villain") }
+
+        model.add(action: .allIn, toAmount: 390_000)  // UTG jams
+        model.add(action: .call, toAmount: 0)          // hero calls
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        XCTAssertTrue(model.needsShowdown)
+
+        model.setMucked(utg)          // villain doesn't show → loses by definition
+        XCTAssertEqual(model.computedWinners, [.hero])
+    }
+
+    // MARK: winnerOverride beats computed winners
+
+    func testWinnerOverrideBeatsComputed() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        guard let utg = model.villains.first?.id else { return XCTFail("no villain") }
+
+        model.add(action: .allIn, toAmount: 390_000)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertEqual(model.computedWinners, [.hero])   // KK wins for real
+
+        // Override the ruling in villain's favour (e.g. a misread corrected by hand).
+        model.winnerOverride = [.villain(utg)]
+        XCTAssertEqual(model.heroNet, -390_000)          // hero gets nothing, loses stack
+
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let hand = model.save(into: context, tournament: nil, cashSession: nil,
+                              sourceStub: nil, tableSize: 9)
+        XCTAssertEqual(hand.result, .lost)
+        XCTAssertFalse(hand.winnerOverride.isEmpty)
+    }
+}

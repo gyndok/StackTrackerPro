@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftData
 
 /// Core engine behind the Hand Capture screen (Hand Logging v2, Phase B).
 ///
@@ -53,6 +54,19 @@ final class HandCaptureModel {
     var heroCards: [PlayingCard] = []
     private(set) var villains: [VillainDraft] = []
 
+    // MARK: - Result flow state
+
+    /// Manual ruling that supersedes `computedWinners` everywhere (chops, odd
+    /// rulings, dealer corrections). `nil` = trust the computed result.
+    var winnerOverride: Set<Participant>?
+
+    /// Free-form review tags: "Cooler", "Bluff", "Value", "Hero call", "Punt?".
+    var selectedTags: Set<String> = []
+
+    /// Stable id used to represent the hero inside `PokerHandEvaluator.holdemWinners`
+    /// (which is keyed by UUID). Distinct from every villain's id.
+    private let heroSentinel = UUID()
+
     // MARK: - Derived state (recomputed by rebuild())
 
     private(set) var ledger: [LedgerEntry] = []
@@ -89,6 +103,18 @@ final class HandCaptureModel {
         self.heroCardCount = heroCardCount
         self.heroStackBefore = heroStackBefore
         rebuild()
+    }
+
+    /// Seeds a capture from a `HandStub`: copies the level/blinds/ante/stack
+    /// snapshot and prefills the hero's hole cards only when the stub stored
+    /// exact cards (`"Ah Kd"`). Suit-agnostic stubs (`"KQs"`, `"99"`) leave the
+    /// cards empty; the view surfaces the token as a hint instead.
+    convenience init(stub: HandStub, heroCardCount: Int) {
+        self.init(levelNumber: stub.levelNumber, smallBlind: stub.smallBlind,
+                  bigBlind: stub.bigBlind, ante: stub.ante,
+                  heroCardCount: heroCardCount, heroStackBefore: stub.heroStackBefore)
+        let exact = HoleCardShorthand.exactCards(stub.holeCards)
+        if exact.count == 2 { heroCards = exact }
     }
 
     // MARK: - Participants
@@ -263,6 +289,186 @@ final class HandCaptureModel {
             }
             return "\(villain.position.rawValue) (\(relative))"
         }
+    }
+
+    // MARK: - Showdown / result flow
+
+    /// Sets a villain's shown holding (exactly two cards for a hold'em read).
+    /// A shown holding is *not* a betting action, so it never enters the input
+    /// log — it only annotates the draft and feeds `computedWinners`/`dealtCards`.
+    func setShownHolding(_ cards: [PlayingCard], for id: UUID) {
+        guard let idx = villains.firstIndex(where: { $0.id == id }) else { return }
+        villains[idx].shownHolding = cards
+        villains[idx].mucked = false
+    }
+
+    /// Marks a villain as having mucked: they showed nothing, so they cannot win
+    /// a showdown. Clears any previously entered holding.
+    func setMucked(_ id: UUID) {
+        guard let idx = villains.firstIndex(where: { $0.id == id }) else { return }
+        villains[idx].shownHolding = []
+        villains[idx].mucked = true
+    }
+
+    /// Participants who have not folded (the hero plus every villain still live).
+    private var nonFoldedParticipants: [Participant] {
+        participants.filter { !foldedParticipants.contains($0) }
+    }
+
+    /// True when the hand is over with two or more players still live — a real
+    /// showdown that needs shown cards (or a manual ruling) to decide.
+    var needsShowdown: Bool {
+        isHandOver && nonFoldedParticipants.count >= 2
+    }
+
+    /// The live participants at a showdown; empty when no showdown is required.
+    var showdownParticipants: [Participant] {
+        needsShowdown ? nonFoldedParticipants : []
+    }
+
+    /// The last participant to bet/raise/all-in, i.e. the aggressor who closed a
+    /// no-showdown pot when everyone else folded.
+    private var lastAggressor: Participant? {
+        for entry in ledger.reversed() {
+            switch entry.action {
+            case .bet, .raise, .allIn: return entry.participant
+            default: continue
+            }
+        }
+        return nil
+    }
+
+    /// Winners derived purely from the recorded hand:
+    /// - not over → empty;
+    /// - no showdown → the last aggressor, else the lone survivor;
+    /// - showdown → `holdemWinners` over the hero plus every villain who showed
+    ///   exactly two cards (mucked/unknown villains are excluded — a villain who
+    ///   didn't show loses; if *all* villains muck the hero wins).
+    ///
+    /// Empty when unevaluable (board not yet five cards, PLO four-card holdings,
+    /// or hero cards missing) — the UI then requires a manual `winnerOverride`.
+    var computedWinners: [Participant] {
+        guard isHandOver else { return [] }
+
+        if !needsShowdown {
+            if let aggressor = lastAggressor { return [aggressor] }
+            let survivors = nonFoldedParticipants
+            return survivors.count == 1 ? survivors : []
+        }
+
+        // Hold'em showdown only; PLO or missing/incomplete cards are unevaluable.
+        guard heroCardCount == 2, heroCards.count == 2, board.count == 5 else { return [] }
+        var holdings: [(id: UUID, cards: [PlayingCard])] = [(heroSentinel, heroCards)]
+        for villain in villains
+        where !foldedParticipants.contains(.villain(villain.id)) && villain.shownHolding.count == 2 {
+            holdings.append((villain.id, villain.shownHolding))
+        }
+        let winnerIDs = PokerHandEvaluator.holdemWinners(board: board, holdings: holdings)
+        return winnerIDs.map { $0 == heroSentinel ? .hero : .villain($0) }
+    }
+
+    /// The winners that actually decide the pot: the manual override when set,
+    /// otherwise `computedWinners`.
+    var effectiveWinners: Set<Participant> {
+        if let winnerOverride { return winnerOverride }
+        return Set(computedWinners)
+    }
+
+    /// Total chips the hero put in the pot: everything committed across streets,
+    /// plus the ante when the hero sits in the big blind (the BB-ante model
+    /// posts the single table ante from the BB seat).
+    private var heroContribution: Int {
+        var total = 0
+        for (_, streetMap) in committedByStreet { total += streetMap[.hero] ?? 0 }
+        if heroPosition == .bb { total += ante }
+        return total
+    }
+
+    /// Hero's net for the hand: pot share if the hero is among the effective
+    /// winners (winners split equally by integer division; any remainder goes to
+    /// the hero when the hero wins), minus the hero's total contribution.
+    var heroNet: Int {
+        let winners = effectiveWinners
+        let contribution = heroContribution
+        guard !winners.isEmpty else { return -contribution }
+        let share = pot / winners.count
+        let remainder = pot % winners.count
+        let heroShare = winners.contains(.hero) ? share + remainder : 0
+        return heroShare - contribution
+    }
+
+    /// Hero's stack once the hand is booked.
+    var heroStackAfter: Int { heroStackBefore + heroNet }
+
+    // MARK: - Persistence
+
+    /// Builds and inserts a `Hand` (with ordered `HandAction`s and `HandVillain`s)
+    /// from the current draft, links it to the given context objects, and — when
+    /// a `sourceStub` is supplied — marks that stub enriched. Does **not** push
+    /// the tracker stack update; the view does that after saving to keep the
+    /// engine ModelContext-pure.
+    @discardableResult
+    func save(into context: ModelContext, tournament: Tournament?, cashSession: CashSession?,
+              sourceStub: HandStub?, tableSize: Int) -> Hand {
+        let net = heroNet
+        let winners = effectiveWinners
+
+        let result: HandResult
+        if foldedParticipants.contains(.hero) {
+            result = .folded
+        } else if winners.contains(.hero) {
+            result = winners.count == 1 ? .won : .chop
+        } else {
+            result = .lost
+        }
+
+        let hand = Hand(
+            heroPosition: heroPosition ?? .btn,
+            heroCardsRaw: PlayingCard.joinList(heroCards),
+            levelNumber: levelNumber, smallBlind: smallBlind, bigBlind: bigBlind, ante: ante,
+            heroStackChips: heroStackBefore, playersRemaining: 0, tableSize: tableSize)
+        hand.boardRaw = PlayingCard.joinList(board)
+        hand.potSize = pot
+        hand.amountWon = net
+        hand.heroStackAfter = heroStackAfter
+        hand.resultRaw = result.rawValue
+        hand.tagsRaw = selectedTags.sorted().joined(separator: ", ")
+        hand.wasAutoDetected = (sourceStub?.origin == .swingDetected)
+        if let winnerOverride {
+            hand.winnerOverride = winnerOverride.map { label(for: $0) }.sorted().joined(separator: ", ")
+        }
+        hand.tournament = tournament
+        hand.cashSession = cashSession
+        hand.sourceStub = sourceStub
+
+        // Ordered actions replayed from the ledger.
+        for (i, entry) in ledger.enumerated() {
+            let action = HandAction(orderIndex: i, street: entry.street,
+                                    position: position(of: entry.participant) ?? .btn,
+                                    actionType: entry.action, amount: entry.toAmount,
+                                    isHero: entry.participant == .hero)
+            action.hand = hand
+            context.insert(action)
+        }
+
+        // Villains, preserving add order and any shown holdings.
+        for (i, villain) in villains.enumerated() {
+            let hv = HandVillain(orderIndex: i, position: villain.position,
+                                 relativeStack: villain.relative, approxStack: villain.approxStack)
+            hv.shownHolding = PlayingCard.joinList(villain.shownHolding)
+            hv.hand = hand
+            context.insert(hv)
+        }
+
+        context.insert(hand)
+
+        if let stub = sourceStub {
+            stub.setStatus(.enriched)
+            stub.enrichedHand = hand
+            stub.heroStackAfter = heroStackAfter
+        }
+
+        return hand
     }
 
     // MARK: - Replay
