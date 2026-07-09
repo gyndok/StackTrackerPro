@@ -17,6 +17,7 @@ struct ActiveSessionView: View {
     @State private var recapFile: RecapFile?
     @State private var recapExportError = false
     @State private var showStubSheet = false
+    @State private var showVoiceCapture = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -243,7 +244,9 @@ struct ActiveSessionView: View {
             BreakTimerSheet(tournament: tournament)
         }
         .sheet(isPresented: $showStubSheet) {
-            HandStubSheet { cards, result, villain in
+            HandStubSheet(onDictate: {
+                showVoiceCapture = true
+            }) { cards, result, villain in
                 tournamentManager.createHandStub(holeCards: cards, quickResult: result,
                                                  quickVillain: villain, origin: .manual)
                 HapticFeedback.impact(.light)
@@ -262,6 +265,10 @@ struct ActiveSessionView: View {
         }
         .fullScreenCover(isPresented: $showVideoExport) {
             VideoExportSheet(tournament: tournament)
+        }
+        .fullScreenCover(isPresented: $showVoiceCapture) {
+            HandCaptureView(tournament: tournament, cashSession: nil, stub: nil,
+                            autoStartDictation: true, onSaved: { _ in })
         }
     }
 

@@ -3,6 +3,10 @@ import SwiftUI
 /// The 5-second capture sheet: hole cards (picker or typed shorthand),
 /// optional one-tap result chips, Save. All context auto-fills at save time.
 struct HandStubSheet: View {
+    /// Optional escape hatch to the voice capture flow. Non-nil renders a
+    /// "Talk instead" button under the quick chips; tapping it hands off to
+    /// the caller (which starts dictation) then dismisses this sheet.
+    let onDictate: (() -> Void)?
     let onSave: (String, QuickResult?, QuickVillain?) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -60,6 +64,17 @@ struct HandStubSheet: View {
                             .tint(quickVillain == v ? .goldAccent : .secondary)
                     }
                 }
+
+                if let onDictate {
+                    Button {
+                        onDictate()
+                        dismiss()
+                    } label: {
+                        Label("Talk instead", systemImage: "mic.fill")
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.goldAccent)
+                }
                 Spacer()
             }
             .padding()
@@ -83,7 +98,7 @@ struct HandStubSheet: View {
 }
 
 #Preview {
-    HandStubSheet { cards, result, villain in
+    HandStubSheet(onDictate: nil) { cards, result, villain in
         print(cards, result ?? "", villain ?? "")
     }
 }

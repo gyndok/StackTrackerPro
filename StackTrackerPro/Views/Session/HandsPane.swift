@@ -12,7 +12,7 @@ struct HandsPane: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var showEntry = false
-    @State private var capturingStub: HandStub?
+    @State private var capturePresentation: CapturePresentation?
 
     private var hands: [Hand] {
         tournament?.sortedHands ?? cashSession?.sortedHands ?? []
@@ -31,13 +31,25 @@ struct HandsPane: View {
                     if !pendingStubs.isEmpty {
                         Section {
                             ForEach(pendingStubs.reversed(), id: \.persistentModelID) { stub in
-                                Button {
-                                    guard !isReadOnly else { return }
-                                    capturingStub = stub
-                                } label: {
-                                    PendingStubRow(stub: stub)
+                                HStack(spacing: 12) {
+                                    Button {
+                                        guard !isReadOnly else { return }
+                                        capturePresentation = CapturePresentation(stub: stub, autoDictate: false)
+                                    } label: {
+                                        PendingStubRow(stub: stub)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if !isReadOnly {
+                                        Button {
+                                            capturePresentation = CapturePresentation(stub: stub, autoDictate: true)
+                                        } label: {
+                                            Image(systemName: "mic.fill")
+                                                .foregroundColor(.goldAccent)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
-                                .buttonStyle(.plain)
                                 .listRowBackground(Color.cardSurface)
                                 .swipeActions(edge: .trailing) {
                                     if !isReadOnly {
@@ -105,8 +117,9 @@ struct HandsPane: View {
         .fullScreenCover(isPresented: $showEntry) {
             HandCaptureView(tournament: tournament, cashSession: cashSession, stub: nil) { _ in }
         }
-        .fullScreenCover(item: $capturingStub) { stub in
-            HandCaptureView(tournament: tournament, cashSession: cashSession, stub: stub) { _ in }
+        .fullScreenCover(item: $capturePresentation) { presentation in
+            HandCaptureView(tournament: tournament, cashSession: cashSession, stub: presentation.stub,
+                            autoStartDictation: presentation.autoDictate) { _ in }
         }
     }
 
@@ -121,6 +134,16 @@ struct HandsPane: View {
             Spacer()
         }
     }
+}
+
+/// Item for the shared pending-stub capture cover — row-tap presents with
+/// `autoDictate: false`, the row's mic accessory with `true`. Wrapping the
+/// stub (rather than presenting it directly) lets the same `fullScreenCover`
+/// carry that flag without parallel presentation state.
+private struct CapturePresentation: Identifiable {
+    let stub: HandStub
+    let autoDictate: Bool
+    var id: PersistentIdentifier { stub.persistentModelID }
 }
 
 private struct PendingStubRow: View {
