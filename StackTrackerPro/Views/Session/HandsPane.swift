@@ -42,6 +42,13 @@ struct HandsPane: View {
                                 .swipeActions(edge: .trailing) {
                                     if !isReadOnly {
                                         Button(role: .destructive) {
+                                            // Dismiss before deleting: if the chat
+                                            // manager still holds this stub as its
+                                            // pending swing prompt, dismissing flips
+                                            // its status so any interleaved access
+                                            // sees a non-pending (not invalidated)
+                                            // stub before the hard delete lands.
+                                            tournamentManager.dismissStub(stub)
                                             modelContext.delete(stub)
                                         } label: {
                                             Label("Delete", systemImage: "trash")

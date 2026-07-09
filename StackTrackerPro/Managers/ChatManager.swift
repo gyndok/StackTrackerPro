@@ -18,6 +18,13 @@ final class ChatManager {
     private(set) var activeDebriefGap: DebriefGap?
     var debriefDisabledForSession = false
 
+    /// Identity of the tournament this conversation state belongs to. When the
+    /// active tournament changes underneath us, all pending conversational state
+    /// (swing prompt, debrief queue/gap, session-disable flag) refers to the old
+    /// tournament and must be dropped before we act — otherwise a cards reply
+    /// could attach to the wrong tournament's stub.
+    private var conversationTournamentID: PersistentIdentifier?
+
     @ObservationIgnored
     private let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "ChatManager")
 
@@ -70,14 +77,40 @@ final class ChatManager {
         return HoleCardShorthand.normalize(payload)
     }
 
+    // MARK: - Conversation Identity
+
+    /// Drops all pending conversational state when the active tournament has
+    /// changed since we last acted, so a swing prompt / debrief opened in one
+    /// tournament can never write into another after a switch.
+    private func resetConversationStateIfTournamentChanged(_ tournament: Tournament) {
+        let id = tournament.persistentModelID
+        guard conversationTournamentID != id else { return }
+        conversationTournamentID = id
+        pendingSwingStub = nil
+        activeDebriefGap = nil
+        debriefQueue = []
+        debriefDisabledForSession = false
+    }
+
     // MARK: - Break Debrief
 
     /// Kicks off a break debrief: at most once per break (`tournament.lastDebriefAt`),
     /// asks about up to 3 unexplained stack gaps, largest |delta| first.
     func runBreakDebrief() {
-        guard !debriefDisabledForSession,
-              let tournament = tournamentManager.activeTournament,
+        guard let tournament = tournamentManager.activeTournament,
               tournament.status == .active else { return }
+        resetConversationStateIfTournamentChanged(tournament)
+        guard !debriefDisabledForSession else { return }
+        // A swing prompt still outstanding would leave two questions live and
+        // misroute the next cards reply between them. Dismiss it before opening
+        // the debrief; its gap resurfaces here if it's still material (dismissed
+        // stubs aren't explainers), which is acceptable and arguably correct.
+        if let pending = pendingSwingStub {
+            pendingSwingStub = nil
+            if !pending.isDeleted, pending.status == .pending {
+                tournamentManager.dismissStub(pending)
+            }
+        }
         let gaps = BreakDebriefEngine.unexplainedGaps(
             for: tournament, since: tournament.lastDebriefAt,
             sensitivityPercent: swingSensitivity)
@@ -104,6 +137,7 @@ final class ChatManager {
     func processUserMessage(text: String) async {
         guard let tournament = tournamentManager.activeTournament else { return }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        resetConversationStateIfTournamentChanged(tournament)
 
         isProcessing = true
         defer { isProcessing = false }
@@ -121,7 +155,11 @@ final class ChatManager {
             // of creating a second, unrelated manual stub.
             if let pending = pendingSwingStub {
                 pendingSwingStub = nil
-                if pending.status == .pending {
+                // A pending stub can be hard-deleted from the Hands pane while we
+                // still hold it; touching a deleted SwiftData model traps, so
+                // guard isDeleted first (short-circuits before .status). When
+                // invalid, fall through to create a fresh manual stub.
+                if !pending.isDeleted, pending.status == .pending {
                     tournamentManager.attachCards(cards, to: pending)
                     let ack = "Logged: \(HoleCardShorthand.display(cards)) — open it in Hands to add the full story."
                     tournament.chatMessages?.append(ChatMessage(sender: .ai, text: ack))
@@ -149,7 +187,9 @@ final class ChatManager {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if let pending = pendingSwingStub {
             pendingSwingStub = nil
-            if pending.status == .pending {
+            // Guard isDeleted first: a hard-deleted stub traps on any property
+            // access. When invalid, fall through to normal processing.
+            if !pending.isDeleted, pending.status == .pending {
                 if tournament.status != .completed, let cards = HoleCardShorthand.normalize(trimmed) {
                     tournamentManager.attachCards(cards, to: pending)
                     let ack = "Logged: \(HoleCardShorthand.display(cards)) — open it in Hands to add the full story."
@@ -188,11 +228,14 @@ final class ChatManager {
                 saveContext(); return
             }
             if let cards = HoleCardShorthand.normalize(trimmed) {
-                tournamentManager.createHandStub(holeCards: cards, origin: .breakDebrief)
+                // Snapshot the gap's starting stack, not the mid-break latestStack.
+                tournamentManager.createHandStub(holeCards: cards, origin: .breakDebrief,
+                                                 heroStackBefore: gap.startChips)
                 tournament.chatMessages?.append(ChatMessage(sender: .ai,
                     text: "Stub saved: \(HoleCardShorthand.display(cards)). Enrich it in the Hands pane when you have a minute."))
             } else if lower.contains("one pot") || lower.contains("1 pot") || lower == "pot" {
-                tournamentManager.createHandStub(holeCards: "", origin: .breakDebrief)
+                tournamentManager.createHandStub(holeCards: "", origin: .breakDebrief,
+                                                 heroStackBefore: gap.startChips)
                 tournament.chatMessages?.append(ChatMessage(sender: .ai,
                     text: "Stub added without cards — open it in Hands to fill in the details."))
             } else {
@@ -234,7 +277,14 @@ final class ChatManager {
                                      currentBB: bb, sensitivityPercent: swingSensitivity),
                !SwingDetector.shouldSuppress(previousEntryDate: previous.timestamp, now: .now,
                                              latestPendingStubDate: latestPendingStub) {
-                let stub = tournamentManager.createHandStub(holeCards: "", origin: .swingDetected)
+                // The swing fires *after* applyEntities pushed `newChips`, so
+                // `previous.chipCount` is the real pre-hand stack and `newChips`
+                // is the post-hand stack (the update that triggered the swing) —
+                // record both explicitly rather than snapshotting the now-stale
+                // latestStack.
+                let stub = tournamentManager.createHandStub(holeCards: "", origin: .swingDetected,
+                                                            heroStackBefore: previous.chipCount)
+                stub?.heroStackAfter = newChips
                 pendingSwingStub = stub
                 let delta = newChips - previous.chipCount
                 let sign = delta >= 0 ? "+" : "−"

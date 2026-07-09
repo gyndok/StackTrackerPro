@@ -40,7 +40,12 @@ struct HandCaptureView: View {
         let cardCount = gameType == .plo ? 4 : 2
 
         if let stub {
-            _model = State(initialValue: HandCaptureModel(stub: stub, heroCardCount: cardCount))
+            // Capture the tracker stack now so the model can tell a just-happened
+            // enrichment (stack unchanged) from a stale one (stack moved on) —
+            // see HandCaptureModel.shouldPushStackUpdate.
+            let trackerStack = tournament?.latestStack?.chipCount ?? cashSession?.latestStack?.chipCount
+            _model = State(initialValue: HandCaptureModel(stub: stub, heroCardCount: cardCount,
+                                                          trackerStackAtOpen: trackerStack))
         } else if let tournament {
             let blinds = tournament.currentBlinds
             _model = State(initialValue: HandCaptureModel(
@@ -270,7 +275,9 @@ struct HandCaptureView: View {
     private func save() {
         let hand = model.save(into: modelContext, tournament: tournament, cashSession: cashSession,
                               sourceStub: stub, tableSize: seatsDefault)
-        if tournament != nil, model.heroStackAfter > 0 {
+        // Only push the stack update for a current hand — a stale enrichment
+        // would regress latestStack (see HandCaptureModel.shouldPushStackUpdate).
+        if tournament != nil, model.heroStackAfter > 0, model.shouldPushStackUpdate {
             tournamentManager.updateStack(chipCount: model.heroStackAfter)
         }
         HapticFeedback.success()

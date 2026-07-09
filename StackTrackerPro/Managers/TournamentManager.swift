@@ -348,11 +348,18 @@ final class TournamentManager {
 
     // MARK: - Hand Stubs
 
+    /// Creates a pending stub snapshotting live session context. `heroStackBefore`
+    /// defaults to the current tracker stack (`latestStack`); callers that already
+    /// know the correct pre-hand stack — a swing prompt fires *after* the
+    /// post-pot update has landed, a break debrief refers to a gap's starting
+    /// entry — pass an explicit override so the stub records the hand's real
+    /// starting stack rather than the post-hand one.
     @discardableResult
     func createHandStub(holeCards: String,
                         quickResult: QuickResult? = nil,
                         quickVillain: QuickVillain? = nil,
-                        origin: StubOrigin = .manual) -> HandStub? {
+                        origin: StubOrigin = .manual,
+                        heroStackBefore: Int? = nil) -> HandStub? {
         guard let tournament = mutableTournament else { return nil }
         let blinds = tournament.currentBlinds
         let stub = HandStub(
@@ -360,7 +367,7 @@ final class TournamentManager {
             smallBlind: blinds?.smallBlind ?? 0,
             bigBlind: blinds?.bigBlind ?? 0,
             ante: blinds?.ante ?? 0,
-            heroStackBefore: tournament.latestStack?.chipCount ?? 0,
+            heroStackBefore: heroStackBefore ?? tournament.latestStack?.chipCount ?? 0,
             playersRemaining: tournament.playersRemaining,
             holeCards: holeCards,
             origin: origin

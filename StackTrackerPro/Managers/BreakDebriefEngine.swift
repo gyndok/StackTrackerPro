@@ -4,6 +4,11 @@ struct DebriefGap: Equatable {
     let start: Date
     let end: Date
     let delta: Int
+    /// Tracker stack at `start` (the gap's opening entry). Carried here — rather
+    /// than re-looked-up by timestamp in ChatManager — because the engine
+    /// already holds the entry while scanning, so a stub created to explain the
+    /// gap can snapshot the hand's real starting stack instead of the mid-gap one.
+    let startChips: Int
 }
 
 /// Finds stack intervals with a swing-sized delta that have no stub, logged
@@ -43,7 +48,8 @@ enum BreakDebriefEngine {
             let hi = next.timestamp.addingTimeInterval(explainPadding)
             let explained = explainers.contains { $0 >= lo && $0 <= hi }
             if !explained {
-                gaps.append(DebriefGap(start: prev.timestamp, end: next.timestamp, delta: delta))
+                gaps.append(DebriefGap(start: prev.timestamp, end: next.timestamp,
+                                       delta: delta, startChips: prev.chipCount))
             }
         }
         return Array(gaps.sorted { abs($0.delta) > abs($1.delta) }.prefix(maxCount))

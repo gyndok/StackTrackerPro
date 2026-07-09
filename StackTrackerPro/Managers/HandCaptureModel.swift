@@ -48,6 +48,14 @@ final class HandCaptureModel {
     let heroCardCount: Int                // 2 (NLHE) or 4 (PLO)
     var heroStackBefore: Int              // editable, prefilled
 
+    /// True when this capture is enriching an existing `HandStub` (vs a fresh
+    /// Log Hand capture). Drives `shouldPushStackUpdate`.
+    let isStubEnrichment: Bool
+    /// The tracker's `latestStack` chip count when this capture opened. `nil`
+    /// for a fresh capture (no stub to compare against). Drives
+    /// `shouldPushStackUpdate`.
+    let trackerStackAtOpen: Int?
+
     // MARK: - Setup state
 
     var heroPosition: HeroPosition? { didSet { rebuild() } }
@@ -95,13 +103,16 @@ final class HandCaptureModel {
     // MARK: - Init
 
     init(levelNumber: Int, smallBlind: Int, bigBlind: Int, ante: Int,
-         heroCardCount: Int, heroStackBefore: Int) {
+         heroCardCount: Int, heroStackBefore: Int,
+         isStubEnrichment: Bool = false, trackerStackAtOpen: Int? = nil) {
         self.levelNumber = levelNumber
         self.smallBlind = smallBlind
         self.bigBlind = bigBlind
         self.ante = ante
         self.heroCardCount = heroCardCount
         self.heroStackBefore = heroStackBefore
+        self.isStubEnrichment = isStubEnrichment
+        self.trackerStackAtOpen = trackerStackAtOpen
         rebuild()
     }
 
@@ -109,10 +120,11 @@ final class HandCaptureModel {
     /// snapshot and prefills the hero's hole cards only when the stub stored
     /// exact cards (`"Ah Kd"`). Suit-agnostic stubs (`"KQs"`, `"99"`) leave the
     /// cards empty; the view surfaces the token as a hint instead.
-    convenience init(stub: HandStub, heroCardCount: Int) {
+    convenience init(stub: HandStub, heroCardCount: Int, trackerStackAtOpen: Int? = nil) {
         self.init(levelNumber: stub.levelNumber, smallBlind: stub.smallBlind,
                   bigBlind: stub.bigBlind, ante: stub.ante,
-                  heroCardCount: heroCardCount, heroStackBefore: stub.heroStackBefore)
+                  heroCardCount: heroCardCount, heroStackBefore: stub.heroStackBefore,
+                  isStubEnrichment: true, trackerStackAtOpen: trackerStackAtOpen)
         let exact = HoleCardShorthand.exactCards(stub.holeCards)
         if exact.count == 2 { heroCards = exact }
     }
@@ -502,6 +514,23 @@ final class HandCaptureModel {
 
     /// Hero's stack once the hand is booked.
     var heroStackAfter: Int { heroStackBefore + heroNet }
+
+    /// Whether saving this hand should push a tracker `updateStack`.
+    ///
+    /// Rule: push only when the hand is *current* —
+    ///   `stub == nil || tournament.latestStack == model.heroStackBefore`
+    /// A fresh Log Hand capture always pushes. A stub enrichment pushes only
+    /// when the tracker stack still equals the stub's pre-hand snapshot, i.e.
+    /// the hand just happened and no stack update has landed since. A stale
+    /// enrichment (an old stub opened later, e.g. at break) must NOT push: the
+    /// chat update that originally recorded the result already moved
+    /// `latestStack` on, so re-pushing `heroStackAfter` would regress it — a
+    /// phantom cliff that re-triggers swing detection. (With the swing-stub fix,
+    /// a swing stub's `latestStack` equals its `heroStackAfter`, not its
+    /// `heroStackBefore`, so swing enrichments correctly land here as false.)
+    var shouldPushStackUpdate: Bool {
+        !isStubEnrichment || trackerStackAtOpen == heroStackBefore
+    }
 
     // MARK: - Persistence
 

@@ -1467,6 +1467,11 @@ final class ChatManagerTests: XCTestCase {
         await chat.processUserMessage(text: "985000")
         XCTAssertEqual(tournament.pendingStubs.count, 1)
         XCTAssertEqual(tournament.pendingStubs.first?.origin, .swingDetected)
+        // The stub records the hand's real starting stack (390K, pre-pot) and
+        // the post-pot stack (985K) — not the now-stale latestStack (985K) for
+        // both, which the old snapshot-latestStack path produced.
+        XCTAssertEqual(tournament.pendingStubs.first?.heroStackBefore, 390_000)
+        XCTAssertEqual(tournament.pendingStubs.first?.heroStackAfter, 985_000)
         let prompt = tournament.sortedChatMessages.last(where: { $0.sender == .ai })
         XCTAssertTrue(prompt?.text.contains("Big pot") ?? false)
 
@@ -1637,6 +1642,86 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertEqual(gaps.count, 1, "unexpected gaps: \(gaps)")
         let remaining = try XCTUnwrap(gaps.first)
         XCTAssertEqual(remaining.delta, -250_000)
+    }
+
+    @MainActor
+    func testDebriefCardsStubSnapshotsGapStartStack() async throws {
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 985_000)   // gap start
+        manager.updateStack(chipCount: 760_000)   // gap end (−225K swing)
+        let chat = ChatManager(tournamentManager: manager)
+
+        chat.runBreakDebrief()
+        // Answer with cards → the stub snapshots the gap's STARTING stack (985K),
+        // not the mid-break latestStack (760K).
+        await chat.processUserMessage(text: "KQs")
+        let stub = try XCTUnwrap(tournament.pendingStubs.first)
+        XCTAssertEqual(stub.origin, .breakDebrief)
+        XCTAssertEqual(stub.heroStackBefore, 985_000)
+    }
+
+    // MARK: - Break button vs. outstanding swing prompt (I2)
+
+    @MainActor
+    func testBreakDebriefDismissesOutstandingSwingPrompt() async throws {
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        let chat = ChatManager(tournamentManager: manager)
+        await chat.processUserMessage(text: "390000")
+        await chat.processUserMessage(text: "985000")
+        let swingStub = try XCTUnwrap(chat.pendingSwingStub)
+        XCTAssertEqual(swingStub.origin, .swingDetected)
+
+        // Break button while the swing prompt is still live: it is dismissed and
+        // the reference cleared, leaving only the debrief question outstanding.
+        chat.runBreakDebrief()
+        XCTAssertNil(chat.pendingSwingStub)
+        XCTAssertEqual(swingStub.status, .dismissed)
+
+        // A cards reply now answers the DEBRIEF (its gap resurfaced once the
+        // swing stub stopped counting as an explainer), creating a breakDebrief
+        // stub — it does not attach to the old swing stub.
+        await chat.processUserMessage(text: "KQs")
+        let breakStub = tournament.handStubs?.first { $0.origin == .breakDebrief }
+        XCTAssertEqual(breakStub?.holeCards, "KQs")
+        XCTAssertEqual(swingStub.holeCards, "", "swing stub must not receive the debrief reply")
+    }
+
+    // MARK: - Conversation state across tournament switch (I3)
+
+    @MainActor
+    func testConversationStateResetsOnTournamentSwitch() async throws {
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournamentA, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        let chat = ChatManager(tournamentManager: manager)
+        await chat.processUserMessage(text: "390000")
+        await chat.processUserMessage(text: "985000")
+        let stubA = try XCTUnwrap(chat.pendingSwingStub)
+        XCTAssertEqual(tournamentA.pendingStubs.count, 1)
+
+        // Switch the active tournament to B.
+        let tournamentB = Tournament(name: "Second", buyIn: 100)
+        container.mainContext.insert(tournamentB)
+        manager.startTournament(tournamentB)
+
+        // A cards-like reply now belongs to B — the stale swing prompt for A
+        // must be dropped, not answered against B.
+        await chat.processUserMessage(text: "AK suited")
+
+        XCTAssertNil(chat.pendingSwingStub)
+        XCTAssertEqual(stubA.holeCards, "", "A's swing stub must not receive B's reply")
+        XCTAssertEqual(stubA.status, .pending, "A's stub is left untouched, not dismissed")
+        XCTAssertTrue(tournamentB.handStubs?.isEmpty ?? true, "B has no stubs")
     }
 }
 
@@ -1956,6 +2041,28 @@ final class HandCaptureModelTests: XCTestCase {
         XCTAssertTrue(model.addCard(PlayingCard("Kd")!))
         XCTAssertFalse(model.addCard(PlayingCard("Qs")!))    // over cap of 2
         XCTAssertEqual(model.heroCards.count, 2)
+    }
+
+    /// shouldPushStackUpdate: fresh captures and just-happened enrichments push;
+    /// stale enrichments (tracker stack already moved on) do not.
+    func testShouldPushStackUpdate() throws {
+        // Fresh Log Hand capture (no stub) → always pushes.
+        let fresh = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        XCTAssertTrue(fresh.shouldPushStackUpdate)
+
+        let stub = HandStub(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000, ante: 25_000,
+                            heroStackBefore: 390_000, holeCards: "Kh Kd")
+
+        // Enrichment where the tracker stack still equals the stub's pre-hand
+        // snapshot (hand just happened, no update since) → pushes.
+        let current = HandCaptureModel(stub: stub, heroCardCount: 2, trackerStackAtOpen: 390_000)
+        XCTAssertTrue(current.shouldPushStackUpdate)
+
+        // Enrichment where later updates moved the tracker on → does not push
+        // (re-pushing would regress latestStack — a phantom cliff).
+        let stale = HandCaptureModel(stub: stub, heroCardCount: 2, trackerStackAtOpen: 985_000)
+        XCTAssertFalse(stale.shouldPushStackUpdate)
     }
 }
 
