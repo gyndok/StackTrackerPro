@@ -113,8 +113,19 @@ final class DictationEngine {
         }
 
         state = .preparingModel
+        // Resolve the device locale to the transcriber's closest supported
+        // equivalent; fall back to US English when the device language has no
+        // on-device transcription model at all.
+        let locale = await SpeechTranscriber.supportedLocale(equivalentTo: .current)
+            ?? Locale(identifier: "en_US")
         do {
-            let locale = Locale.current
+            try await Self.ensureLocaleReserved(locale)
+        } catch {
+            let name = Locale.current.localizedString(forIdentifier: locale.identifier) ?? "your language"
+            state = .error("Couldn't prepare speech recognition for \(name) — \(error.localizedDescription)")
+            return
+        }
+        do {
             let transcriber = SpeechTranscriber(locale: locale,
                                                 transcriptionOptions: [],
                                                 reportingOptions: [.volatileResults],
@@ -168,6 +179,33 @@ final class DictationEngine {
         } catch {
             teardownAudio()
             state = .error("Couldn't start dictation: \(error.localizedDescription)")
+        }
+    }
+
+    /// Makes sure this app holds an AssetInventory reservation for `locale`
+    /// before any asset status/installation query. On real hardware,
+    /// `AssetInventory.assetInstallationRequest(supporting:)` throws
+    /// "Cannot check the download status, <bundle id> is not subscribed to
+    /// transcription.<lang>" for a locale the app hasn't reserved — the
+    /// simulator never enforces this, which is why it only surfaced in
+    /// device testing. The reservation is app-wide and persists across
+    /// sessions (it is deliberately never released in `stop()`, so the model
+    /// stays installed for the next dictation).
+    private static func ensureLocaleReserved(_ locale: Locale) async throws {
+        let reserved = await AssetInventory.reservedLocales
+        guard !reserved.contains(where: { $0.identifier(.bcp47) == locale.identifier(.bcp47) }) else { return }
+        do {
+            try await AssetInventory.reserve(locale: locale)
+        } catch {
+            // Most likely the per-app reservation limit
+            // (`AssetInventory.maximumReservedLocales`). Dictation is this
+            // app's only speech feature, so any other reservation is stale —
+            // e.g. left over after the user changed device language. Release
+            // them and retry once; rethrow if the retry still fails.
+            for stale in reserved where stale.identifier(.bcp47) != locale.identifier(.bcp47) {
+                await AssetInventory.release(reservedLocale: stale)
+            }
+            try await AssetInventory.reserve(locale: locale)
         }
     }
 
