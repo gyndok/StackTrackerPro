@@ -96,11 +96,23 @@ final class ChatManager {
 
     /// Kicks off a break debrief: at most once per break (`tournament.lastDebriefAt`),
     /// asks about up to 3 unexplained stack gaps, largest |delta| first.
-    func runBreakDebrief() {
+    ///
+    /// `announceWhenClear` controls what happens when there's nothing to ask:
+    /// the explicit chat trigger ("on break"/"break time") passes `true` so the
+    /// user's request never dead-ends in silence after the ack; the automatic
+    /// BreakTimerSheet path keeps the default `false` — never nag when clear.
+    func runBreakDebrief(announceWhenClear: Bool = false) {
         guard let tournament = tournamentManager.activeTournament,
               tournament.status == .active else { return }
         resetConversationStateIfTournamentChanged(tournament)
-        guard !debriefDisabledForSession else { return }
+        guard !debriefDisabledForSession else {
+            if announceWhenClear {
+                tournament.chatMessages?.append(ChatMessage(sender: .ai,
+                    text: "Debriefs are off for this session — you said \"skip today\"."))
+                saveContext()
+            }
+            return
+        }
         // A swing prompt still outstanding would leave two questions live and
         // misroute the next cards reply between them. Dismiss it before opening
         // the debrief; its gap resurfaces here if it's still material (dismissed
@@ -114,7 +126,14 @@ final class ChatManager {
         let gaps = BreakDebriefEngine.unexplainedGaps(
             for: tournament, since: tournament.lastDebriefAt,
             sensitivityPercent: swingSensitivity)
-        guard !gaps.isEmpty else { return }
+        guard !gaps.isEmpty else {
+            if announceWhenClear {
+                tournament.chatMessages?.append(ChatMessage(sender: .ai,
+                    text: "Nothing unexplained since the last check — all your swings are covered."))
+                saveContext()
+            }
+            return
+        }
         tournament.lastDebriefAt = .now
         debriefQueue = gaps
         askNextDebriefQuestion(tournament: tournament, intro: true)
@@ -250,11 +269,13 @@ final class ChatManager {
             return
         }
 
-        // Chat-triggered break debrief.
+        // Chat-triggered break debrief. The user asked explicitly, so the
+        // exchange must never end at the ack: announceWhenClear guarantees a
+        // follow-up bubble (first question, all-clear, or debriefs-off note).
         if tournament.status != .completed,
            trimmed.lowercased() == "on break" || trimmed.lowercased() == "break time" {
             tournament.chatMessages?.append(ChatMessage(sender: .ai, text: "Got it — let's debrief."))
-            runBreakDebrief()
+            runBreakDebrief(announceWhenClear: true)
             saveContext()
             return
         }

@@ -256,7 +256,7 @@ final class ResponseEngine: @unchecked Sendable {
     // MARK: - Fallback
 
     private func fallbackResponse(entities: ParsedEntities) -> String {
-        "Got it. Try messages like \"18k\", \"level 7\", \"310 left\", or \"got a bounty\"."
+        "Got it. Try messages like \"18k\", \"level 7\", \"310 left\", \"got a bounty\" — or \"stub AsKc\" to log a hand."
     }
 
     // MARK: - Helpers

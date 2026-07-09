@@ -1732,6 +1732,61 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertEqual(stubA.status, .pending, "A's stub is left untouched, not dismissed")
         XCTAssertTrue(tournamentB.handStubs?.isEmpty ?? true, "B has no stubs")
     }
+
+    // MARK: - Debrief all-clear vs. silent auto-trigger (F7)
+
+    @MainActor
+    func testOnBreakAnnouncesAllClearWhenNoGaps() async throws {
+        // Explicit "on break" must never dead-end at the ack: with zero
+        // unexplained gaps the user gets an all-clear instead of silence.
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 500_000)   // single update → no intervals
+        let chat = ChatManager(tournamentManager: manager)
+
+        await chat.processUserMessage(text: "on break")
+
+        let aiTexts = tournament.sortedChatMessages.filter { $0.sender == .ai }.map(\.text)
+        XCTAssertTrue(aiTexts.contains { $0.contains("let's debrief") },
+                      "ack bubble missing: \(aiTexts)")
+        XCTAssertTrue(aiTexts.contains { $0.contains("all your swings are covered") },
+                      "all-clear bubble missing: \(aiTexts)")
+        XCTAssertNil(chat.activeDebriefGap, "no question should be pending when clear")
+    }
+
+    @MainActor
+    func testAutoDebriefStaysSilentWhenClear() throws {
+        // The BreakTimerSheet auto-trigger path (default announceWhenClear:
+        // false) must not add any chat message when there's nothing to ask.
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 500_000)   // single update → no intervals
+        let chat = ChatManager(tournamentManager: manager)
+        let messagesBefore = tournament.chatMessages?.count ?? 0
+
+        chat.runBreakDebrief()
+
+        XCTAssertEqual(tournament.chatMessages?.count ?? 0, messagesBefore,
+                       "silent auto-trigger must not append messages when clear")
+        XCTAssertNil(chat.activeDebriefGap)
+    }
+
+    // MARK: - Fallback mentions hand logging (F8)
+
+    @MainActor
+    func testFallbackMentionsStubShorthand() throws {
+        let (_, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+
+        let fallback = ResponseEngine.shared.generateResponse(entities: ParsedEntities(),
+                                                              tournament: tournament)
+        XCTAssertTrue(fallback.contains("stub AsKc"),
+                      "fallback must teach the stub shorthand: \(fallback)")
+    }
 }
 
 final class PokerHandEvaluatorTests: XCTestCase {
