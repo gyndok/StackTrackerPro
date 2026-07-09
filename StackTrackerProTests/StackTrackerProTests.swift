@@ -38,6 +38,15 @@ private func writeTempCSV(_ content: String) throws -> URL {
     return url
 }
 
+/// An empty `ParsedHandDraft` built via the full labeled initializer, which
+/// exists in both the `@Generable` and plain-`#else` shapes of the struct
+/// (the `@Generable` macro suppresses the zero-argument memberwise init, so
+/// `emptyDraft()` won't compile there). Tests mutate the returned value.
+private func emptyDraft() -> ParsedHandDraft {
+    ParsedHandDraft(heroPosition: nil, heroCards: nil, villains: [], actions: [],
+                    flop: nil, turn: nil, river: nil)
+}
+
 // MARK: - RegexPokerParser
 
 final class RegexPokerParserTests: XCTestCase {
@@ -2430,5 +2439,253 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(draft.actions.count, 3)
         let flopCards = PlayingCard.parseList(draft.flop ?? "")
         XCTAssertEqual(flopCards.count, 3)
+    }
+
+    // MARK: - VoiceHandMapper (Voice Hand Entry Task 2)
+
+    @MainActor
+    func testMapperAppliesReferenceHandCleanly() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Kh Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: "9h Th")]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 75_000, isAllIn: false),
+            SpokenAction(actor: "hero", street: "preflop", action: "raise", amount: 200_000, isAllIn: false),
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 390_000, isAllIn: true),
+            SpokenAction(actor: "hero", street: "preflop", action: "call", amount: nil, isAllIn: false),
+        ]
+        draft.flop = "Jh 8h 4d"; draft.turn = "2c"; draft.river = "3s"
+
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(issues.isEmpty, "unexpected issues: \(issues.map(\.label))")
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertEqual(model.pot, 840_000)
+        XCTAssertEqual(model.board.count, 5)
+        let villain = try XCTUnwrap(model.villains.first)
+        XCTAssertEqual(villain.shownHolding.map(\.raw), ["9h", "Th"])
+        XCTAssertEqual(model.computedWinners, [.hero])
+    }
+
+    @MainActor
+    func testMapperFlagsOutOfTurnAndSkips() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "As Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "shorter", approxStack: nil, shownCards: nil)]
+        // Hero acts first in the draft but UTG is first to act — out of turn.
+        draft.actions = [SpokenAction(actor: "hero", street: "preflop", action: "raise", amount: 500, isAllIn: false)]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(issues.contains { if case .outOfTurnAction = $0 { return true }; return false })
+        XCTAssertTrue(model.ledger.isEmpty)   // skipped, not force-applied
+    }
+
+    @MainActor
+    func testMapperFlagsSuitAgnosticHeroCards() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "CO"
+        draft.heroCards = "KQ suited"
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(model.heroCards.isEmpty)
+        XCTAssertTrue(issues.contains { if case .unknownHeroCards(let s) = $0 { return s == "KQs" }; return false })
+    }
+
+    @MainActor
+    func testMapperFlagsMissingAmountAndDuplicateSeat() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [
+            SpokenVillain(position: "UTG", relativeStack: nil, approxStack: nil, shownCards: nil),
+            SpokenVillain(position: "UTG", relativeStack: nil, approxStack: nil, shownCards: nil),
+        ]
+        draft.actions = [SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: nil, isAllIn: false)]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.villains.count, 1)
+        XCTAssertTrue(issues.contains { if case .duplicateVillainSeat = $0 { return true }; return false })
+        XCTAssertTrue(issues.contains { if case .missingAmount = $0 { return true }; return false })
+    }
+
+    @MainActor
+    func testMapperEmptyDraftProducesIssuesNotCrash() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        let issues = VoiceHandMapper.apply(emptyDraft(), to: model)
+        XCTAssertFalse(issues.isEmpty)
+        XCTAssertNil(model.heroPosition)
+    }
+
+    // MARK: VoiceHandMapper — extra edge coverage
+
+    /// Position aliases beyond the brief's five: "button"→BTN, "cutoff"→CO,
+    /// "UTG1"→UTG+1 (case-insensitive), and a spelled-out "small blind".
+    @MainActor
+    func testMapperParsesPositionAliases() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "button"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [
+            SpokenVillain(position: "cutoff", relativeStack: "covers", approxStack: nil, shownCards: nil),
+            SpokenVillain(position: "UTG1", relativeStack: "same", approxStack: nil, shownCards: nil),
+            SpokenVillain(position: "small blind", relativeStack: "shorter", approxStack: nil, shownCards: nil),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.heroPosition, .btn)
+        XCTAssertEqual(model.villains.count, 3)
+        XCTAssertTrue(model.villains.contains { $0.position == .co })
+        XCTAssertTrue(model.villains.contains { $0.position == .utg1 })
+        XCTAssertTrue(model.villains.contains { $0.position == .sb })
+        XCTAssertFalse(issues.contains { if case .unknownPosition = $0 { return true }; return false })
+    }
+
+    /// Unknown position strings are flagged and the villain is not added.
+    @MainActor
+    func testMapperFlagsUnknownVillainPosition() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [SpokenVillain(position: "banana", relativeStack: nil, approxStack: nil, shownCards: nil)]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.villains.count, 0)
+        XCTAssertTrue(issues.contains { if case .unknownPosition(let s) = $0 { return s == "banana" }; return false })
+    }
+
+    /// Legality rule: a spoken action the engine would not currently offer
+    /// (a check when a call is owed) is flagged out-of-turn and skipped rather
+    /// than force-applied.
+    @MainActor
+    func testMapperFlagsIllegalCheckAsOutOfTurn() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 600, isAllIn: false),
+            SpokenAction(actor: "hero", street: "preflop", action: "check", amount: nil, isAllIn: false),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.ledger.count, 1)   // only the raise landed
+        XCTAssertTrue(issues.contains { if case .outOfTurnAction = $0 { return true }; return false })
+    }
+
+    /// A board card that duplicates a hero card is rejected by the engine and
+    /// flagged; consumption of that street stops at the collision.
+    @MainActor
+    func testMapperFlagsBoardCardDuplicatingHeroCard() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Jh Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: 40_000, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 40_000, isAllIn: true),
+            SpokenAction(actor: "hero", street: "preflop", action: "call", amount: nil, isAllIn: false),
+        ]
+        draft.flop = "8h Jh 4d"   // Jh duplicates the hero's Jh
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.board.count, 1)   // 8h landed, Jh rejected, stop
+        XCTAssertTrue(issues.contains { if case .invalidCard = $0 { return true }; return false })
+    }
+
+    /// Actions after the hand is already over (a fold ended it) are flagged
+    /// out-of-turn, not applied.
+    @MainActor
+    func testMapperFlagsActionsAfterHandOver() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "fold", amount: nil, isAllIn: false),
+            SpokenAction(actor: "hero", street: "flop", action: "bet", amount: 500, isAllIn: false),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertEqual(model.ledger.count, 1)   // only the fold
+        XCTAssertTrue(issues.contains { if case .outOfTurnAction = $0 { return true }; return false })
+    }
+
+    /// Unparseable shown cards produce `unknownShownCards`; the holding is not set.
+    @MainActor
+    func testMapperFlagsUnknownShownCards() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: "zz qq")]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        let villain = try XCTUnwrap(model.villains.first)
+        XCTAssertTrue(villain.shownHolding.isEmpty)
+        XCTAssertTrue(issues.contains { if case .unknownShownCards = $0 { return true }; return false })
+    }
+
+    /// Multi-street interleaving with live betting on every street (not just an
+    /// all-in run-out): the mapper feeds the flop before flop actions, the turn
+    /// before turn actions, etc., and the whole hand resolves cleanly.
+    @MainActor
+    func testMapperInterleavesBoardWithLiveBettingEachStreet() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 400_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 600, isAllIn: false),
+            SpokenAction(actor: "hero", street: "preflop", action: "call", amount: nil, isAllIn: false),
+            SpokenAction(actor: "UTG", street: "flop", action: "bet", amount: 500, isAllIn: false),
+            SpokenAction(actor: "hero", street: "flop", action: "call", amount: nil, isAllIn: false),
+            SpokenAction(actor: "UTG", street: "turn", action: "check", amount: nil, isAllIn: false),
+            SpokenAction(actor: "hero", street: "turn", action: "check", amount: nil, isAllIn: false),
+            SpokenAction(actor: "UTG", street: "river", action: "bet", amount: 1_000, isAllIn: false),
+            SpokenAction(actor: "hero", street: "river", action: "fold", amount: nil, isAllIn: false),
+        ]
+        draft.flop = "Jh 8h 4d"; draft.turn = "2c"; draft.river = "3s"
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(issues.isEmpty, "unexpected issues: \(issues.map(\.label))")
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertEqual(model.board.count, 5)
+        XCTAssertEqual(model.ledger.count, 8)
+        // Hero folded the river; UTG (last aggressor) wins with no showdown.
+        XCTAssertEqual(model.computedWinners.count, 1)
+        XCTAssertNotEqual(model.computedWinners.first, .hero)
+    }
+
+    /// A flop string with the wrong number of cards is flagged `boardMismatch`
+    /// and no partial board is dealt for that street.
+    @MainActor
+    func testMapperFlagsBoardMismatchOnWrongFlopCount() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: 40_000, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 40_000, isAllIn: true),
+            SpokenAction(actor: "hero", street: "preflop", action: "call", amount: nil, isAllIn: false),
+        ]
+        draft.flop = "Jh 8h"   // only two cards where three are needed
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.board.count, 0)
+        XCTAssertTrue(issues.contains { if case .boardMismatch = $0 { return true }; return false })
     }
 }
