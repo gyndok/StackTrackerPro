@@ -1603,4 +1603,62 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertEqual(tournament.pendingStubs.first?.origin, .swingDetected)
         XCTAssertEqual(tournament.pendingStubs.first?.holeCards, "AKs")
     }
+
+    // MARK: - Break Debrief
+
+    @MainActor
+    func testDebriefFindsUnexplainedGapsLargestFirst() throws {
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        // Three updates: 985K → 700K (−285K, unexplained), 700K → 450K (−250K, unexplained).
+        // (8×BB = 200,000 is the swing floor at this level, so both deltas clear it —
+        // unlike the smaller −115K drift used elsewhere, which sits below the floor.)
+        manager.updateStack(chipCount: 985_000)
+        manager.updateStack(chipCount: 700_000)
+        manager.updateStack(chipCount: 450_000)
+
+        // Back-date the first two entries so the ±10-minute explain-padding
+        // windows around each interval don't overlap — a stub created "now"
+        // (below) should only fall inside the most recent interval's window.
+        let entryA = tournament.stackEntries?.first { $0.chipCount == 985_000 }
+        let entryB = tournament.stackEntries?.first { $0.chipCount == 700_000 }
+        entryA?.timestamp = Date.now.addingTimeInterval(-40 * 60)
+        entryB?.timestamp = Date.now.addingTimeInterval(-20 * 60)
+
+        let gaps = BreakDebriefEngine.unexplainedGaps(for: tournament, since: nil,
+                                                      sensitivityPercent: 20, maxCount: 3)
+        XCTAssertEqual(gaps.count, 2)
+        XCTAssertEqual(gaps[0].delta, -285_000)   // largest first
+        XCTAssertEqual(gaps[1].delta, -250_000)
+
+        // A stub created now "explains" the most recent interval only
+        manager.createHandStub(holeCards: "KQs", origin: .manual)
+        let after = BreakDebriefEngine.unexplainedGaps(for: tournament, since: nil,
+                                                       sensitivityPercent: 20, maxCount: 3)
+        XCTAssertEqual(after.count, 1)
+        XCTAssertEqual(after[0].delta, -285_000)
+    }
+
+    @MainActor
+    func testDebriefFlowRecordsFadeNote() async throws {
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 985_000)
+        manager.updateStack(chipCount: 760_000)
+        let chat = ChatManager(tournamentManager: manager)
+
+        chat.runBreakDebrief()
+        XCTAssertTrue(tournament.sortedChatMessages.last?.text.contains("dropped 225,000") ?? false)
+
+        await chat.processUserMessage(text: "blinds and a few small ones")
+        XCTAssertEqual(tournament.fadeNotes?.count, 1)
+        XCTAssertEqual(tournament.fadeNotes?.first?.chipDelta, -225_000)
+        // Once per break:
+        chat.runBreakDebrief()
+        XCTAssertEqual(tournament.sortedChatMessages.filter { $0.text.contains("debrief") }.count, 1)
+    }
 }

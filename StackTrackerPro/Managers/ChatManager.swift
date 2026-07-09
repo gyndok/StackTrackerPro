@@ -12,6 +12,12 @@ final class ChatManager {
     /// so the user is never nagged twice for the same swing.
     private(set) var pendingSwingStub: HandStub?
 
+    /// Break debrief (spec F6): unexplained gaps queued to ask about, one at
+    /// a time, largest |delta| first.
+    private(set) var debriefQueue: [DebriefGap] = []
+    private(set) var activeDebriefGap: DebriefGap?
+    var debriefDisabledForSession = false
+
     @ObservationIgnored
     private let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "ChatManager")
 
@@ -62,6 +68,35 @@ final class ChatManager {
             return nil
         }
         return HoleCardShorthand.normalize(payload)
+    }
+
+    // MARK: - Break Debrief
+
+    /// Kicks off a break debrief: at most once per break (`tournament.lastDebriefAt`),
+    /// asks about up to 3 unexplained stack gaps, largest |delta| first.
+    func runBreakDebrief() {
+        guard !debriefDisabledForSession,
+              let tournament = tournamentManager.activeTournament,
+              tournament.status == .active else { return }
+        let gaps = BreakDebriefEngine.unexplainedGaps(
+            for: tournament, since: tournament.lastDebriefAt,
+            sensitivityPercent: swingSensitivity)
+        guard !gaps.isEmpty else { return }
+        tournament.lastDebriefAt = .now
+        debriefQueue = gaps
+        askNextDebriefQuestion(tournament: tournament, intro: true)
+    }
+
+    private func askNextDebriefQuestion(tournament: Tournament, intro: Bool) {
+        guard let gap = debriefQueue.first else { activeDebriefGap = nil; return }
+        debriefQueue.removeFirst()
+        activeDebriefGap = gap
+        let fmt = DateFormatter(); fmt.timeStyle = .short
+        let dir = gap.delta >= 0 ? "picked up" : "dropped"
+        var text = intro ? "Break debrief — couldn't account for this:\n" : ""
+        text += "You \(dir) \(abs(gap.delta).formatted()) between \(fmt.string(from: gap.start)) and \(fmt.string(from: gap.end)). One pot or a fade? (Reply with your cards, a description, \"later\", or \"skip today\".)"
+        tournament.chatMessages?.append(ChatMessage(sender: .ai, text: text))
+        saveContext()
     }
 
     // MARK: - Core Flow
@@ -133,6 +168,52 @@ final class ChatManager {
                 }
                 // fall through: process the unrelated message normally
             }
+        }
+
+        // Break debrief answer: cards → stub with cards, "one pot"-ish →
+        // empty stub, "later" defers, "skip today" disables, anything else
+        // → FadeNote with the text verbatim.
+        if let gap = activeDebriefGap {
+            activeDebriefGap = nil
+            let lower = trimmed.lowercased()
+            if lower == "later" {
+                debriefQueue = []
+                tournament.lastDebriefAt = nil     // re-ask next break
+                tournament.chatMessages?.append(ChatMessage(sender: .ai, text: "No problem — I'll ask at the next break."))
+                saveContext(); return
+            }
+            if lower.contains("skip today") {
+                debriefQueue = []; debriefDisabledForSession = true
+                tournament.chatMessages?.append(ChatMessage(sender: .ai, text: "Debriefs off for this session."))
+                saveContext(); return
+            }
+            if let cards = HoleCardShorthand.normalize(trimmed) {
+                tournamentManager.createHandStub(holeCards: cards, origin: .breakDebrief)
+                tournament.chatMessages?.append(ChatMessage(sender: .ai,
+                    text: "Stub saved: \(HoleCardShorthand.display(cards)). Enrich it in the Hands pane when you have a minute."))
+            } else if lower.contains("one pot") || lower.contains("1 pot") || lower == "pot" {
+                tournamentManager.createHandStub(holeCards: "", origin: .breakDebrief)
+                tournament.chatMessages?.append(ChatMessage(sender: .ai,
+                    text: "Stub added without cards — open it in Hands to fill in the details."))
+            } else {
+                let note = FadeNote(intervalStart: gap.start, intervalEnd: gap.end,
+                                    chipDelta: gap.delta, userExplanation: trimmed)
+                note.tournament = tournament
+                tournamentManager.modelContext?.insert(note)
+                tournament.chatMessages?.append(ChatMessage(sender: .ai, text: "Noted — recorded as a fade, it'll show in your recap timeline."))
+            }
+            askNextDebriefQuestion(tournament: tournament, intro: false)
+            saveContext()
+            return
+        }
+
+        // Chat-triggered break debrief.
+        if tournament.status != .completed,
+           trimmed.lowercased() == "on break" || trimmed.lowercased() == "break time" {
+            tournament.chatMessages?.append(ChatMessage(sender: .ai, text: "Got it — let's debrief."))
+            runBreakDebrief()
+            saveContext()
+            return
         }
 
         // 2. Parse (AI with regex fallback)

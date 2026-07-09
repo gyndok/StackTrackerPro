@@ -38,6 +38,9 @@ final class Tournament {
     var accumulatedPauseSeconds: Int = 0
     var pausedAt: Date?
 
+    // Break debrief (spec F6; CloudKit-safe default)
+    var lastDebriefAt: Date?
+
     // Ante format (big-blind ante by default; see AnteFormat)
     var anteFormatRaw: String = AnteFormat.bigBlind.rawValue
 
@@ -125,6 +128,7 @@ final class Tournament {
         self.actualStartDate = nil
         self.accumulatedPauseSeconds = 0
         self.pausedAt = nil
+        self.lastDebriefAt = nil
         self.anteFormatRaw = AnteFormat.bigBlind.rawValue
         self.currentBlindLevelNumber = 1
         self.fieldSize = 0

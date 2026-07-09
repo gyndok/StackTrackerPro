@@ -3,6 +3,7 @@ import SwiftUI
 struct BreakTimerSheet: View {
     @Bindable var tournament: Tournament
     @Environment(TournamentManager.self) private var tournamentManager
+    @Environment(ChatManager.self) private var chatManager
     @Environment(\.dismiss) private var dismiss
 
     // Setup state
@@ -337,6 +338,7 @@ struct BreakTimerSheet: View {
             duration: selectedDuration,
             photoData: photoData
         )
+        chatManager.runBreakDebrief()
     }
 
     private func compressImage(_ image: UIImage?) -> Data? {

@@ -38,6 +38,7 @@
 		7E570000000000000000011A /* CardPickerGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000119 /* CardPickerGrid.swift */; };
 		7E570000000000000000011C /* HandStubSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000011B /* HandStubSheet.swift */; };
 		7E570000000000000000011E /* SwingDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000011D /* SwingDetector.swift */; };
+		7E5700000000000000000120 /* BreakDebriefEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000011F /* BreakDebriefEngine.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -161,6 +162,7 @@
 		7E5700000000000000000119 /* CardPickerGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardPickerGrid.swift; sourceTree = "<group>"; };
 		7E570000000000000000011B /* HandStubSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandStubSheet.swift; sourceTree = "<group>"; };
 		7E570000000000000000011D /* SwingDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingDetector.swift; sourceTree = "<group>"; };
+		7E570000000000000000011F /* BreakDebriefEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakDebriefEngine.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 				CA5H000000000000000013 /* CSVExporter.swift */,
 				7E5700000000000000000117 /* HoleCardShorthand.swift */,
 				7E570000000000000000011D /* SwingDetector.swift */,
+				7E570000000000000000011F /* BreakDebriefEngine.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -577,6 +580,7 @@
 				7E570000000000000000011A /* CardPickerGrid.swift in Sources */,
 				7E570000000000000000011C /* HandStubSheet.swift in Sources */,
 				7E570000000000000000011E /* SwingDetector.swift in Sources */,
+				7E5700000000000000000120 /* BreakDebriefEngine.swift in Sources */,
 				7E570000000000000000010A /* BlindStructureParsing.swift in Sources */,
 				7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */,
 				7E5700000000000000000106 /* TournamentEvent.swift in Sources */,
