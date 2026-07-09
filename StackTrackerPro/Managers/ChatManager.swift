@@ -58,7 +58,9 @@ final class ChatManager {
         tournament.chatMessages?.append(userMessage)
 
         // Stub shorthand: "stub KQs" / ". KQs" — no parse, no sheet, one-line ack.
-        if let cards = Self.stubShorthand(from: text) {
+        // Completed tournaments are read-only: fall through to normal parsing,
+        // where applyEntities' guard keeps the message inert.
+        if tournament.status != .completed, let cards = Self.stubShorthand(from: text) {
             let stub = tournamentManager.createHandStub(holeCards: cards, origin: .manual)
             var ack = "Stub saved: \(HoleCardShorthand.display(cards))"
             if let stub {

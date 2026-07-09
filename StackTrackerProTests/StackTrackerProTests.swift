@@ -1464,6 +1464,19 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertTrue(lastAI?.text.contains("KQs") ?? false)
     }
 
+    @MainActor
+    func testStubShorthandIgnoredWhenTournamentCompleted() async throws {
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.completeTournament(position: 10, payout: 0)
+        let chat = ChatManager(tournamentManager: manager)
+
+        await chat.processUserMessage(text: "stub KQs")
+
+        XCTAssertTrue(tournament.pendingStubs.isEmpty,
+                      "completed tournaments are read-only — no stub created")
+    }
+
     func testStubShorthandDetection() {
         XCTAssertEqual(ChatManager.stubShorthand(from: "stub KQs"), "KQs")
         XCTAssertEqual(ChatManager.stubShorthand(from: ". AhKd"), "Ah Kd")
