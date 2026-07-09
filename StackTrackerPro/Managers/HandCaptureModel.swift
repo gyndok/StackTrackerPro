@@ -660,8 +660,12 @@ final class HandCaptureModel {
             }
         }
 
-        func startNextStreet() {
-            guard let next = nextStreet(after: street) else { handOver = true; return }
+        // Both resolvers return the hand-over flag instead of writing the
+        // captured `handOver` var: Xcode's emit-module pass (skip-bodies +
+        // code coverage) drops nested-function captures and would otherwise
+        // mis-diagnose the loop's `if handOver` check as unreachable.
+        func startNextStreet() -> Bool {
+            guard let next = nextStreet(after: street) else { return true }
             street = next
             committed[street] = [:]
             curBet = 0
@@ -670,19 +674,21 @@ final class HandCaptureModel {
             // If at most one player can still act (the rest all-in or folded),
             // there is no betting: run the remaining board out street by street.
             if nonFolded().count <= 1 {
-                handOver = true
+                return true
             } else if ableToAct().count <= 1 {
-                if street == .river { handOver = true }
-                else { needed = cardsForNextStreet(after: street) }
+                if street == .river { return true }
+                needed = cardsForNextStreet(after: street)
             }
+            return false
         }
 
         // Called after each action to resolve hand-end / street-close.
-        func resolveAfterAction() {
-            if nonFolded().count <= 1 { handOver = true; needed = 0; return }
-            guard streetClosed() else { return }
-            if street == .river { handOver = true; needed = 0 }
-            else { needed = cardsForNextStreet(after: street) }
+        func resolveAfterAction() -> Bool {
+            if nonFolded().count <= 1 { needed = 0; return true }
+            guard streetClosed() else { return false }
+            if street == .river { needed = 0; return true }
+            needed = cardsForNextStreet(after: street)
+            return false
         }
 
         for input in inputs {
@@ -711,7 +717,7 @@ final class HandCaptureModel {
                 lastActor = actor
                 ledgerArr.append(LedgerEntry(id: id, street: street, participant: actor,
                                              action: type, toAmount: committedOf(actor)))
-                resolveAfterAction()
+                handOver = resolveAfterAction()
 
             case .boardCard(let card):
                 // A board card only ever appears in the log while one is owed;
@@ -719,7 +725,7 @@ final class HandCaptureModel {
                 guard needed > 0 else { break }
                 boardArr.append(card)
                 needed -= 1
-                if needed == 0 { startNextStreet() }
+                if needed == 0 { handOver = startNextStreet() }
             }
         }
 
