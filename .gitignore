@@ -1,1 +1,7 @@
 tools/seeder/seeder
+
+# Machine-local / generated
+.DS_Store
+xcuserdata/
+tools/seeder/event.json
+.superpowers/
