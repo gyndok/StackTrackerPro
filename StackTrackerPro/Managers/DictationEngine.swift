@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 @preconcurrency import AVFoundation
 import Speech
 
@@ -31,20 +32,44 @@ final class DictationEngine {
     private var transcriber: SpeechTranscriber?
     private var resultsTask: Task<Void, Never>?
 
-    /// Bridges the audio-tap callback (an arbitrary, non-actor real-time
-    /// thread) into the analyzer's input stream. `AVAudioPCMBuffer` is not
-    /// `Sendable`, so hopping it into a `@MainActor` `Task` per buffer (as
-    /// the reference sketch did) fails Swift 6 strict concurrency checking
-    /// ("sending 'buffer' risks causing data races"). Instead this bridge
-    /// lives outside actor isolation — like `AnalyzerInput` itself, which
-    /// the SDK marks `@unchecked Sendable` — and the tap closure calls it
-    /// directly. AVAudioEngine invokes the tap serially on one thread, so
-    /// the unguarded mutable state here is safe in practice.
+    /// Incremented on every `start()`. The results task captures the value at
+    /// spawn time and refuses to touch engine state (transcripts or `state`)
+    /// once it no longer matches, so a stale task orphaned by a quick
+    /// stop→start cannot append text to — or write an error into — the new
+    /// session. `teardownAudio()` cancels the task but cannot await it (it is
+    /// not async), which is exactly the window this guard closes.
+    private var sessionGeneration = 0
+
+    /// Bridges the audio-tap callback (an arbitrary, non-actor thread) into
+    /// the analyzer's input stream. `AVAudioPCMBuffer` is not `Sendable`, so
+    /// hopping it into a `@MainActor` `Task` per buffer (as the reference
+    /// sketch did) fails Swift 6 strict concurrency checking ("sending
+    /// 'buffer' risks causing data races"). Instead this bridge lives outside
+    /// actor isolation — like `AnalyzerInput` itself, which the SDK marks
+    /// `@unchecked Sendable` — and the tap closure calls it directly.
+    ///
+    /// Safety argument for `@unchecked Sendable`:
+    /// - `isActive` is written from the MainActor (start/stop) while the tap
+    ///   thread reads it, so it is guarded by an `OSAllocatedUnfairLock`.
+    /// - `format` and `inputBuilder` are written by the MainActor only while
+    ///   no tap is installed: set before `installTap`, cleared by `reset()`
+    ///   only after `removeTap` (teardown removes the tap first). The tap
+    ///   thread therefore never overlaps a write.
+    /// - `converter` is created and used exclusively on the tap thread while
+    ///   the tap is installed; `reset()` clears it only after `removeTap`.
+    /// - `AsyncStream.Continuation` is itself Sendable/thread-safe, so the
+    ///   MainActor calling `finish()` concurrently with a tap-thread `yield`
+    ///   is fine.
     private final class AudioFeedBridge: @unchecked Sendable {
         var format: AVAudioFormat?
         var converter: AVAudioConverter?
         var inputBuilder: AsyncStream<AnalyzerInput>.Continuation?
-        var isActive = false
+
+        private let activeFlag = OSAllocatedUnfairLock(initialState: false)
+        var isActive: Bool {
+            get { activeFlag.withLock { $0 } }
+            set { activeFlag.withLock { $0 = newValue } }
+        }
 
         func feed(_ buffer: AVAudioPCMBuffer) {
             guard isActive, let format else { return }
@@ -64,6 +89,7 @@ final class DictationEngine {
             if error == nil { inputBuilder?.yield(AnalyzerInput(buffer: out)) }
         }
 
+        /// Only call after the tap has been removed (see safety argument).
         func reset() {
             isActive = false
             format = nil
@@ -77,6 +103,8 @@ final class DictationEngine {
     func start() async {
         guard state == .idle || state.isError else { return }
         finalizedTranscript = ""; volatileTranscript = ""
+        sessionGeneration += 1
+        let generation = sessionGeneration
 
         state = .requestingPermission
         guard await AVAudioApplication.requestRecordPermission() else {
@@ -104,10 +132,9 @@ final class DictationEngine {
             audioFeed.inputBuilder = builder
 
             resultsTask = Task { [weak self] in
-                guard let transcriber = self?.transcriber else { return }
                 do {
                     for try await result in transcriber.results {
-                        guard let self else { return }
+                        guard let self, self.sessionGeneration == generation else { return }
                         let text = String(result.text.characters)
                         if result.isFinal {
                             self.finalizedTranscript += text + " "
@@ -117,7 +144,9 @@ final class DictationEngine {
                         }
                     }
                 } catch {
-                    self?.state = .error("Transcription failed: \(error.localizedDescription)")
+                    guard !Task.isCancelled,
+                          let self, self.sessionGeneration == generation else { return }
+                    self.state = .error("Transcription failed: \(error.localizedDescription)")
                 }
             }
 
@@ -145,6 +174,10 @@ final class DictationEngine {
     func stop() async -> String {
         guard state == .listening else { return fullTranscript.trimmingCharacters(in: .whitespaces) }
         state = .stopping
+        // Remove the tap FIRST so the tap thread goes quiet before any other
+        // teardown state changes, then flag the bridge inactive and close the
+        // input stream so the analyzer can finalize what it already has.
+        audioEngine.inputNode.removeTap(onBus: 0)
         audioFeed.isActive = false
         audioFeed.inputBuilder?.finish()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
@@ -154,21 +187,34 @@ final class DictationEngine {
     }
 
     /// Tears down every resource `start()` may have acquired, however far it
-    /// got before succeeding or throwing. In particular `resultsTask` must be
+    /// got before succeeding or throwing. Order matters: the tap is removed
+    /// first so the tap thread can no longer race the rest of the teardown
+    /// (see AudioFeedBridge's safety argument). `resultsTask` must be
     /// cancelled here (not just in `stop()`): if `start()` fails after the
     /// task is created but before `analyzer.start(inputSequence:)` runs (e.g.
-    /// `audioEngine.start()` throws), the task's local `transcriber` binding
-    /// keeps it alive independent of `self.transcriber`, and it would await
+    /// `audioEngine.start()` throws), the task's captured `transcriber` keeps
+    /// it alive independent of `self.transcriber`, and it would await
     /// `transcriber.results` forever since nothing is ever feeding the
     /// analyzer. Calling this from both the success and failure paths avoids
     /// that leak.
     private func teardownAudio() {
-        resultsTask?.cancel()
-        resultsTask = nil
         audioEngine.inputNode.removeTap(onBus: 0)
         audioEngine.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        resultsTask?.cancel()
+        resultsTask = nil
         analyzer = nil; transcriber = nil
+        audioFeed.reset()
+    }
+
+    /// Backstop if the engine is deallocated mid-session (e.g. its owning
+    /// sheet is torn down without awaiting `stop()`): silence the tap and
+    /// stop the hardware. Stored properties are accessible from this
+    /// nonisolated deinit because the instance is uniquely referenced at
+    /// this point; none of these calls touch MainActor-isolated state.
+    deinit {
+        audioEngine.inputNode.removeTap(onBus: 0)
+        audioEngine.stop()
         audioFeed.reset()
     }
 }
