@@ -8,6 +8,9 @@ enum MappingIssue: Equatable, Identifiable {
     /// Hero cards were nil, unparseable, or only suit-agnostic (payload is the
     /// best canonical string we have, e.g. `"KQs"`).
     case unknownHeroCards(String)
+    /// The model already had a full set of hero cards (prefilled from a stub)
+    /// and the dictated cards differ from them (payload is the dictated string).
+    case conflictingHeroCards(String)
     /// A position string (hero's or a villain's) didn't resolve to a seat.
     case unknownPosition(String)
     /// A villain seat was already taken (by the hero or an earlier villain).
@@ -27,6 +30,7 @@ enum MappingIssue: Equatable, Identifiable {
     var id: String {
         switch self {
         case .unknownHeroCards(let s): return "unknownHeroCards:\(s)"
+        case .conflictingHeroCards(let s): return "conflictingHeroCards:\(s)"
         case .unknownPosition(let s): return "unknownPosition:\(s)"
         case .duplicateVillainSeat(let s): return "duplicateVillainSeat:\(s)"
         case .outOfTurnAction(let actor, let street): return "outOfTurnAction:\(actor):\(street)"
@@ -44,6 +48,8 @@ enum MappingIssue: Equatable, Identifiable {
             return s.isEmpty
                 ? "Couldn't read your hole cards — tap to pick them"
                 : "Pick suits for your \(s) — tap to set"
+        case .conflictingHeroCards:
+            return "Cards differ from stub — tap cards to change"
         case .unknownPosition(let s):
             return "Couldn't place the seat \"\(s)\" — tap to set"
         case .duplicateVillainSeat(let s):
@@ -113,14 +119,18 @@ enum VoiceHandMapper {
             }
         }
 
-        // Rules 4 + 5: actions interleaved with board.
+        // Rules 4 + 5: actions interleaved with board. A street that can't be
+        // dealt (wrong count / bad card) leaves `boardCardsNeeded > 0`, so every
+        // later `feedPendingBoard` re-enters on the same street; track which
+        // streets we've already flagged this run so each is reported at most once.
+        var flaggedBoardStreets: Set<HandStreet> = []
         for action in draft.actions {
-            feedPendingBoard(draft, to: model, issues: &issues)
+            feedPendingBoard(draft, to: model, issues: &issues, flaggedStreets: &flaggedBoardStreets)
             applyAction(action, to: model, issues: &issues)
         }
         // Any board the engine still owes (e.g. all-in run-out) after the last
         // action.
-        feedPendingBoard(draft, to: model, issues: &issues)
+        feedPendingBoard(draft, to: model, issues: &issues, flaggedStreets: &flaggedBoardStreets)
 
         // Rule 6: showdown holdings.
         for (spoken, id) in addedVillains {
@@ -128,14 +138,30 @@ enum VoiceHandMapper {
                   !shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
             let cards = PlayingCard.parseList(shown)
             let dealt = model.dealtCards
-            if cards.count == 2, cards.allSatisfy({ !dealt.contains($0) }) {
+            if cards.count == model.heroCardCount,
+               Set(cards).count == cards.count,
+               cards.allSatisfy({ !dealt.contains($0) }) {
                 model.setShownHolding(cards, for: id)
             } else {
                 issues.append(.unknownShownCards(actor: spoken.position ?? "villain", text: shown))
             }
         }
 
-        return issues
+        // Payload-only ids mean cascading anomalies (e.g. a boardMismatch re-hit
+        // across streets, or twin out-of-turn actions) can collide; de-duplicate
+        // by id, preserving first-seen order, so the UI's ForEach + per-chip
+        // removal stay well-defined.
+        return deduplicated(issues)
+    }
+
+    /// Order-preserving de-duplication of issues by `id`.
+    private static func deduplicated(_ issues: [MappingIssue]) -> [MappingIssue] {
+        var seen: Set<String> = []
+        var result: [MappingIssue] = []
+        for issue in issues where seen.insert(issue.id).inserted {
+            result.append(issue)
+        }
+        return result
     }
 
     // MARK: - Hero cards
@@ -143,6 +169,34 @@ enum VoiceHandMapper {
     private static func applyHeroCards(_ draft: ParsedHandDraft, to model: HandCaptureModel,
                                        issues: inout [MappingIssue]) {
         let raw = draft.heroCards ?? ""
+        let count = model.heroCardCount
+
+        // Stub-prefilled: the model already carries a full hand of exact cards.
+        // `addCard` would silently no-op (the cap is full), so instead compare the
+        // dictated cards to what's there — a match is a harmless restatement, a
+        // difference (or anything unparseable) is a conflict for the user to fix.
+        if model.heroCards.count == count {
+            let dictated = dictatedExactCards(raw, count: count)
+            if !dictated.isEmpty, Set(dictated) == Set(model.heroCards) {
+                return
+            }
+            issues.append(.conflictingHeroCards(raw))
+            return
+        }
+
+        // PLO: a perfectly dictated 4-card hand can't go through the 2-card
+        // shorthand grammar, so parse it directly.
+        if count == 4 {
+            let cards = PlayingCard.parseList(raw)
+            if cards.count == 4, Set(cards).count == 4 {
+                for card in cards { model.addCard(card) }   // respects heroCardCount + dealt
+            } else {
+                issues.append(.unknownHeroCards(raw))
+            }
+            return
+        }
+
+        // Hold'em: 2-card shorthand grammar.
         guard let normalized = HoleCardShorthand.normalize(raw) else {
             issues.append(.unknownHeroCards(raw))
             return
@@ -154,6 +208,18 @@ enum VoiceHandMapper {
             // Suit-agnostic (e.g. "KQs", "99"): leave cards empty, chip picks suits.
             issues.append(.unknownHeroCards(normalized))
         }
+    }
+
+    /// Parses `raw` into exactly `count` distinct exact cards, or `[]` if it
+    /// isn't a clean exact hand of that size (hold'em 2 / PLO 4). Used to compare
+    /// dictated cards against stub-prefilled ones.
+    private static func dictatedExactCards(_ raw: String, count: Int) -> [PlayingCard] {
+        if count == 2 {
+            guard let normalized = HoleCardShorthand.normalize(raw) else { return [] }
+            return HoleCardShorthand.exactCards(normalized)
+        }
+        let cards = PlayingCard.parseList(raw)
+        return cards.count == count && Set(cards).count == count ? cards : []
     }
 
     // MARK: - Actions
@@ -254,7 +320,8 @@ enum VoiceHandMapper {
     /// single call while live betting stops after one street (the engine then
     /// hands the turn back to a player and `boardCardsNeeded` drops to 0).
     private static func feedPendingBoard(_ draft: ParsedHandDraft, to model: HandCaptureModel,
-                                         issues: inout [MappingIssue]) {
+                                         issues: inout [MappingIssue],
+                                         flaggedStreets: inout Set<HandStreet>) {
         while model.boardCardsNeeded > 0 {
             let dealtOnBoard = model.board.count
             let street: HandStreet
@@ -263,15 +330,21 @@ enum VoiceHandMapper {
             else if dealtOnBoard < 4 { street = .turn; source = draft.turn }
             else { street = .river; source = draft.river }
 
+            // A street already flagged this run is a permanent stall (the bad
+            // board still owes cards): stop, don't re-report the same issue.
+            guard !flaggedStreets.contains(street) else { break }
+
             let cards = PlayingCard.parseList(source ?? "")
             guard cards.count == model.boardCardsNeeded else {
                 issues.append(.boardMismatch(street.label))
+                flaggedStreets.insert(street)
                 break
             }
             var stalled = false
             for card in cards {
                 if !model.addBoardCard(card) {
                     issues.append(.invalidCard(text: card.raw, place: street.label))
+                    flaggedStreets.insert(street)
                     stalled = true
                     break
                 }

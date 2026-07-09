@@ -19,6 +19,11 @@ struct DictationSheet: View {
     /// Transient hint shown in the transcript placeholder after Done was
     /// tapped with nothing captured; cleared as soon as new speech arrives.
     @State private var showEmptyHint = false
+    /// Set once Cancel is tapped so an in-flight parse that resolves after
+    /// dismissal doesn't still fire `onResult`.
+    @State private var cancelled = false
+    /// The in-flight parse task, held so Cancel can cancel it.
+    @State private var parseTask: Task<Void, Never>?
 
     private enum Phase: Equatable {
         case recording
@@ -199,7 +204,7 @@ struct DictationSheet: View {
         case .unavailable, .parseError:
             VStack(spacing: 12) {
                 Button("Retry") {
-                    Task { await runParse() }
+                    parseTask = Task { await runParse() }
                 }
                 .buttonStyle(PokerButtonStyle(isEnabled: true))
                 Button("Cancel") { cancel() }
@@ -212,7 +217,7 @@ struct DictationSheet: View {
     // MARK: - Actions
 
     private func doneBuildHand() {
-        Task {
+        parseTask = Task {
             let transcript = await engine.stop()
             guard !transcript.isEmpty else {
                 // Nothing captured — say so and resume listening rather than
@@ -234,6 +239,9 @@ struct DictationSheet: View {
         phase = .parsing
         do {
             let draft = try await HandTranscriptParser.shared.parse(transcript: capturedTranscript, context: context)
+            // Cancel may have fired (and the sheet dismissed) while the parse was
+            // in flight; don't push a result into a torn-down flow.
+            guard !cancelled else { return }
             onResult(draft)
             dismiss()
         } catch {
@@ -242,6 +250,8 @@ struct DictationSheet: View {
     }
 
     private func cancel() {
+        cancelled = true
+        parseTask?.cancel()
         Task { await engine.stop() }
         dismiss()
     }

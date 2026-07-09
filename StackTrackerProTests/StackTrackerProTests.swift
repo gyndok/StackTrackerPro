@@ -2393,6 +2393,20 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertTrue(instructions.lowercased().contains("only the transcript provided"))
     }
 
+    /// Cash / no-blinds context (bigBlind == 0): the instructions must not assert
+    /// "blinds are 0/0" or carry the blinds-scaling guidance, but must keep the
+    /// hero stack when it's known.
+    func testHandTranscriptInstructionsOmitBlindsForZeroContext() {
+        let ctx = HandContext(levelNumber: 0, smallBlind: 0, bigBlind: 0,
+                              ante: 0, heroStack: 120_000, heroCardCount: 2)
+        let instructions = HandTranscriptParser.instructions(for: ctx)
+        XCTAssertFalse(instructions.contains("0/0"))
+        XCTAssertFalse(instructions.lowercased().contains("blinds are"))
+        XCTAssertFalse(instructions.contains("scaled to the stakes"))
+        XCTAssertTrue(instructions.contains("120,000"))         // hero stack retained
+        XCTAssertTrue(instructions.lowercased().contains("only the transcript provided"))
+    }
+
     func testHandTranscriptParserParsesReferenceHand() async throws {
         let parser = HandTranscriptParser.shared
         try XCTSkipUnless(parser.isAvailable, "on-device model unavailable")
@@ -2670,7 +2684,11 @@ final class HandTranscriptParserTests: XCTestCase {
     }
 
     /// A flop string with the wrong number of cards is flagged `boardMismatch`
-    /// and no partial board is dealt for that street.
+    /// and no partial board is dealt for that street. With post-board actions
+    /// present, `feedPendingBoard` re-enters the still-owed bad street on every
+    /// action, and twin out-of-turn actions share a payload-only id — the flagged
+    /// -street guard plus the id de-duplication must collapse both: exactly ONE
+    /// `boardMismatch("Flop")` and no duplicate ids in the returned array.
     @MainActor
     func testMapperFlagsBoardMismatchOnWrongFlopCount() {
         let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
@@ -2678,15 +2696,25 @@ final class HandTranscriptParserTests: XCTestCase {
         var draft = emptyDraft()
         draft.heroPosition = "BTN"
         draft.heroCards = "Ah Kd"
-        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: 40_000, shownCards: nil)]
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: nil)]
         draft.actions = [
-            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 40_000, isAllIn: true),
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 600, isAllIn: false),
             SpokenAction(actor: "hero", street: "preflop", action: "call", amount: nil, isAllIn: false),
+            // Flop is owed but unparseable; these two never place (board isn't
+            // dealt, so it's nobody's turn) and both fold into the same
+            // outOfTurnAction(actor:"UTG", street:"flop") id.
+            SpokenAction(actor: "UTG", street: "flop", action: "bet", amount: 500, isAllIn: false),
+            SpokenAction(actor: "UTG", street: "flop", action: "bet", amount: 300, isAllIn: false),
         ]
         draft.flop = "Jh 8h"   // only two cards where three are needed
         let issues = VoiceHandMapper.apply(draft, to: model)
         XCTAssertEqual(model.board.count, 0)
-        XCTAssertTrue(issues.contains { if case .boardMismatch = $0 { return true }; return false })
+        let boardMismatches = issues.filter {
+            if case .boardMismatch(let s) = $0 { return s == "Flop" }
+            return false
+        }
+        XCTAssertEqual(boardMismatches.count, 1, "boardMismatch(\"Flop\") re-reported")
+        XCTAssertEqual(Set(issues.map(\.id)).count, issues.count, "duplicate issue ids: \(issues.map(\.id))")
     }
 
     /// Verb normalization: a preflop open spoken as "bet" must map cleanly —
@@ -2775,6 +2803,91 @@ final class HandTranscriptParserTests: XCTestCase {
         let issues = VoiceHandMapper.apply(draft, to: model)
         XCTAssertTrue(model.ledger.isEmpty)
         XCTAssertTrue(issues.contains { if case .missingAmount = $0 { return true }; return false })
+    }
+
+    // MARK: - PLO (4-card) hero + villain cards
+
+    /// A perfectly dictated 4-card PLO hand parses directly (bypassing the
+    /// 2-card shorthand grammar) and all four cards apply.
+    @MainActor
+    func testMapperAppliesFourCardPLOHeroHand() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 4, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh Qd Jc"
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.heroCards.map(\.raw), ["Ah", "Kh", "Qd", "Jc"])
+        XCTAssertFalse(issues.contains { if case .unknownHeroCards = $0 { return true }; return false })
+        XCTAssertFalse(issues.contains { if case .conflictingHeroCards = $0 { return true }; return false })
+    }
+
+    /// A PLO hand missing a card (3 where 4 are needed) is left empty and flagged
+    /// `unknownHeroCards` rather than partially applied.
+    @MainActor
+    func testMapperFlagsThreeCardPLOHeroAsUnknown() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 4, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh Qd"   // only three cards
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(model.heroCards.isEmpty)
+        XCTAssertTrue(issues.contains { if case .unknownHeroCards = $0 { return true }; return false })
+    }
+
+    /// A PLO villain's 4-card shown holding at showdown sets correctly (the gate
+    /// keys off `heroCardCount`, not a hardcoded 2).
+    @MainActor
+    func testMapperSetsFourCardPLOVillainShownHolding() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 4, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh Qd Jc"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers",
+                                        approxStack: nil, shownCards: "2c 3d 4h 5s")]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        let villain = try XCTUnwrap(model.villains.first)
+        XCTAssertEqual(villain.shownHolding.map(\.raw), ["2c", "3d", "4h", "5s"])
+        XCTAssertFalse(issues.contains { if case .unknownShownCards = $0 { return true }; return false })
+    }
+
+    // MARK: - Stub-prefilled hero cards
+
+    /// When the model was seeded from a stub that already prefilled exact hole
+    /// cards, dictating DIFFERENT cards can't silently no-op through `addCard`;
+    /// it must surface `conflictingHeroCards` and leave the existing cards intact.
+    @MainActor
+    func testMapperFlagsConflictWhenDictatedCardsDifferFromStub() {
+        let stub = HandStub(levelNumber: 1, smallBlind: 100, bigBlind: 200, ante: 200,
+                            heroStackBefore: 40_000, playersRemaining: 9,
+                            holeCards: "Ah Kd", origin: .manual)
+        let model = HandCaptureModel(stub: stub, heroCardCount: 2)
+        XCTAssertEqual(model.heroCards.map(\.raw), ["Ah", "Kd"])
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Qs Qh"   // differs from the stub's Ah Kd
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.heroCards.map(\.raw), ["Ah", "Kd"], "stub cards must be untouched")
+        XCTAssertTrue(issues.contains { if case .conflictingHeroCards = $0 { return true }; return false })
+    }
+
+    /// Dictating the SAME cards the stub prefilled is a harmless restatement:
+    /// no conflict, cards unchanged.
+    @MainActor
+    func testMapperNoConflictWhenDictatedCardsMatchStub() {
+        let stub = HandStub(levelNumber: 1, smallBlind: 100, bigBlind: 200, ante: 200,
+                            heroStackBefore: 40_000, playersRemaining: 9,
+                            holeCards: "Ah Kd", origin: .manual)
+        let model = HandCaptureModel(stub: stub, heroCardCount: 2)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Kd Ah"   // same set, different order
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertEqual(model.heroCards.map(\.raw), ["Ah", "Kd"])
+        XCTAssertFalse(issues.contains { if case .conflictingHeroCards = $0 { return true }; return false })
+        XCTAssertFalse(issues.contains { if case .unknownHeroCards = $0 { return true }; return false })
     }
 
     // MARK: - DictationEngine (Voice Hand Entry Task 3)

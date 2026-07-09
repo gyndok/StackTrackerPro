@@ -201,33 +201,52 @@ private func makeInstructions(for context: HandContext) -> String {
     // regardless of the device locale — the prompt (and its deterministic
     // test) must not change with the environment.
     let style = IntegerFormatStyle<Int>.number.locale(Locale(identifier: "en_US"))
-    let blinds = "\(context.smallBlind.formatted(style))/\(context.bigBlind.formatted(style))"
-    let heroStack = context.heroStack.formatted(style)
-    return """
+    let hasBlinds = context.bigBlind > 0
+
+    // Cash-game / no-context hands carry no meaningful level or blinds; asserting
+    // "blinds are 0/0" would mislead the model (and there's nothing to scale
+    // spoken numbers against), so omit both the blinds sentence and the
+    // blinds-scaling guidance entirely in that case.
+    var contextSentences = "Table context for this hand:"
+    if hasBlinds {
+        let blinds = "\(context.smallBlind.formatted(style))/\(context.bigBlind.formatted(style))"
+        contextSentences += " Level \(context.levelNumber), blinds are \(blinds) "
+            + "with a \(context.ante.formatted(style)) ante."
+    }
+    if context.heroStack > 0 {
+        contextSentences += " Hero's stack is \(context.heroStack.formatted(style))."
+    }
+    contextSentences += " Hero was dealt \(context.heroCardCount) hole card(s)."
+
+    var paragraphs: [String] = []
+    paragraphs.append("""
         Parse ONLY the transcript provided into a structured poker hand. Never \
         invent actions, villains, cards, or streets that were not stated — if a \
         value is not explicitly said, leave it null. Treat the transcript in \
         isolation.
-
-        Table context for this hand: Level \(context.levelNumber), blinds are \
-        \(blinds) with a \(context.ante.formatted(style)) ante. \
-        Hero's stack is \(heroStack). Hero was dealt \(context.heroCardCount) hole card(s).
-
+        """)
+    paragraphs.append(contextSentences)
+    paragraphs.append("""
         Cards must be written in canonical two-character form: rank followed by \
         suit letter (s/h/d/c), space-separated for multiple cards — for example a \
         flop of jack of hearts, eight of hearts, four of diamonds is written \
         "Jh 8h 4d".
-
-        Spoken numbers are chip amounts scaled to the stakes above, not literal \
-        decimals: "seventy five" or "seventy five K" near these stakes means \
-        75,000; "five one" means 51,000 when it is a bet or raise amount, not 5.1. \
-        Use judgement based on the blinds and stacks given above to disambiguate \
-        shorthand chip counts.
-
+        """)
+    if hasBlinds {
+        paragraphs.append("""
+            Spoken numbers are chip amounts scaled to the stakes above, not literal \
+            decimals: "seventy five" or "seventy five K" near these stakes means \
+            75,000; "five one" means 51,000 when it is a bet or raise amount, not 5.1. \
+            Use judgement based on the blinds and stacks given above to disambiguate \
+            shorthand chip counts.
+            """)
+    }
+    paragraphs.append("""
         "Jam", "shove", and "ship" all mean the action was all-in. A phrase like \
         "he had me covered" or "he covered me" means that villain's relativeStack \
         is 'covers'.
-
+        """)
+    paragraphs.append("""
         Identifying the hero: the hero is the narrator speaking in first person \
         ("I", "me", "my"). heroPosition is the seat the hero explicitly says they \
         were in (e.g. "I had kings on the button" → heroPosition is BTN, "in the \
@@ -237,11 +256,13 @@ private func makeInstructions(for context: HandContext) -> String {
         cards mentioned elsewhere in the transcript — a seat name like "UTG" used \
         to describe an opponent's action is that opponent's position, never the \
         hero's, even if it appears right after the hero's own sentence.
-
+        """)
+    paragraphs.append("""
         Worked disambiguation example: in "I had kings on the button, king of \
         hearts king of diamonds. UTG covered me and raised to seventy five \
         thousand", the hero's position is BTN and heroCards is "Kh Kd" — "UTG" \
         here names the opponent who acted, not the hero, even though the \
         sentence also contains the word "me".
-        """
+        """)
+    return paragraphs.joined(separator: "\n\n")
 }
