@@ -508,3 +508,20 @@ private extension DictationEngine.State {
 - **Placeholder scan:** clean — every code step has concrete code; T4/T5 UI steps specify exact behaviors and bindings.
 - **Type consistency:** `ParsedHandDraft/SpokenVillain/SpokenAction` (T1) consumed by T2 tests/mapper and T4 `onResult`; `HandContext` produced T1, consumed T4; `MappingIssue.id/.label` used by T4 chips; `DictationEngine.state/fullTranscript/start/stop` used by T4 sheet; `autoStartDictation` produced T4, consumed T5.
 - **Known risk, named:** SpeechAnalyzer SDK-signature drift (T3) — explicitly instructed to adapt-and-document or BLOCK, never improvise architecture.
+
+---
+
+> **STATUS: EXECUTED 2026-07-09** (commits c6a593c..3f8c13d, all 6 tasks complete, final whole-branch review READY after fix rounds; suite 144/144; schema-neutral — no CloudKit deploy needed for this feature).
+
+## Device Checklist (run on iPhone — the true acceptance test)
+
+1. First mic tap (Capture Screen toolbar) → permission prompt shows "StackTrackerPro uses the microphone to dictate poker hands for the hand logger."
+2. First use downloads the speech model once; subsequent dictations start in <2s.
+3. Speak the Event #86 reference hand (~20s): "I had kings on the button, king of hearts king of diamonds. UTG covered me and raised to seventy five thousand, I three-bet to two hundred K, he jammed, I called. Board came jack of hearts eight of hearts four of diamonds, deuce of clubs, three of spades. He showed nine ten of hearts." → Capture Screen populates: KK on BTN, UTG covers, the 3-bet/jam/call line, full board, 9T shown, pot 840K, winner Hero — with ≤2 disambiguation chips (spec F4 acceptance).
+4. Fix one sizing by tap after dictating (hybrid voice+tap check).
+5. Airplane mode: dictate → parse → populate all still work (fully on-device).
+6. Save → stack pushes to tracker → stub (if launched from one) shows enriched.
+7. Stub-sheet "Talk instead" → sheet dismisses → capture cover presents with dictation auto-started (the 0.4s handoff).
+8. Pending-row mic → capture opens on the stub's context, dictation auto-starts; dictating WITHOUT restating cards keeps the stub's cards with no spurious chip.
+9. Rapid cancel → immediately re-dictate (twice) — no audio-session error, mic indicator clears.
+10. PLO tournament: dictate a 4-card hand — all four cards land.
