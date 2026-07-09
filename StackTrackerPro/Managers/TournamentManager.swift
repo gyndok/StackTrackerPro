@@ -346,6 +346,42 @@ final class TournamentManager {
         save()
     }
 
+    // MARK: - Hand Stubs
+
+    @discardableResult
+    func createHandStub(holeCards: String,
+                        quickResult: QuickResult? = nil,
+                        quickVillain: QuickVillain? = nil,
+                        origin: StubOrigin = .manual) -> HandStub? {
+        guard let tournament = mutableTournament else { return nil }
+        let blinds = tournament.currentBlinds
+        let stub = HandStub(
+            levelNumber: tournament.currentBlindLevelNumber,
+            smallBlind: blinds?.smallBlind ?? 0,
+            bigBlind: blinds?.bigBlind ?? 0,
+            ante: blinds?.ante ?? 0,
+            heroStackBefore: tournament.latestStack?.chipCount ?? 0,
+            playersRemaining: tournament.playersRemaining,
+            holeCards: holeCards,
+            origin: origin
+        )
+        if let quickResult { stub.quickResultRaw = quickResult.rawValue }
+        if let quickVillain { stub.quickVillainRaw = quickVillain.rawValue }
+        tournament.handStubs?.append(stub)
+        save()
+        return stub
+    }
+
+    func attachCards(_ cards: String, to stub: HandStub) {
+        stub.holeCards = cards
+        save()
+    }
+
+    func dismissStub(_ stub: HandStub) {
+        stub.setStatus(.dismissed)
+        save()
+    }
+
     func setCurrentLevel(_ levelNumber: Int) {
         guard let tournament = mutableTournament else { return }
         let previousLevel = tournament.currentBlindLevelNumber

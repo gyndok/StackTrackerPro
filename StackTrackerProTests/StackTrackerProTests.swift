@@ -1214,6 +1214,34 @@ final class TournamentEventTests: XCTestCase {
         XCTAssertEqual(playerEvents.count, 1)
         XCTAssertEqual(playerEvents.first?.intValue, 1)
     }
+
+    @MainActor
+    func testCreateHandStubSnapshotsLiveContext() throws {
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 390_000)
+        manager.updateField(playersRemaining: 43)
+
+        let stub = manager.createHandStub(holeCards: "KQs", quickResult: .won,
+                                          quickVillain: .covered, origin: .manual)
+        XCTAssertNotNil(stub)
+        XCTAssertEqual(stub?.levelNumber, 21)
+        XCTAssertEqual(stub?.smallBlind, 10_000)
+        XCTAssertEqual(stub?.bigBlind, 25_000)
+        XCTAssertEqual(stub?.ante, 25_000)
+        XCTAssertEqual(stub?.heroStackBefore, 390_000)
+        XCTAssertEqual(stub?.playersRemaining, 43)
+        XCTAssertEqual(tournament.pendingStubs.count, 1)
+
+        manager.attachCards("Ah Kd", to: stub!)
+        XCTAssertEqual(stub?.holeCards, "Ah Kd")
+
+        manager.dismissStub(stub!)
+        XCTAssertEqual(stub?.status, .dismissed)
+        XCTAssertTrue(tournament.pendingStubs.isEmpty)
+    }
 }
 
 // MARK: - Structure library
