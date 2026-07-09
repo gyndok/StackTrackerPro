@@ -30,6 +30,14 @@ struct HandCaptureView: View {
     @State private var showStackPad = false
     @State private var stackPadText = ""
     @State private var villainEditorTarget: VillainEditorTarget?
+    /// Villain currently showing the "Shown cards" editor, opened from the
+    /// villain row's always-enabled "eye" button (see `villainSection`).
+    /// Deliberately separate from `villainEditorTarget`: that editor's chip
+    /// disables once the villain has acted (editing is remove-and-re-add,
+    /// which would drop their ledger entries), but shown cards are not a
+    /// replay input — they must stay settable regardless of `hasActed`
+    /// (all-in hands routinely reveal cards before the runout finishes).
+    @State private var shownCardsTarget: UUID?
     @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
     @State private var showDictation = false
@@ -204,6 +212,16 @@ struct HandCaptureView: View {
                     }
                     .quickChip()
                     .disabled(hasActed)
+                    // Always enabled — unlike the chip above, setting a shown
+                    // holding is never a replay input, so it must stay
+                    // reachable even after the villain has acted (all-ins
+                    // routinely show cards before the runout completes).
+                    Button {
+                        shownCardsTarget = shownCardsTarget == villain.id ? nil : villain.id
+                    } label: {
+                        Image(systemName: "eye")
+                    }
+                    .foregroundColor(.goldAccent)
                     Spacer()
                     Button {
                         if hasActed {
@@ -215,6 +233,11 @@ struct HandCaptureView: View {
                         Image(systemName: "minus.circle")
                     }
                     .foregroundColor(.chipRed)
+                }
+                if shownCardsTarget == villain.id {
+                    VillainShownCardsEditor(model: model, villainID: villain.id) {
+                        shownCardsTarget = nil
+                    }
                 }
             }
             Button {
@@ -440,6 +463,39 @@ private struct NarrationBar: View {
     }
 }
 
+// MARK: - Card chip
+
+/// A single dealt/held card rendered as a chip — the shared look used for the
+/// hero's hole cards, the board-so-far row, and a villain's shown holding. An
+/// optional trailing "x" removes the card via `onRemove` when the caller
+/// allows it (the board row only wires this up for the last card, and only
+/// when `HandCaptureModel.lastInputWasBoardCard` — see `BoardEntry`).
+private struct CardChip: View {
+    let card: PlayingCard
+    var onRemove: (() -> Void)?
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Text(card.display)
+                .font(PokerTypography.statValue)
+                .foregroundColor(card.isRed ? .red : .textPrimary)
+                .frame(width: 48, height: 60)
+                .background(Color.backgroundPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.chipRed)
+                        .background(Circle().fill(Color.backgroundPrimary))
+                }
+                .buttonStyle(.plain)
+                .offset(x: 8, y: -8)
+            }
+        }
+    }
+}
+
 // MARK: - Hero strip
 
 private struct HeroStrip: View {
@@ -459,12 +515,7 @@ private struct HeroStrip: View {
 
             HStack(spacing: 8) {
                 ForEach(model.heroCards, id: \.self) { card in
-                    Text(card.display)
-                        .font(PokerTypography.statValue)
-                        .foregroundColor(card.isRed ? .red : .textPrimary)
-                        .frame(width: 48, height: 60)
-                        .background(Color.backgroundPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    CardChip(card: card)
                 }
                 if model.heroCards.count < model.heroCardCount, let stubHint {
                     Text("Stub: \(stubHint)")
@@ -577,6 +628,54 @@ private struct VillainInlineEditor: View {
         model.addVillain(position: position, relative: relative, approxStack: approxStack)
         HapticFeedback.impact(.light)
         onDone()
+    }
+}
+
+/// Lets a villain's shown holding be entered (or cleared) at any point in the
+/// hand — including mid-runout all-ins, where cards get shown before the
+/// board finishes — regardless of whether the villain has already acted.
+/// Opened from the always-enabled "eye" button next to the villain chip
+/// (see `HandCaptureView.villainSection`), not the position/stack editor,
+/// which locks after `hasActed` since it replaces the villain's identity.
+private struct VillainShownCardsEditor: View {
+    let model: HandCaptureModel
+    let villainID: UUID
+    let onDone: () -> Void
+
+    private var villain: HandCaptureModel.VillainDraft? {
+        model.villains.first { $0.id == villainID }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Shown Cards").font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
+                Spacer()
+                Button("Done", action: onDone)
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+            }
+            if let villain, !villain.shownHolding.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(villain.shownHolding, id: \.self) { card in
+                        CardChip(card: card) {
+                            model.setShownHolding(villain.shownHolding.filter { $0 != card }, for: villainID)
+                        }
+                    }
+                    Spacer()
+                    Button("Clear") { model.setShownHolding([], for: villainID) }
+                        .font(.caption)
+                        .foregroundColor(.chipRed)
+                }
+            }
+            if let villain, villain.shownHolding.count < model.heroCardCount {
+                CardPickerGrid(dealt: model.dealtCards) { card in
+                    guard let current = self.villain else { return }
+                    model.setShownHolding(current.shownHolding + [card], for: villainID)
+                }
+            }
+        }
+        .padding(.top, 4)
     }
 }
 
@@ -783,14 +882,28 @@ private struct BoardEntry: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("\(model.currentStreet.label) card\(model.boardCardsNeeded > 1 ? "s (\(model.boardCardsNeeded))" : "")")
+            Text("\(model.streetBeingDealt.label) card\(model.boardCardsNeeded > 1 ? "s (\(model.boardCardsNeeded))" : "")")
                 .font(PokerTypography.sectionHeader)
                 .foregroundColor(.goldAccent)
+            if !model.board.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(model.board, id: \.self) { card in
+                        CardChip(card: card, onRemove: isLastPick(card) ? { model.undoLast() } : nil)
+                    }
+                }
+            }
             CardPickerGrid(dealt: model.dealtCards) { card in
                 if model.addBoardCard(card) { HapticFeedback.impact(.light) }
             }
         }
         .pokerCard()
+    }
+
+    /// Only the very last dealt board card is removable, and only while it is
+    /// genuinely the last thing entered (see `lastInputWasBoardCard`) — never
+    /// an earlier street's card, which would corrupt the replay.
+    private func isLastPick(_ card: PlayingCard) -> Bool {
+        card == model.board.last && model.lastInputWasBoardCard
     }
 }
 

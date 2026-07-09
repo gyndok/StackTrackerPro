@@ -225,6 +225,38 @@ final class HandCaptureModel {
         rebuild()
     }
 
+    /// True when the most recently recorded input is a board card rather than
+    /// an action. The view uses this to gate an inline "remove" affordance on
+    /// the last board-card chip: `undoLast()` only rewinds a mispicked card
+    /// when it is genuinely the last thing entered — if an action was taken
+    /// after the card (e.g. a check on the new street), undoing would instead
+    /// wipe that action, which would be surprising and is never what an inline
+    /// per-card delete should do. Deeper rewinds still go through the toolbar
+    /// undo / ledger truncate.
+    var lastInputWasBoardCard: Bool {
+        if case .boardCard = inputs.last { return true }
+        return false
+    }
+
+    /// The street whose cards are currently owed, derived from how many board
+    /// cards have already been dealt (0/1/2 → flop, 3 → turn, 4 → river).
+    ///
+    /// This is distinct from `currentStreet`: `currentStreet` is the street of
+    /// the last *completed betting round* and only advances in `rebuild()`'s
+    /// `startNextStreet()`, which runs once the owed cards have actually been
+    /// dealt — not the moment they become owed. So while `boardCardsNeeded >
+    /// 0`, `currentStreet` still names the street that just finished acting
+    /// (e.g. it reads `.flop` while the turn card is owed, and `.turn` while
+    /// the river card is owed). `streetBeingDealt` is the one computed source
+    /// of truth for "what street's card(s) am I picking right now."
+    var streetBeingDealt: HandStreet {
+        switch board.count {
+        case 0, 1, 2: return .flop
+        case 3: return .turn
+        default: return .river
+        }
+    }
+
     /// Drops the ledger entry at `index` and every input after it (later actions
     /// and board cards), then replays.
     func truncate(toLedgerIndex index: Int) {

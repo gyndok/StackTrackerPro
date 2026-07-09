@@ -2073,6 +2073,87 @@ final class HandCaptureModelTests: XCTestCase {
         let stale = HandCaptureModel(stub: stub, heroCardCount: 2, trackerStackAtOpen: 985_000)
         XCTAssertFalse(stale.shouldPushStackUpdate)
     }
+
+    // MARK: Board-entry UX fixes (Findings 2 & 3)
+
+    /// `streetBeingDealt` maps board.count → the street actually being dealt
+    /// (0/1/2 → flop, 3 → turn, 4 → river), independent of `currentStreet`,
+    /// which lags a street behind while cards are owed.
+    func testStreetBeingDealtMapsBoardCountToStreet() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .co, relative: .similar, approxStack: 0)
+        model.add(action: .call, toAmount: 0)          // CO calls the BB
+        model.add(action: .call, toAmount: 0)          // hero calls to close
+
+        // Awaiting the flop (board empty): dealt street is flop, even though
+        // `currentStreet` is still `.preflop` at this point.
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        XCTAssertEqual(model.currentStreet, .preflop)
+        XCTAssertEqual(model.streetBeingDealt, .flop)
+
+        XCTAssertTrue(model.addBoardCard(PlayingCard("2c")!))
+        XCTAssertEqual(model.streetBeingDealt, .flop)          // 1 of 3 flop cards dealt
+        XCTAssertTrue(model.addBoardCard(PlayingCard("7d")!))
+        XCTAssertEqual(model.streetBeingDealt, .flop)          // 2 of 3
+        XCTAssertTrue(model.addBoardCard(PlayingCard("9s")!))
+        XCTAssertEqual(model.currentStreet, .flop)
+
+        // Flop action closes with a check-check → turn is owed. `currentStreet`
+        // still reads `.flop` here (the bug: it would mislabel the turn pick as
+        // a flop pick), but `streetBeingDealt` correctly reports `.turn`.
+        model.add(action: .check, toAmount: 0)
+        model.add(action: .check, toAmount: 0)
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertEqual(model.currentStreet, .flop)
+        XCTAssertEqual(model.streetBeingDealt, .turn)
+
+        XCTAssertTrue(model.addBoardCard(PlayingCard("Ts")!))
+        XCTAssertEqual(model.currentStreet, .turn)
+
+        // Turn action closes → river is owed. `currentStreet` still reads
+        // `.turn` (the other half of the bug report), `streetBeingDealt` is
+        // `.river`.
+        model.add(action: .check, toAmount: 0)
+        model.add(action: .check, toAmount: 0)
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertEqual(model.currentStreet, .turn)
+        XCTAssertEqual(model.streetBeingDealt, .river)
+    }
+
+    /// `lastInputWasBoardCard` is true only immediately after a board card is
+    /// dealt, and flips false the moment any action is recorded afterward —
+    /// interleaving board cards and actions must not leave it stuck true.
+    func testLastInputWasBoardCardTracksInterleavedInputs() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .co, relative: .similar, approxStack: 0)
+
+        XCTAssertFalse(model.lastInputWasBoardCard)            // no inputs yet
+        model.add(action: .call, toAmount: 0)
+        XCTAssertFalse(model.lastInputWasBoardCard)             // last input is an action
+        model.add(action: .call, toAmount: 0)
+        XCTAssertFalse(model.lastInputWasBoardCard)
+
+        XCTAssertTrue(model.addBoardCard(PlayingCard("2c")!))
+        XCTAssertTrue(model.lastInputWasBoardCard)              // last input is the card just dealt
+        XCTAssertTrue(model.addBoardCard(PlayingCard("7d")!))
+        XCTAssertTrue(model.lastInputWasBoardCard)
+        XCTAssertTrue(model.addBoardCard(PlayingCard("9s")!))
+        XCTAssertTrue(model.lastInputWasBoardCard)              // flop complete, still last input
+
+        // An action after the flop completes flips it false again.
+        model.add(action: .check, toAmount: 0)
+        XCTAssertFalse(model.lastInputWasBoardCard)
+
+        // Undoing that action restores the board card as the last input.
+        model.undoLast()
+        XCTAssertTrue(model.lastInputWasBoardCard)
+    }
 }
 
 // MARK: - HandCaptureModel result flow + save (Task 13)
