@@ -16,6 +16,7 @@ struct ActiveSessionView: View {
     @State private var showEditResult = false
     @State private var recapFile: RecapFile?
     @State private var recapExportError = false
+    @State private var showStubSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -80,7 +81,8 @@ struct ActiveSessionView: View {
                     text: $messageText,
                     isProcessing: chatManager.isProcessing,
                     onSend: sendMessage,
-                    onQuickAction: handleQuickAction
+                    onQuickAction: handleQuickAction,
+                    onStub: { showStubSheet = true }
                 )
             }
         }
@@ -239,6 +241,13 @@ struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showBreakTimer) {
             BreakTimerSheet(tournament: tournament)
+        }
+        .sheet(isPresented: $showStubSheet) {
+            HandStubSheet { cards, result, villain in
+                tournamentManager.createHandStub(holeCards: cards, quickResult: result,
+                                                 quickVillain: villain, origin: .manual)
+                HapticFeedback.impact(.light)
+            }
         }
         .sheet(isPresented: $showEditResult) {
             EditResultSheet(tournament: tournament)

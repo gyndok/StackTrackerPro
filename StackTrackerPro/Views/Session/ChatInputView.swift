@@ -5,6 +5,7 @@ struct ChatInputView: View {
     let isProcessing: Bool
     let onSend: () -> Void
     let onQuickAction: (QuickAction) -> Void
+    let onStub: (() -> Void)?
 
     @FocusState private var isFocused: Bool
 
@@ -31,6 +32,15 @@ struct ChatInputView: View {
 
             // Text input
             HStack(spacing: 10) {
+                if let onStub {
+                    Button(action: onStub) {
+                        Image(systemName: "rectangle.portrait.on.rectangle.portrait.angled.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.goldAccent)
+                    }
+                    .accessibilityLabel("Log hand stub")
+                }
+
                 TextField("Update your stack...", text: $text)
                     .font(PokerTypography.chatBody)
                     .foregroundColor(.textPrimary)
@@ -84,7 +94,8 @@ struct ChatInputView: View {
             text: .constant("18k"),
             isProcessing: false,
             onSend: {},
-            onQuickAction: { _ in }
+            onQuickAction: { _ in },
+            onStub: {}
         )
     }
     .background(Color.backgroundPrimary)
