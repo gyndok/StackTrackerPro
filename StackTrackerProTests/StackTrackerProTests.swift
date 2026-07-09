@@ -25,6 +25,7 @@ private func makeInMemoryContainer() throws -> ModelContainer {
         HandAction.self,
         HandStub.self,
         FadeNote.self,
+        HandVillain.self,
     ])
     let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
     return try ModelContainer(for: schema, configurations: [config])
@@ -998,6 +999,27 @@ final class HandModelTests: XCTestCase {
         XCTAssertTrue(saved.sortedActions[1].isHero)
         XCTAssertEqual(saved.netResult, 12_400)
         XCTAssertEqual(saved.result, .won)
+    }
+
+    @MainActor
+    func testHandVillainsPersistAndCascade() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let hand = Hand(heroPosition: .btn, heroCardsRaw: "Kh Kd")
+        context.insert(hand)
+        let v = HandVillain(orderIndex: 0, position: .utg, relativeStack: .coversHero)
+        v.shownHolding = "9h Th"
+        v.hand = hand
+        context.insert(v)
+        try context.save()
+
+        XCTAssertEqual(hand.sortedVillains.count, 1)
+        let first = try XCTUnwrap(hand.sortedVillains.first)
+        XCTAssertEqual(first.position, .utg)
+        XCTAssertEqual(first.relativeStack, .coversHero)
+        context.delete(hand)
+        try context.save()
+        XCTAssertEqual(try context.fetch(FetchDescriptor<HandVillain>()).count, 0)
     }
 }
 

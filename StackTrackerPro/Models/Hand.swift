@@ -105,6 +105,11 @@ final class Hand {
 
     @Relationship(deleteRule: .cascade, inverse: \HandAction.hand)
     var actions: [HandAction]? = []
+    @Relationship(deleteRule: .cascade, inverse: \HandVillain.hand)
+    var villains: [HandVillain]? = []
+    var wasAutoDetected: Bool = false
+    var heroStackAfter: Int = 0        // 0 = not computed
+    var winnerOverride: String = ""    // manual override for chops/odd rulings
 
     var tournament: Tournament?
     var cashSession: CashSession?
@@ -143,6 +148,10 @@ final class Hand {
 
     var sortedActions: [HandAction] {
         (actions ?? []).sorted { $0.orderIndex < $1.orderIndex }
+    }
+
+    var sortedVillains: [HandVillain] {
+        (villains ?? []).sorted { $0.orderIndex < $1.orderIndex }
     }
 
     /// Hero's preflop actions, for VPIP/PFR.

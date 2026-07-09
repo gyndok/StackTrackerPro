@@ -33,6 +33,7 @@ struct StackTrackerProApp: App {
             HandAction.self,
             HandStub.self,
             FadeNote.self,
+            HandVillain.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
