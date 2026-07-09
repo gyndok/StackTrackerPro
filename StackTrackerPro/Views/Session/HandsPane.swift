@@ -8,18 +8,66 @@ struct HandsPane: View {
     let cashSession: CashSession?
     let isReadOnly: Bool
 
+    @Environment(TournamentManager.self) private var tournamentManager
+    @Environment(\.modelContext) private var modelContext
+
     @State private var showEntry = false
+    @State private var capturingStub: HandStub?
 
     private var hands: [Hand] {
         tournament?.sortedHands ?? cashSession?.sortedHands ?? []
     }
 
+    private var pendingStubs: [HandStub] {
+        tournament?.pendingStubs ?? []
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            if hands.isEmpty {
+            if hands.isEmpty && pendingStubs.isEmpty {
                 emptyState
             } else {
                 List {
+                    if !pendingStubs.isEmpty {
+                        Section {
+                            ForEach(pendingStubs.reversed(), id: \.persistentModelID) { stub in
+                                Button {
+                                    guard !isReadOnly else { return }
+                                    capturingStub = stub
+                                } label: {
+                                    PendingStubRow(stub: stub)
+                                }
+                                .buttonStyle(.plain)
+                                .listRowBackground(Color.cardSurface)
+                                .swipeActions(edge: .trailing) {
+                                    if !isReadOnly {
+                                        Button(role: .destructive) {
+                                            modelContext.delete(stub)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        Button {
+                                            tournamentManager.dismissStub(stub)
+                                        } label: {
+                                            Label("Dismiss", systemImage: "xmark.circle")
+                                        }
+                                        .tint(.orange)
+                                    }
+                                }
+                            }
+                        } header: {
+                            HStack {
+                                Text("Pending Hands")
+                                Spacer()
+                                Text("\(pendingStubs.count)")
+                                    .font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.goldAccent))
+                                    .foregroundColor(.backgroundPrimary)
+                            }
+                        }
+                    }
                     ForEach(hands.reversed(), id: \.persistentModelID) { hand in
                         NavigationLink {
                             HandDetailView(hand: hand)
@@ -47,8 +95,11 @@ struct HandsPane: View {
                 .padding(12)
             }
         }
-        .sheet(isPresented: $showEntry) {
-            HandEntryView(tournament: tournament, cashSession: cashSession)
+        .fullScreenCover(isPresented: $showEntry) {
+            HandCaptureView(tournament: tournament, cashSession: cashSession, stub: nil) { _ in }
+        }
+        .fullScreenCover(item: $capturingStub) { stub in
+            HandCaptureView(tournament: tournament, cashSession: cashSession, stub: stub) { _ in }
         }
     }
 
@@ -62,6 +113,62 @@ struct HandsPane: View {
                 .font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
             Spacer()
         }
+    }
+}
+
+private struct PendingStubRow: View {
+    let stub: HandStub
+
+    private var cardsText: String {
+        stub.holeCards.isEmpty ? "cards unknown" : HoleCardShorthand.display(stub.holeCards)
+    }
+
+    private var quickChipsText: String {
+        var text = stub.quickResult?.rawValue ?? ""
+        if let villain = stub.quickVillain {
+            text += text.isEmpty ? villain.rawValue : " \(villain.rawValue)"
+        }
+        return text
+    }
+
+    private var originIcon: String {
+        switch stub.origin {
+        case .swingDetected: return "bolt.fill"
+        case .breakDebrief: return "cup.and.saucer.fill"
+        case .manual: return "suit.spade.fill"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: originIcon)
+                    .foregroundColor(.goldAccent)
+                    .accessibilityHidden(true)
+                Text(cardsText)
+                    .font(PokerTypography.statValue)
+                    .foregroundColor(stub.holeCards.isEmpty ? .textSecondary : .textPrimary)
+                Spacer()
+                if stub.levelNumber > 0 {
+                    Text("L\(stub.levelNumber)")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            HStack(spacing: 4) {
+                if stub.heroStackBefore > 0 {
+                    Text(stub.heroStackBefore.formatted())
+                }
+                if !quickChipsText.isEmpty {
+                    Text("· \(quickChipsText)")
+                }
+                Spacer()
+                Text(stub.createdAt, style: .relative)
+            }
+            .font(PokerTypography.chatCaption)
+            .foregroundColor(.textSecondary)
+        }
+        .contentShape(Rectangle())
     }
 }
 
@@ -119,6 +226,14 @@ struct HandDetailView: View {
                         row("Villain", hand.villainCards.map(\.display).joined(separator: " "))
                     }
                 }
+                if !hand.sortedVillains.isEmpty {
+                    Section("Villains") {
+                        ForEach(hand.sortedVillains, id: \.persistentModelID) { villain in
+                            row(villain.chipLabel,
+                                villain.shownCards.isEmpty ? "—" : villain.shownCards.map(\.display).joined(separator: " "))
+                        }
+                    }
+                }
                 ForEach(HandStreet.allCases, id: \.self) { street in
                     let actions = hand.sortedActions.filter { $0.street == street }
                     if !actions.isEmpty {
@@ -141,6 +256,7 @@ struct HandDetailView: View {
                     row("Outcome", hand.result.rawValue)
                     if hand.potSize > 0 { row("Pot", hand.potSize.formatted()) }
                     if hand.amountWon != 0 { row("Net", hand.amountWon.formatted()) }
+                    if hand.heroStackAfter > 0 { row("Stack after", hand.heroStackAfter.formatted()) }
                     if !hand.tags.isEmpty { row("Tags", hand.tags.joined(separator: ", ")) }
                     if !hand.notes.isEmpty { row("Notes", hand.notes) }
                 }
