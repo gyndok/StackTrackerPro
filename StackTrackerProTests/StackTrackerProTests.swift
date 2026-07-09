@@ -1369,6 +1369,8 @@ final class HoleCardShorthandTests: XCTestCase {
         XCTAssertNil(HoleCardShorthand.normalize("As"))          // one card
         XCTAssertNil(HoleCardShorthand.normalize("AhAh"))        // duplicate
         XCTAssertNil(HoleCardShorthand.normalize("99s"))         // pair can't be suited
+        XCTAssertNil(HoleCardShorthand.normalize("99o"))         // pair can't be offsuit
+        XCTAssertNil(HoleCardShorthand.normalize("AAo"))         // pair can't be offsuit
         XCTAssertNil(HoleCardShorthand.normalize("got a bounty"))
     }
 

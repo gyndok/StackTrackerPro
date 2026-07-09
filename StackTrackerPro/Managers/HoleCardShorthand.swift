@@ -68,8 +68,8 @@ enum HoleCardShorthand {
         guard body.count == 2,
               let r1 = body.first, let r2 = body.last,
               ranks.contains(r1), ranks.contains(r2) else { return nil }
-        // Pairs can't be suited; single pair like "99" keeps no suffix.
-        if r1 == r2 && suffix == "s" { return nil }
+        // Pairs can't be suited or offsuit; single pair like "99" keeps no suffix.
+        if r1 == r2 && suffix != nil { return nil }
         let order = Array("akqjt98765432")
         let hi = order.firstIndex(of: r1)! <= order.firstIndex(of: r2)! ? r1 : r2
         let lo = hi == r1 ? r2 : r1
