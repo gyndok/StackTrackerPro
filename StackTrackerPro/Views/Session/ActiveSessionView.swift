@@ -17,6 +17,13 @@ struct ActiveSessionView: View {
     @State private var recapFile: RecapFile?
     @State private var recapExportError = false
     @State private var showStubSheet = false
+    /// Two-step handoff for the stub sheet's "Talk instead" flow: onDictate
+    /// sets `pendingVoiceCapture` (the sheet then dismisses itself), and only
+    /// the sheet's `onDismiss` flips `showVoiceCapture` — presenting the
+    /// capture cover while the sheet's dismissal is still in flight would hang
+    /// two modal transitions off the same presenter at once (same shape as the
+    /// milestone-sheet chaining in SessionRecapSheet, commit df350d8).
+    @State private var pendingVoiceCapture = false
     @State private var showVoiceCapture = false
 
     var body: some View {
@@ -243,9 +250,19 @@ struct ActiveSessionView: View {
         .sheet(isPresented: $showBreakTimer) {
             BreakTimerSheet(tournament: tournament)
         }
-        .sheet(isPresented: $showStubSheet) {
+        .sheet(isPresented: $showStubSheet, onDismiss: {
+            if pendingVoiceCapture {
+                pendingVoiceCapture = false
+                // Small delay so the sheet's dismissal transition fully lands
+                // before the cover presents (mirrors SessionRecapSheet's
+                // milestone chaining).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    showVoiceCapture = true
+                }
+            }
+        }) {
             HandStubSheet(onDictate: {
-                showVoiceCapture = true
+                pendingVoiceCapture = true
             }) { cards, result, villain in
                 tournamentManager.createHandStub(holeCards: cards, quickResult: result,
                                                  quickVillain: villain, origin: .manual)

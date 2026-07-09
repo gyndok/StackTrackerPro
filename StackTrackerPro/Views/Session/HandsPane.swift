@@ -44,7 +44,8 @@ struct HandsPane: View {
                                         Button {
                                             capturePresentation = CapturePresentation(stub: stub, autoDictate: true)
                                         } label: {
-                                            Image(systemName: "mic.fill")
+                                            Label("Dictate Hand", systemImage: "mic.fill")
+                                                .labelStyle(.iconOnly)
                                                 .foregroundColor(.goldAccent)
                                         }
                                         .buttonStyle(.plain)
