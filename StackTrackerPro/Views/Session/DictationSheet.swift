@@ -16,6 +16,9 @@ struct DictationSheet: View {
     /// survives display through parsing/error phases even though the engine
     /// itself resets `fullTranscript` on its next `start()`.
     @State private var capturedTranscript = ""
+    /// Transient hint shown in the transcript placeholder after Done was
+    /// tapped with nothing captured; cleared as soon as new speech arrives.
+    @State private var showEmptyHint = false
 
     private enum Phase: Equatable {
         case recording
@@ -45,6 +48,18 @@ struct DictationSheet: View {
         .preferredColorScheme(.dark)
         .task {
             await engine.start()
+        }
+        .onDisappear {
+            // Swipe-to-dismiss bypasses the Cancel/Done paths, and the
+            // engine's deinit backstop can only silence the tap — it can't
+            // deactivate the shared AVAudioSession (leaving the system record
+            // indicator on) or cancel the results task. onDisappear is
+            // synchronous and the view is already gone, so capture the engine
+            // and run the full graceful stop detached. stop() is idempotent
+            // for non-listening states via its guard, so the Cancel/Done
+            // paths hitting it a second time here is harmless.
+            let engine = self.engine
+            Task { _ = await engine.stop() }
         }
     }
 
@@ -137,19 +152,28 @@ struct DictationSheet: View {
         phase == .recording ? engine.fullTranscript : capturedTranscript
     }
 
+    private var transcriptPlaceholder: String {
+        showEmptyHint
+            ? "Didn't catch anything — try again."
+            : "Start speaking — describe the hand as it happened."
+    }
+
     private var transcriptArea: some View {
         ScrollView {
-            Text(displayedTranscript.isEmpty
-                 ? "Start speaking — describe the hand as it happened."
-                 : displayedTranscript)
+            Text(displayedTranscript.isEmpty ? transcriptPlaceholder : displayedTranscript)
                 .font(PokerTypography.chatBody)
-                .foregroundColor(displayedTranscript.isEmpty ? .textSecondary : .textPrimary)
+                .foregroundColor(displayedTranscript.isEmpty
+                                 ? (showEmptyHint ? .mZoneOrange : .textSecondary)
+                                 : .textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .onChange(of: engine.fullTranscript) { _, newValue in
+            if showEmptyHint, !newValue.isEmpty { showEmptyHint = false }
+        }
     }
 
     // MARK: - Action buttons
@@ -191,8 +215,9 @@ struct DictationSheet: View {
         Task {
             let transcript = await engine.stop()
             guard !transcript.isEmpty else {
-                // Nothing captured — resume listening rather than stranding
-                // the user on a dead-end screen.
+                // Nothing captured — say so and resume listening rather than
+                // stranding the user on a dead-end screen.
+                showEmptyHint = true
                 await engine.start()
                 return
             }
