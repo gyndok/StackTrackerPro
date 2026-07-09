@@ -1581,4 +1581,26 @@ final class ChatManagerTests: XCTestCase {
         await chat.processUserMessage(text: "380000")
         XCTAssertTrue(tournament.pendingStubs.isEmpty)
     }
+
+    @MainActor
+    func testStubShorthandAnswersSwingPrompt() async throws {
+        // Spec F2: "If the user replies with cards (any format), attach to the
+        // auto-stub" — stub shorthand is a cards format, so it must attach to
+        // the pending swing stub instead of creating a second manual stub.
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        let chat = ChatManager(tournamentManager: manager)
+        await chat.processUserMessage(text: "390000")
+        await chat.processUserMessage(text: "985000")
+        XCTAssertEqual(tournament.pendingStubs.count, 1)
+
+        // Reply with stub shorthand → attaches to the swing stub, no new stub.
+        await chat.processUserMessage(text: "stub AKs")
+        XCTAssertEqual(tournament.pendingStubs.count, 1)
+        XCTAssertEqual(tournament.pendingStubs.first?.origin, .swingDetected)
+        XCTAssertEqual(tournament.pendingStubs.first?.holeCards, "AKs")
+    }
 }

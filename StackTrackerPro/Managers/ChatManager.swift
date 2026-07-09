@@ -81,6 +81,20 @@ final class ChatManager {
         // Completed tournaments are read-only: fall through to normal parsing,
         // where applyEntities' guard keeps the message inert.
         if tournament.status != .completed, let cards = Self.stubShorthand(from: text) {
+            // Answering the swing prompt with shorthand is still a cards reply
+            // (spec F2: "any format") — attach to the pending auto-stub instead
+            // of creating a second, unrelated manual stub.
+            if let pending = pendingSwingStub {
+                pendingSwingStub = nil
+                if pending.status == .pending {
+                    tournamentManager.attachCards(cards, to: pending)
+                    let ack = "Logged: \(HoleCardShorthand.display(cards)) — open it in Hands to add the full story."
+                    tournament.chatMessages?.append(ChatMessage(sender: .ai, text: ack))
+                    saveContext()
+                    HapticFeedback.impact(.light)
+                    return
+                }
+            }
             let stub = tournamentManager.createHandStub(holeCards: cards, origin: .manual)
             var ack = "Stub saved: \(HoleCardShorthand.display(cards))"
             if let stub {
