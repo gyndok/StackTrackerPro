@@ -448,6 +448,35 @@ final class HandCaptureModel {
         return Set(computedWinners)
     }
 
+    /// True when the hand can be saved without booking a silently-wrong
+    /// result. Gates the Save button:
+    /// - the hand must be over;
+    /// - no showdown → always resolvable (the fold-out winner is unambiguous);
+    /// - showdown → a manual `winnerOverride` settles anything; otherwise
+    ///   every still-live villain must be resolved (a two-card shown holding
+    ///   or an explicit muck) AND `computedWinners` must actually evaluate to
+    ///   something. The second clause matters for unevaluable showdowns (PLO,
+    ///   missing hero cards): without it, `heroNet` would book an automatic
+    ///   hero loss even though no winner was ever determined.
+    var isResolvable: Bool {
+        guard isHandOver else { return false }
+        if !needsShowdown { return true }
+        if winnerOverride != nil { return true }
+        let villainsResolved = villains.allSatisfy { villain in
+            foldedParticipants.contains(.villain(villain.id))
+                || villain.mucked || villain.shownHolding.count == 2
+        }
+        return villainsResolved && !computedWinners.isEmpty
+    }
+
+    /// True when `participant` has at least one recorded betting action.
+    /// The UI uses this to lock a villain's seat/stack editing (edit is
+    /// remove-and-re-add, which would silently drop their ledger entries)
+    /// and to warn before removal.
+    func hasActed(_ participant: Participant) -> Bool {
+        ledger.contains { $0.participant == participant }
+    }
+
     /// Total chips the hero put in the pot: everything committed across streets,
     /// plus the ante when the hero sits in the big blind (the BB-ante model
     /// posts the single table ante from the BB seat).

@@ -2281,6 +2281,83 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertFalse(hand.winnerOverride.isEmpty)
     }
 
+    // MARK: - isResolvable / Save gating (Task 14)
+
+    /// Builds an all-in-preflop heads-up hand (hero BTN vs UTG) run out to the
+    /// river — a real showdown. `withHeroCards: false` leaves the hero's cards
+    /// unentered, making the showdown unevaluable.
+    private func makeShowdownModel(withHeroCards: Bool = true) -> (HandCaptureModel, UUID) {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        if withHeroCards {
+            for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        let utg = model.villains.first!.id
+        model.add(action: .allIn, toAmount: 390_000)  // UTG jams
+        model.add(action: .call, toAmount: 0)          // hero calls
+        for c in PlayingCard.parseList("Jh 8h 4d 2c 3s") { _ = model.addBoardCard(c) }
+        return (model, utg)
+    }
+
+    func testIsResolvableGating() throws {
+        // Mid-hand: not resolvable.
+        let midHand = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                       ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        midHand.heroPosition = .btn
+        midHand.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        midHand.add(action: .raise, toAmount: 500)
+        XCTAssertFalse(midHand.isResolvable)
+
+        // Fold-out (no showdown): resolvable with no further input.
+        midHand.add(action: .fold, toAmount: 0)
+        XCTAssertTrue(midHand.isHandOver)
+        XCTAssertFalse(midHand.needsShowdown)
+        XCTAssertTrue(midHand.isResolvable)
+
+        // Showdown with an unresolved villain: blocked.
+        let (model, utg) = makeShowdownModel()
+        XCTAssertTrue(model.needsShowdown)
+        XCTAssertFalse(model.isResolvable, "unresolved villain must block Save")
+
+        // Explicit muck resolves it (hero wins by default).
+        model.setMucked(utg)
+        XCTAssertTrue(model.isResolvable)
+
+        // A shown two-card holding also resolves it.
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertTrue(model.isResolvable)
+        XCTAssertEqual(model.computedWinners, [.hero])
+    }
+
+    func testIsResolvableBlocksUnevaluableShowdown() throws {
+        // Hero cards never entered: villains resolve but the showdown cannot
+        // be evaluated — Save must stay blocked rather than booking an
+        // automatic hero loss.
+        let (model, utg) = makeShowdownModel(withHeroCards: false)
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertTrue(model.needsShowdown)
+        XCTAssertTrue(model.computedWinners.isEmpty)
+        XCTAssertFalse(model.isResolvable, "unevaluable showdown must block Save")
+
+        // A manual override settles it.
+        model.winnerOverride = [.villain(utg)]
+        XCTAssertTrue(model.isResolvable)
+    }
+
+    func testHasActed() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        let utg = model.villains.first!.id
+        XCTAssertFalse(model.hasActed(.villain(utg)))
+        model.add(action: .raise, toAmount: 500)      // UTG acts first
+        XCTAssertTrue(model.hasActed(.villain(utg)))
+        XCTAssertFalse(model.hasActed(.hero))
+    }
+
     // MARK: - narration (Task 14)
 
     func testNarrationRendersHandSoFar() throws {

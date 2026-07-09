@@ -27,6 +27,7 @@ struct HandCaptureView: View {
     @State private var showStackPad = false
     @State private var stackPadText = ""
     @State private var villainEditorTarget: VillainEditorTarget?
+    @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
 
     init(tournament: Tournament?, cashSession: CashSession?, stub: HandStub?, onSaved: @escaping (Hand) -> Void) {
@@ -127,6 +128,17 @@ struct HandCaptureView: View {
             }
             Button("Cancel", role: .cancel) { truncateIndex = nil }
         }
+        .confirmationDialog(
+            "Remove this villain? Their recorded actions will be removed and the hand replayed without them.",
+            isPresented: Binding(get: { pendingRemovalID != nil }, set: { if !$0 { pendingRemovalID = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Remove Villain", role: .destructive) {
+                if let id = pendingRemovalID { model.removeVillain(id: id) }
+                pendingRemovalID = nil
+            }
+            Button("Cancel", role: .cancel) { pendingRemovalID = nil }
+        }
         .alert("Set Pot", isPresented: $showPotPad) {
             TextField("e.g. 390k", text: $potPadText).keyboardType(.numbersAndPunctuation)
             Button("Set") { model.potOverride = ChipInput.parse(potPadText) }
@@ -148,7 +160,11 @@ struct HandCaptureView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Villains").font(PokerTypography.sectionHeader).foregroundColor(.goldAccent)
             ForEach(model.villains) { villain in
+                let hasActed = model.hasActed(.villain(villain.id))
                 HStack(spacing: 8) {
+                    // Editing is remove-and-re-add under a new id, which would
+                    // silently strip the villain's recorded ledger actions —
+                    // so the edit affordance locks once they have acted.
                     Button {
                         villainEditorTarget = villainEditorTarget == .editing(villain.id)
                             ? nil : .editing(villain.id)
@@ -156,9 +172,14 @@ struct HandCaptureView: View {
                         Text(villainChipText(villain))
                     }
                     .quickChip()
+                    .disabled(hasActed)
                     Spacer()
                     Button {
-                        model.removeVillain(id: villain.id)
+                        if hasActed {
+                            pendingRemovalID = villain.id
+                        } else {
+                            model.removeVillain(id: villain.id)
+                        }
                     } label: {
                         Image(systemName: "minus.circle")
                     }
@@ -174,9 +195,13 @@ struct HandCaptureView: View {
             }
 
             if let target = villainEditorTarget {
+                // Per-target identity: without .id, SwiftUI reuses the editor's
+                // @State when switching directly between targets (edit A → edit
+                // B, or edit → add), leaking A's position/stack into B.
                 VillainInlineEditor(model: model, editing: editing(for: target)) {
                     villainEditorTarget = nil
                 }
+                .id(target)
             }
         }
         .pokerCard()
@@ -218,29 +243,17 @@ struct HandCaptureView: View {
         }
     }
 
+    /// Save gating lives on the engine (`HandCaptureModel.isResolvable`, unit
+    /// tested): hand over, and any showdown either overridden or fully
+    /// resolved with evaluable winners.
     private var saveButton: some View {
         Button {
             save()
         } label: {
             Text("Save Hand")
         }
-        .buttonStyle(PokerButtonStyle(isEnabled: canSave))
-        .disabled(!canSave)
-    }
-
-    /// Save gates on the hand being over, and — at a real showdown — every
-    /// still-live villain having either a shown two-card holding or an
-    /// explicit muck, unless a manual `winnerOverride` already settles it.
-    /// Without this the engine would silently compute a hero win against an
-    /// unresolved villain.
-    private var canSave: Bool {
-        guard model.isHandOver else { return false }
-        if !model.needsShowdown { return true }
-        if model.winnerOverride != nil { return true }
-        return model.villains.allSatisfy { villain in
-            model.foldedParticipants.contains(.villain(villain.id))
-                || villain.mucked || villain.shownHolding.count == 2
-        }
+        .buttonStyle(PokerButtonStyle(isEnabled: model.isResolvable))
+        .disabled(!model.isResolvable)
     }
 
     private func commitSizedAction(_ type: HandActionType, _ amount: Int) {
@@ -414,7 +427,7 @@ private struct HeroStrip: View {
 /// existing villain re-opened for editing (tap position → tap relative-stack
 /// commits immediately, matching the brief's "inline editor" — no modal, no
 /// separate Save tap).
-private enum VillainEditorTarget: Equatable {
+private enum VillainEditorTarget: Hashable {
     case adding
     case editing(UUID)
 }
@@ -432,14 +445,22 @@ private struct VillainInlineEditor: View {
         self.editing = editing
         self.onDone = onDone
         _position = State(initialValue: editing?.position
-            ?? HeroPosition.allCases.first { $0 != model.heroPosition } ?? .utg)
+            ?? HeroPosition.allCases.first { seat in
+                seat != model.heroPosition && !model.villains.contains { $0.position == seat }
+            } ?? .utg)
         _approxText = State(initialValue: (editing?.approxStack).map { $0 > 0 ? String($0) : "" } ?? "")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Position").font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
-            PositionGrid(selected: position, disabled: { $0 == model.heroPosition }) { candidate in
+            // A seat can hold one player: the hero's seat and every seat taken
+            // by another villain are disabled (the villain being edited keeps
+            // its own seat selectable).
+            PositionGrid(selected: position, disabled: { seat in
+                seat == model.heroPosition
+                    || model.villains.contains { $0.id != editing?.id && $0.position == seat }
+            }) { candidate in
                 position = candidate
             }
 
@@ -469,8 +490,14 @@ private struct VillainInlineEditor: View {
     /// before the villain has acted, and the engine already drops any of
     /// their recorded actions on removal.
     private func commit(relative: RelativeStack) {
+        if let editing {
+            // Race guard: the chip locks once a villain has acted, but the
+            // editor may already be open when their first action is recorded
+            // below — committing then would strip that action. Bail instead.
+            guard !model.hasActed(.villain(editing.id)) else { onDone(); return }
+            model.removeVillain(id: editing.id)
+        }
         let approxStack = ChipInput.parse(approxText) ?? 0
-        if let editing { model.removeVillain(id: editing.id) }
         model.addVillain(position: position, relative: relative, approxStack: approxStack)
         HapticFeedback.impact(.light)
         onDone()
