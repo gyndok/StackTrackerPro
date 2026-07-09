@@ -1,5 +1,7 @@
 # Hand Logging v2 — "Capture Now, Enrich Later" Implementation Plan
 
+> **STATUS: EXECUTED 2026-07-09** (commits 27f8deb..b0289cd, all 17 tasks complete, final review READY TO MERGE; voice = future plan)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the staged hand-entry flow with a two-surface system: 5-second Hand Stubs at the table (manual, chat shorthand, swing-detected, break-debrief) plus a full Hand Capture Screen for enrichment — computing everything the app already knows (street, pot, turn order, winner, stack-after) instead of asking for it.
