@@ -6,10 +6,11 @@ struct DebriefGap: Equatable {
     let delta: Int
 }
 
-/// Finds stack intervals with a swing-sized delta that have no stub or logged
-/// hand near them — the "unexplained" gaps a break debrief should ask about.
+/// Finds stack intervals with a swing-sized delta that have no stub, logged
+/// hand, or fade note near them — the "unexplained" gaps a break debrief
+/// should ask about.
 enum BreakDebriefEngine {
-    /// Timestamp slop when matching stubs/hands to an interval.
+    /// Timestamp slop when matching stubs/hands/fade notes to an interval.
     static let explainPadding: TimeInterval = 10 * 60
 
     static func unexplainedGaps(for tournament: Tournament, since: Date?,
@@ -21,9 +22,15 @@ enum BreakDebriefEngine {
         let entries = tournament.sortedStackEntries.filter { $0.source != .initial }
         guard entries.count >= 2 else { return [] }
 
+        // FadeNotes count too: a gap the user already explained in a prior
+        // debrief must not be re-asked after a "later" defer resets
+        // lastDebriefAt (which recomputes over full history). A FadeNote's
+        // intervalEnd is the gap's end timestamp it was created from, so the
+        // same padded matching applies.
         let explainers: [Date] =
             (tournament.handStubs ?? []).filter { $0.status != .dismissed }.map(\.createdAt) +
-            tournament.sortedHands.map(\.timestamp)
+            tournament.sortedHands.map(\.timestamp) +
+            (tournament.fadeNotes ?? []).map(\.intervalEnd)
 
         var gaps: [DebriefGap] = []
         for (prev, next) in zip(entries, entries.dropFirst()) {

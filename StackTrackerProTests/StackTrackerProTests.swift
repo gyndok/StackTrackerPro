@@ -1628,7 +1628,11 @@ final class ChatManagerTests: XCTestCase {
 
         let gaps = BreakDebriefEngine.unexplainedGaps(for: tournament, since: nil,
                                                       sensitivityPercent: 20, maxCount: 3)
-        XCTAssertEqual(gaps.count, 2)
+        // Guard before indexing: XCTAssertEqual doesn't halt on failure, and
+        // out-of-bounds indexing would crash the whole suite.
+        guard gaps.count == 2 else {
+            XCTFail("expected 2 gaps, got \(gaps.count): \(gaps)"); return
+        }
         XCTAssertEqual(gaps[0].delta, -285_000)   // largest first
         XCTAssertEqual(gaps[1].delta, -250_000)
 
@@ -1637,7 +1641,8 @@ final class ChatManagerTests: XCTestCase {
         let after = BreakDebriefEngine.unexplainedGaps(for: tournament, since: nil,
                                                        sensitivityPercent: 20, maxCount: 3)
         XCTAssertEqual(after.count, 1)
-        XCTAssertEqual(after[0].delta, -285_000)
+        let remaining = try XCTUnwrap(after.first)
+        XCTAssertEqual(remaining.delta, -285_000)
     }
 
     @MainActor
@@ -1660,5 +1665,53 @@ final class ChatManagerTests: XCTestCase {
         // Once per break:
         chat.runBreakDebrief()
         XCTAssertEqual(tournament.sortedChatMessages.filter { $0.text.contains("debrief") }.count, 1)
+    }
+
+    @MainActor
+    func testFadeNoteExplainsGapAfterLaterDefer() async throws {
+        // Regression: a FadeNote must count as an "explainer" — after answering
+        // one gap with freeform text and deferring the rest with "later"
+        // (which resets lastDebriefAt so the next break recomputes over full
+        // history), the FadeNote-explained gap must NOT be re-asked while the
+        // deferred one still is.
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        // Two swings separated by a non-swing drift entry so the gaps don't
+        // share a boundary timestamp (a shared boundary would let one gap's
+        // FadeNote fall inside the other's ±10-min padding window).
+        manager.updateStack(chipCount: 985_000)   // A
+        manager.updateStack(chipCount: 700_000)   // B: A→B −285K (swing)
+        manager.updateStack(chipCount: 690_000)   // C: B→C −10K (drift, not a swing)
+        manager.updateStack(chipCount: 440_000)   // D: C→D −250K (swing)
+        let entryA = tournament.stackEntries?.first { $0.chipCount == 985_000 }
+        let entryB = tournament.stackEntries?.first { $0.chipCount == 700_000 }
+        let entryC = tournament.stackEntries?.first { $0.chipCount == 690_000 }
+        entryA?.timestamp = Date.now.addingTimeInterval(-60 * 60)
+        entryB?.timestamp = Date.now.addingTimeInterval(-40 * 60)
+        entryC?.timestamp = Date.now.addingTimeInterval(-25 * 60)
+        let chat = ChatManager(tournamentManager: manager)
+
+        chat.runBreakDebrief()
+        XCTAssertTrue(tournament.sortedChatMessages.last?.text.contains("dropped 285,000") ?? false)
+
+        // Freeform answer → FadeNote for the −285K gap; next question follows.
+        await chat.processUserMessage(text: "card dead, bled blinds all level")
+        XCTAssertEqual(tournament.fadeNotes?.count, 1)
+        XCTAssertEqual(tournament.fadeNotes?.first?.chipDelta, -285_000)
+        XCTAssertTrue(tournament.sortedChatMessages.last?.text.contains("dropped 250,000") ?? false)
+
+        // Defer the rest → lastDebriefAt reset, full history recomputed next time.
+        await chat.processUserMessage(text: "later")
+        XCTAssertNil(tournament.lastDebriefAt)
+
+        // The FadeNote-explained gap is gone; the deferred one remains.
+        let gaps = BreakDebriefEngine.unexplainedGaps(for: tournament, since: nil,
+                                                      sensitivityPercent: 20, maxCount: 3)
+        XCTAssertEqual(gaps.count, 1, "unexpected gaps: \(gaps)")
+        let remaining = try XCTUnwrap(gaps.first)
+        XCTAssertEqual(remaining.delta, -250_000)
     }
 }
