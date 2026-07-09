@@ -1765,3 +1765,96 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertEqual(remaining.delta, -250_000)
     }
 }
+
+final class PokerHandEvaluatorTests: XCTestCase {
+    private func score(_ s: String) throws -> PokerHandEvaluator.Score {
+        try XCTUnwrap(PokerHandEvaluator.bestScore(PlayingCard.parseList(s)))
+    }
+
+    func testEvaluatorRanksCategories() throws {
+        XCTAssertGreaterThan(try score("Ah Kh Qh Jh Th"), try score("As Ad Ac Ah Kd"))   // royal > quads
+        XCTAssertGreaterThan(try score("As Ad Ac Kh Kd"), try score("As Ad Ac Kh Qd"))   // boat > trips
+        XCTAssertGreaterThan(try score("2h 7h 9h Jh Kh"), try score("As Ks Qs Jd 9c"))   // flush > high card
+        XCTAssertGreaterThan(try score("Ah 2d 3c 4s 5h"), try score("As Ad Kc Qh Jd"))   // wheel > pair
+        XCTAssertEqual(try score("Ah Kd Qc Js Th"), try score("Ad Kh Qs Jc Td"))          // same straight
+        // 7-card: board pairs the best hand
+        let sevenCard = try XCTUnwrap(
+            PokerHandEvaluator.bestScore(PlayingCard.parseList("Kh Kd Jh 8h 4d 2c 2s")))
+        XCTAssertEqual(sevenCard.category, 2)  // two pair
+    }
+
+    func testHoldemWinnersKKvs9T() {
+        // Event #86 reference hand: KK vs 9T on a J-8-4-2-3 board → KK's overpair holds
+        // (NOTE: the brief's original board card was "Qs", but Jh-8h-...-9h-Th combine into
+        // an 8-9-T-J-Q straight for the villain, which would actually beat KK's pair outright —
+        // a genuine poker-math bug in the reference test. Swapped the case card to "3s" so the
+        // scenario matches its stated outcome: no straight completes, and KK's pair wins clean.)
+        let hero = UUID(), villain = UUID()
+        let winners = PokerHandEvaluator.holdemWinners(
+            board: PlayingCard.parseList("Jh 8h 4d 2c 3s"),
+            holdings: [(hero, PlayingCard.parseList("Kh Kd")),
+                       (villain, PlayingCard.parseList("9h Th"))])
+        XCTAssertEqual(winners, [hero])
+        // Chop: same straight
+        let a = UUID(), b = UUID()
+        let chop = PokerHandEvaluator.holdemWinners(
+            board: PlayingCard.parseList("9h Th Jc Qs Kd"),
+            holdings: [(a, PlayingCard.parseList("2h 3d")), (b, PlayingCard.parseList("4c 5s"))])
+        XCTAssertEqual(Set(chop), Set([a, b]))
+    }
+
+    // MARK: - Extra edge cases
+
+    func testQuadsVsQuadsKickerBreaksTie() throws {
+        // Both hold quad aces on a paired board; kicker (K vs Q) decides.
+        XCTAssertGreaterThan(try score("Ah Ad As Ac Kh"), try score("Ah Ad As Ac Qh"))
+    }
+
+    func testFlushTiebreaksOnHighCardsInOrder() throws {
+        // Same suit, top card decides even though both are "just a flush".
+        XCTAssertGreaterThan(try score("Ah Kh 9h 5h 2h"), try score("Ah Qh Jh 8h 3h"))
+        // Second card decides when the top card matches.
+        XCTAssertGreaterThan(try score("Ah Kh 9h 5h 2h"), try score("Ah Jh Th 8h 4h"))
+    }
+
+    func testAceHighStraightBeatsKingHighStraight() throws {
+        XCTAssertGreaterThan(try score("Ah Kd Qc Js Td"), try score("Kh Qd Jc Ts 9d"))
+    }
+
+    func testWheelStraightIsLowestStraight() throws {
+        // A-2-3-4-5 ("the wheel") plays the 5 as its high card, so it loses to 6-high straight.
+        let wheel = try score("Ah 2d 3c 4s 5h")
+        let sixHigh = try score("2h 3d 4c 5s 6h")
+        XCTAssertEqual(wheel.category, 4)
+        XCTAssertEqual(sixHigh.category, 4)
+        XCTAssertGreaterThan(sixHigh, wheel)
+    }
+
+    func testTwoPairKickerBreaksTie() throws {
+        // Same two pair (KK, 88); the fifth card (kicker) decides.
+        XCTAssertGreaterThan(try score("Kh Kd 8h 8c Ah"), try score("Ks Kc 8s 8d Qd"))
+    }
+
+    func testFullHouseTripsRankDecidesOverPair() throws {
+        // Trip rank outranks the pair rank when comparing two boats.
+        XCTAssertGreaterThan(try score("Kh Kd Kc 2h 2d"), try score("Qh Qd Qc Ah Ad"))
+    }
+
+    func testBestScoreRejectsInvalidCardCounts() {
+        XCTAssertNil(PokerHandEvaluator.bestScore(PlayingCard.parseList("Ah Kd Qc Js")))
+        XCTAssertNil(PokerHandEvaluator.bestScore(
+            PlayingCard.parseList("Ah Kd Qc Js Th 9c 8d 7h")))
+    }
+
+    func testBestScoreRejectsDuplicateCards() {
+        XCTAssertNil(PokerHandEvaluator.bestScore(PlayingCard.parseList("Ah Ah Kd Qc Jh")))
+    }
+
+    func testHoldemWinnersReturnsEmptyForMalformedInput() {
+        let hero = UUID()
+        // Board must be exactly 5 cards.
+        XCTAssertEqual(PokerHandEvaluator.holdemWinners(
+            board: PlayingCard.parseList("Jh 8h 4d 2c"),
+            holdings: [(hero, PlayingCard.parseList("Kh Kd"))]), [])
+    }
+}
