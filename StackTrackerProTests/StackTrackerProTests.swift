@@ -1342,3 +1342,42 @@ final class HandStubTests: XCTestCase {
         XCTAssertTrue(t.pendingStubs.isEmpty)
     }
 }
+
+// MARK: - HoleCardShorthand
+
+final class HoleCardShorthandTests: XCTestCase {
+
+    func testHoleCardShorthandNormalization() {
+        // Exact
+        XCTAssertEqual(HoleCardShorthand.normalize("AhKd"), "Ah Kd")
+        XCTAssertEqual(HoleCardShorthand.normalize("ah kd"), "Ah Kd")
+        XCTAssertEqual(HoleCardShorthand.normalize("KS QS"), "Ks Qs")
+        // Suit-agnostic
+        XCTAssertEqual(HoleCardShorthand.normalize("KQs"), "KQs")
+        XCTAssertEqual(HoleCardShorthand.normalize("ako"), "AKo")
+        XCTAssertEqual(HoleCardShorthand.normalize("99"), "99")
+        XCTAssertEqual(HoleCardShorthand.normalize("kq"), "KQ")
+        // Spoken-ish
+        XCTAssertEqual(HoleCardShorthand.normalize("AK suited"), "AKs")
+        XCTAssertEqual(HoleCardShorthand.normalize("ace king suited"), "AKs")
+        XCTAssertEqual(HoleCardShorthand.normalize("pocket nines"), "99")
+        XCTAssertEqual(HoleCardShorthand.normalize("queen jack offsuit"), "QJo")
+        // Rejects
+        XCTAssertNil(HoleCardShorthand.normalize("18000"))
+        XCTAssertNil(HoleCardShorthand.normalize("level 12"))
+        XCTAssertNil(HoleCardShorthand.normalize("no"))
+        XCTAssertNil(HoleCardShorthand.normalize("As"))          // one card
+        XCTAssertNil(HoleCardShorthand.normalize("AhAh"))        // duplicate
+        XCTAssertNil(HoleCardShorthand.normalize("99s"))         // pair can't be suited
+        XCTAssertNil(HoleCardShorthand.normalize("got a bounty"))
+    }
+
+    func testHoleCardShorthandHelpers() {
+        XCTAssertTrue(HoleCardShorthand.isExact("Ah Kd"))
+        XCTAssertFalse(HoleCardShorthand.isExact("KQs"))
+        XCTAssertEqual(HoleCardShorthand.exactCards("Ah Kd").map(\.raw), ["Ah", "Kd"])
+        XCTAssertTrue(HoleCardShorthand.exactCards("KQs").isEmpty)
+        XCTAssertEqual(HoleCardShorthand.display("Ah Kd"), "A♥ K♦")
+        XCTAssertEqual(HoleCardShorthand.display("KQs"), "KQs")
+    }
+}

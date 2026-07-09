@@ -34,6 +34,7 @@
 		7E5700000000000000000112 /* HandsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000111 /* HandsPane.swift */; };
 		7E5700000000000000000114 /* HandStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000113 /* HandStub.swift */; };
 		7E5700000000000000000116 /* FadeNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000115 /* FadeNote.swift */; };
+		7E5700000000000000000118 /* HoleCardShorthand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000117 /* HoleCardShorthand.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -153,6 +154,7 @@
 		7E5700000000000000000111 /* HandsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsPane.swift; sourceTree = "<group>"; };
 		7E5700000000000000000113 /* HandStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandStub.swift; sourceTree = "<group>"; };
 		7E5700000000000000000115 /* FadeNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FadeNote.swift; sourceTree = "<group>"; };
+		7E5700000000000000000117 /* HoleCardShorthand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleCardShorthand.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -304,6 +306,7 @@
 				B0C2D3E4F5A6B7C8D9E0F1A2 /* CloudKitService.swift */,
 				CA5H000000000000000003 /* CSVImporter.swift */,
 				CA5H000000000000000013 /* CSVExporter.swift */,
+				7E5700000000000000000117 /* HoleCardShorthand.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -561,6 +564,7 @@
 				7E570000000000000000010C /* Hand.swift in Sources */,
 				7E5700000000000000000114 /* HandStub.swift in Sources */,
 				7E5700000000000000000116 /* FadeNote.swift in Sources */,
+				7E5700000000000000000118 /* HoleCardShorthand.swift in Sources */,
 				7E570000000000000000010A /* BlindStructureParsing.swift in Sources */,
 				7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */,
 				7E5700000000000000000106 /* TournamentEvent.swift in Sources */,
