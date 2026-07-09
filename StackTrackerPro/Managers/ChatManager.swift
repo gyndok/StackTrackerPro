@@ -102,8 +102,14 @@ final class ChatManager {
     /// user's request never dead-ends in silence after the ack; the automatic
     /// BreakTimerSheet path keeps the default `false` — never nag when clear.
     func runBreakDebrief(announceWhenClear: Bool = false) {
+        // .paused is as natural a debrief state as .active — users routinely
+        // pause the tracker for the break itself, and an .active-only guard
+        // made the explicit "on break" trigger ack then go silent (device
+        // finding 12). Every mutation downstream (createHandStub, FadeNote
+        // insertion, dismissStub) only guards .completed, so paused
+        // tournaments are safe to debrief.
         guard let tournament = tournamentManager.activeTournament,
-              tournament.status == .active else { return }
+              tournament.status == .active || tournament.status == .paused else { return }
         resetConversationStateIfTournamentChanged(tournament)
         guard !debriefDisabledForSession else {
             if announceWhenClear {

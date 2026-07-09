@@ -1757,6 +1757,42 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertNil(chat.activeDebriefGap, "no question should be pending when clear")
     }
 
+    // MARK: - Debrief while paused (F12)
+
+    @MainActor
+    func testOnBreakDebriefsWhilePausedTournament() async throws {
+        // Pausing the tracker for the break is natural; the old .active-only
+        // guard in runBreakDebrief made "on break" ack ("let's debrief") and
+        // then go silent. Paused tournaments must debrief exactly like active
+        // ones, including the downstream mutations (stub creation on a cards
+        // reply — mutableTournament only blocks .completed).
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 985_000)
+        manager.updateStack(chipCount: 760_000)   // −225K unexplained gap
+        manager.pauseTournament()
+        XCTAssertEqual(tournament.status, .paused)
+        let chat = ChatManager(tournamentManager: manager)
+
+        await chat.processUserMessage(text: "on break")
+
+        let aiTexts = tournament.sortedChatMessages.filter { $0.sender == .ai }.map(\.text)
+        XCTAssertTrue(aiTexts.contains { $0.contains("let's debrief") },
+                      "ack bubble missing: \(aiTexts)")
+        XCTAssertTrue(aiTexts.contains { $0.contains("dropped 225,000") },
+                      "debrief question missing while paused: \(aiTexts)")
+        XCTAssertNotNil(chat.activeDebriefGap)
+
+        // The cards reply must still create the breakDebrief stub while paused.
+        await chat.processUserMessage(text: "KQs")
+        let stub = try XCTUnwrap(tournament.pendingStubs.first)
+        XCTAssertEqual(stub.origin, .breakDebrief)
+        XCTAssertEqual(stub.heroStackBefore, 985_000)
+    }
+
     @MainActor
     func testAutoDebriefStaysSilentWhenClear() throws {
         // The BreakTimerSheet auto-trigger path (default announceWhenClear:
@@ -2079,6 +2115,37 @@ final class HandCaptureModelTests: XCTestCase {
         XCTAssertFalse(model.ledger.contains { $0.participant == .villain(utg) })
         XCTAssertTrue(model.ledger.contains { $0.participant == .villain(co) })
         XCTAssertNil(model.villains.first(where: { $0.id == utg }))
+    }
+
+    /// Removing the ONLY villain mid-hand collapses the replay to hero-only:
+    /// the hero's first replayed action ends the hand and books "Hero wins".
+    /// This pins the engine behavior behind device finding 10 — it is correct
+    /// as replay semantics (a lone participant can't be bet against), which is
+    /// exactly why the view must warn before allowing it, even when the
+    /// villain being removed never acted (only the hero did).
+    func testRemoveLastVillainMidHandEndsHandHeroOnly() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .co
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .bb, relative: .shorter, approxStack: 0)
+        guard let bb = model.villains.first?.id else { return XCTFail("no villain") }
+
+        // Hero (CO) opens; the BB villain has NOT acted yet — the view's
+        // per-villain hasActed check alone would therefore remove silently.
+        XCTAssertEqual(model.participantToAct, .hero)
+        model.add(action: .raise, toAmount: 500)
+        XCTAssertFalse(model.isHandOver)
+        XCTAssertFalse(model.hasActed(.villain(bb)))
+        XCTAssertFalse(model.ledger.isEmpty)               // the view's warning trigger
+
+        model.removeVillain(id: bb)
+
+        // Hero-only replay: the raise closes the hand immediately.
+        XCTAssertTrue(model.villains.isEmpty)
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertEqual(model.effectiveWinners, [.hero])
+        XCTAssertEqual(model.ledger.count, 1)              // hero's raise survives
     }
 
     /// Labels format hero and villains per the spec.

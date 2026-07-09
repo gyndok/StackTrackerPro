@@ -190,12 +190,12 @@ struct HandCaptureView: View {
             Button("Cancel", role: .cancel) { truncateIndex = nil }
         }
         .confirmationDialog(
-            "Remove this villain? Their recorded actions will be removed and the hand replayed without them.",
+            removalDialogTitle,
             isPresented: Binding(get: { pendingRemovalID != nil }, set: { if !$0 { pendingRemovalID = nil } }),
             titleVisibility: .visible
         ) {
             Button("Remove Villain", role: .destructive) {
-                if let id = pendingRemovalID { model.removeVillain(id: id) }
+                if let id = pendingRemovalID { removeVillain(id) }
                 pendingRemovalID = nil
             }
             Button("Cancel", role: .cancel) { pendingRemovalID = nil }
@@ -247,10 +247,17 @@ struct HandCaptureView: View {
                     .accessibilityLabel("Shown cards")
                     Spacer()
                     Button {
-                        if hasActed {
+                        // Confirm (never silently) when removal drops recorded
+                        // actions OR collapses the hand: removing the only
+                        // committed villain mid-hand leaves the hero as the
+                        // sole participant, so the replay ends the hand on
+                        // the first hero action — "Hero wins" out of nowhere
+                        // (device finding 10). That case needs a warning even
+                        // when the villain themselves never acted.
+                        if hasActed || isLastVillainMidHand {
                             pendingRemovalID = villain.id
                         } else {
-                            model.removeVillain(id: villain.id)
+                            removeVillain(villain.id)
                         }
                     } label: {
                         Image(systemName: "minus.circle")
@@ -287,6 +294,28 @@ struct HandCaptureView: View {
     private func editing(for target: VillainEditorTarget) -> HandCaptureModel.VillainDraft? {
         guard case .editing(let id) = target else { return nil }
         return model.villains.first { $0.id == id }
+    }
+
+    /// True when the hand is in flight and only one committed villain remains —
+    /// removing them collapses the replay to hero-only and ends the hand.
+    private var isLastVillainMidHand: Bool {
+        model.villains.count == 1 && !model.ledger.isEmpty
+    }
+
+    private var removalDialogTitle: String {
+        if isLastVillainMidHand {
+            return "Removing the only opponent ends the hand — its actions will be removed too."
+        }
+        return "Remove this villain? Their recorded actions will be removed and the hand replayed without them."
+    }
+
+    /// Single removal path: closes any editor still pointed at the villain
+    /// before dropping them, so a stale open editor can't later resurrect the
+    /// removed villain with old values (device finding 11).
+    private func removeVillain(_ id: UUID) {
+        if villainEditorTarget == .editing(id) { villainEditorTarget = nil }
+        if shownCardsTarget == id { shownCardsTarget = nil }
+        model.removeVillain(id: id)
     }
 
     private func villainChipText(_ villain: HandCaptureModel.VillainDraft) -> String {
@@ -554,16 +583,48 @@ private struct HeroStrip: View {
                 }
             }
 
-            HStack {
-                Text("Stack").foregroundColor(.textSecondary)
-                Spacer()
-                Button {
-                    stackPadText = String(model.heroStackBefore)
-                    showStackPad = true
-                } label: {
-                    Text(model.heroStackBefore.formatted())
-                        .font(PokerTypography.statValue)
-                        .foregroundColor(.textPrimary)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Stack at start of hand").foregroundColor(.textSecondary)
+                    Spacer()
+                    // Styled as an obvious input (field chrome + pencil):
+                    // the bare-label version read as static text and users
+                    // never realized it was editable (device finding 9).
+                    Button {
+                        stackPadText = String(model.heroStackBefore)
+                        showStackPad = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(model.heroStackBefore.formatted())
+                                .font(PokerTypography.statValue)
+                                .foregroundColor(.textPrimary)
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                                .foregroundColor(.goldAccent)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.backgroundPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.goldAccent.opacity(0.4), lineWidth: 1)
+                        )
+                    }
+                    .accessibilityLabel("Stack at start of hand, \(model.heroStackBefore.formatted()), edit")
+                }
+                // Enrich-at-break staleness: when the tracker's stack at open
+                // differs from the (stub-snapshotted) starting stack, offer
+                // the current tracker value as a one-tap correction.
+                if let tracker = model.trackerStackAtOpen, tracker != model.heroStackBefore {
+                    HStack(spacing: 8) {
+                        Text("Tracker now: \(tracker.formatted())")
+                            .font(PokerTypography.chipLabel)
+                            .foregroundColor(.textSecondary)
+                        Button("Use current") { model.heroStackBefore = tracker }
+                            .font(.caption)
+                            .foregroundColor(.goldAccent)
+                    }
                 }
             }
         }
@@ -652,6 +713,12 @@ private struct VillainInlineEditor: View {
     /// the engine already drops any of their recorded actions on removal.
     private func commit() {
         if let editing {
+            // Stale-editor guard: the villain may have been removed while
+            // this editor stayed open (minus button, or a dictation-applied
+            // draft replacing the roster). Committing then would resurrect
+            // them with stale values — bail instead, same pattern as the
+            // hasActed race guard below.
+            guard model.villains.contains(where: { $0.id == editing.id }) else { onDone(); return }
             // Race guard: the chip locks once a villain has acted, but the
             // editor may already be open when their first action is recorded
             // below — committing then would strip that action. Bail instead.
