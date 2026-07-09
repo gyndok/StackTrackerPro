@@ -197,15 +197,20 @@ final class HandTranscriptParser: @unchecked Sendable {
 // MARK: - Instructions (pure, deterministic, testable outside canImport)
 
 private func makeInstructions(for context: HandContext) -> String {
-    let blinds = "\(context.smallBlind.formatted())/\(context.bigBlind.formatted())"
-    let heroStack = context.heroStack.formatted()
+    // Pinned locale so number grouping is always comma-style ("10,000")
+    // regardless of the device locale — the prompt (and its deterministic
+    // test) must not change with the environment.
+    let style = IntegerFormatStyle<Int>.number.locale(Locale(identifier: "en_US"))
+    let blinds = "\(context.smallBlind.formatted(style))/\(context.bigBlind.formatted(style))"
+    let heroStack = context.heroStack.formatted(style)
     return """
         Parse ONLY the transcript provided into a structured poker hand. Never \
         invent actions, villains, cards, or streets that were not stated — if a \
         value is not explicitly said, leave it null. Treat the transcript in \
         isolation.
 
-        Table context for this hand: Blinds are \(blinds) with a \(context.ante.formatted()) ante. \
+        Table context for this hand: Level \(context.levelNumber), blinds are \
+        \(blinds) with a \(context.ante.formatted(style)) ante. \
         Hero's stack is \(heroStack). Hero was dealt \(context.heroCardCount) hole card(s).
 
         Cards must be written in canonical two-character form: rank followed by \

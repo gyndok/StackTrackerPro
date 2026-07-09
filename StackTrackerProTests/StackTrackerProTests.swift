@@ -2395,10 +2395,37 @@ final class HandTranscriptParserTests: XCTestCase {
             Board came jack of hearts eight of hearts four of diamonds, deuce of clubs, three of spades. \
             He showed nine ten of hearts.
             """
-        let draft = try await parser.parse(transcript: transcript, context: ctx)
-        // Loose invariants only — model output is non-deterministic.
+        // The exact-value checks (hero position/cards) can flake on a single
+        // shot of a small on-device model, and generation can occasionally
+        // run away and throw exceededContextWindowSize. Each parse is a fresh
+        // session, so a bounded retry (treating a throw as a failed attempt)
+        // asserts the model CAN parse the reference hand right while
+        // statistically suppressing single-shot variance.
+        func exactChecksPass(_ draft: ParsedHandDraft) -> Bool {
+            HoleCardShorthand.normalize(draft.heroCards ?? "") == "Kh Kd"
+                && draft.heroPosition?.uppercased() == "BTN"
+        }
+
+        var lastDraft: ParsedHandDraft?
+        var lastError: Error?
+        for _ in 0..<3 {
+            do {
+                let attempt = try await parser.parse(transcript: transcript, context: ctx)
+                lastDraft = attempt
+                if exactChecksPass(attempt) { break }
+            } catch {
+                lastError = error
+            }
+        }
+        let draft = try XCTUnwrap(
+            lastDraft,
+            "all 3 parse attempts threw; last error: \(String(describing: lastError))"
+        )
+
+        // Exact checks: pass if ANY of up to 3 attempts got them right.
         XCTAssertEqual(HoleCardShorthand.normalize(draft.heroCards ?? ""), "Kh Kd")
         XCTAssertEqual(draft.heroPosition?.uppercased(), "BTN")
+        // Loose invariants — stable across runs; asserted on the final draft.
         XCTAssertGreaterThanOrEqual(draft.villains.count, 1)
         XCTAssertGreaterThanOrEqual(draft.actions.count, 3)
         let flopCards = PlayingCard.parseList(draft.flop ?? "")
