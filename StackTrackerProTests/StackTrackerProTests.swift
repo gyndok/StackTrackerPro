@@ -23,6 +23,8 @@ private func makeInMemoryContainer() throws -> ModelContainer {
         TournamentEvent.self,
         Hand.self,
         HandAction.self,
+        HandStub.self,
+        FadeNote.self,
     ])
     let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
     return try ModelContainer(for: schema, configurations: [config])
@@ -1296,5 +1298,47 @@ final class CSVLineEndingTests: XCTestCase {
         let rows = CSVImporter.parseCSV("a,\"line1\r\nline2\",c\r\n")
         XCTAssertEqual(rows.count, 1)
         XCTAssertEqual(rows[0][1], "line1\r\nline2")
+    }
+}
+
+// MARK: - HandStub + FadeNote
+
+final class HandStubTests: XCTestCase {
+
+    @MainActor
+    func testHandStubPersistsWithContextAndStatus() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let t = Tournament(name: "Stub Test", buyIn: 100)
+        context.insert(t)
+
+        let stub = HandStub(
+            levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000, ante: 25_000,
+            heroStackBefore: 390_000, playersRemaining: 43,
+            holeCards: "KQs", origin: .manual
+        )
+        stub.quickResultRaw = QuickResult.won.rawValue
+        stub.quickVillainRaw = QuickVillain.covered.rawValue
+        stub.tournament = t
+        context.insert(stub)
+
+        let fade = FadeNote(intervalStart: .now, intervalEnd: .now, chipDelta: -340_000,
+                            userExplanation: "blinds and a few small ones")
+        fade.tournament = t
+        context.insert(fade)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<HandStub>()).first
+        XCTAssertEqual(fetched?.holeCards, "KQs")
+        XCTAssertEqual(fetched?.origin, .manual)
+        XCTAssertEqual(fetched?.status, .pending)
+        XCTAssertEqual(fetched?.quickResult, .won)
+        XCTAssertEqual(fetched?.quickVillain, .covered)
+        XCTAssertEqual(fetched?.heroStackBefore, 390_000)
+        XCTAssertEqual(t.pendingStubs.count, 1)
+        XCTAssertEqual(t.fadeNotes?.count, 1)
+
+        fetched?.setStatus(.dismissed)
+        XCTAssertTrue(t.pendingStubs.isEmpty)
     }
 }

@@ -108,6 +108,7 @@ final class Hand {
 
     var tournament: Tournament?
     var cashSession: CashSession?
+    var sourceStub: HandStub?
 
     init(
         heroPosition: HeroPosition = .btn,

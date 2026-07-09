@@ -31,6 +31,8 @@ struct StackTrackerProApp: App {
             TournamentEvent.self,
             Hand.self,
             HandAction.self,
+            HandStub.self,
+            FadeNote.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

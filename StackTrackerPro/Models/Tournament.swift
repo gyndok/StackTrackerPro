@@ -82,6 +82,12 @@ final class Tournament {
     @Relationship(deleteRule: .cascade, inverse: \Hand.tournament)
     var hands: [Hand]? = []
 
+    @Relationship(deleteRule: .cascade, inverse: \HandStub.tournament)
+    var handStubs: [HandStub]? = []
+
+    @Relationship(deleteRule: .cascade, inverse: \FadeNote.tournament)
+    var fadeNotes: [FadeNote]? = []
+
     // End of session
     var endDate: Date?
 
@@ -173,6 +179,16 @@ final class Tournament {
 
     var sortedHands: [Hand] {
         (hands ?? []).sorted { $0.timestamp < $1.timestamp }
+    }
+
+    var pendingStubs: [HandStub] {
+        (handStubs ?? [])
+            .filter { $0.status == .pending }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    var sortedFadeNotes: [FadeNote] {
+        (fadeNotes ?? []).sorted { $0.intervalStart < $1.intervalStart }
     }
 
     var sortedBlindLevels: [BlindLevel] {
