@@ -13,6 +13,7 @@
 		24F970FE3E9D3F06AA59D946 /* BountyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */; };
 		345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */; };
 		7E570000000000000000012C /* HandTranscriptParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012B /* HandTranscriptParser.swift */; };
+		7E570000000000000000012A /* DictationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000129 /* DictationEngine.swift */; };
 		44C9DCA32F5DCC8500C52F6B /* VideoComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */; };
 		44F697F82F3A5D1F008DDBFF /* AnalyticsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */; };
 		46AD5370A7D959B7B723909E /* Venue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */; };
@@ -195,6 +196,7 @@
 		C122E458D953010331B7239C /* TournamentMetricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentMetricsView.swift; sourceTree = "<group>"; };
 		C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPokerParser.swift; sourceTree = "<group>"; };
 		7E570000000000000000012B /* HandTranscriptParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTranscriptParser.swift; sourceTree = "<group>"; };
+		7E5700000000000000000129 /* DictationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationEngine.swift; sourceTree = "<group>"; };
 		C5B62E3D5EFC67A262E5F764 /* ChatThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadView.swift; sourceTree = "<group>"; };
 		C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseEngine.swift; sourceTree = "<group>"; };
 		CA5H000000000000000001 /* CashSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSession.swift; sourceTree = "<group>"; };
@@ -329,6 +331,7 @@
 				7E5700000000000000000125 /* HandCaptureModel.swift */,
 				7E570000000000000000012B /* HandTranscriptParser.swift */,
 				7E570000000000000000012D /* VoiceHandMapper.swift */,
+				7E5700000000000000000129 /* DictationEngine.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -597,6 +600,7 @@
 				7E5700000000000000000128 /* HandCaptureView.swift in Sources */,
 				7E570000000000000000012C /* HandTranscriptParser.swift in Sources */,
 				7E570000000000000000012E /* VoiceHandMapper.swift in Sources */,
+				7E570000000000000000012A /* DictationEngine.swift in Sources */,
 				7E570000000000000000010A /* BlindStructureParsing.swift in Sources */,
 				7E5700000000000000000108 /* TournamentRecapExporter.swift in Sources */,
 				7E5700000000000000000106 /* TournamentEvent.swift in Sources */,
@@ -877,6 +881,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StackTrackerPro uses the microphone to dictate poker hands for the hand logger.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -911,6 +916,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StackTrackerPro uses the microphone to dictate poker hands for the hand logger.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

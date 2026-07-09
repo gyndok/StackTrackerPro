@@ -2776,4 +2776,13 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertTrue(model.ledger.isEmpty)
         XCTAssertTrue(issues.contains { if case .missingAmount = $0 { return true }; return false })
     }
+
+    // MARK: - DictationEngine (Voice Hand Entry Task 3)
+
+    @MainActor
+    func testDictationEngineInitialStateAndTranscriptComposition() {
+        let engine = DictationEngine()
+        XCTAssertEqual(engine.state, .idle)
+        XCTAssertEqual(engine.fullTranscript, "")
+    }
 }
