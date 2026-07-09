@@ -291,6 +291,80 @@ final class HandCaptureModel {
         }
     }
 
+    /// Compact "what's happened so far" recap for the narration bar: level and
+    /// blinds, hero's seat/cards/stack, then one segment per street with its
+    /// board cards (once dealt) and the actions taken on it. Pure string
+    /// composition over already-computed state; no new derivation happens
+    /// here. The pot is intentionally omitted — it has its own chip in the UI.
+    var narration: String {
+        var parts: [String] = []
+
+        let game = heroCardCount == 4 ? "PLO" : "NLHE"
+        var header = "\(game) L\(levelNumber) \(smallBlind.formatted())/\(bigBlind.formatted())"
+        if ante > 0 { header += "(\(ante.formatted()))" }
+        parts.append(header)
+
+        if let heroPosition {
+            var heroPart = "Hero \(heroPosition.rawValue)"
+            if !heroCards.isEmpty {
+                heroPart += " " + heroCards.map(\.display).joined()
+            }
+            heroPart += " (\(heroStackBefore.formatted()))"
+            parts.append(heroPart)
+        }
+
+        for street in HandStreet.allCases {
+            let entries = ledger.filter { $0.street == street }
+            let streetBoard = boardCards(for: street)
+            guard !entries.isEmpty || !streetBoard.isEmpty else { continue }
+
+            var streetPart = street.label.uppercased()
+            if !streetBoard.isEmpty {
+                streetPart += " " + streetBoard.map(\.display).joined()
+            }
+            if !entries.isEmpty {
+                let separator = streetBoard.isEmpty ? " " : " — "
+                streetPart += separator + entries.map(describe).joined(separator: ", ")
+            }
+            parts.append(streetPart)
+        }
+
+        return parts.joined(separator: " · ")
+    }
+
+    /// The board cards revealed as of `street` (flop = first three, turn/river
+    /// = the single card added on that street). Empty until enough cards have
+    /// actually been dealt.
+    private func boardCards(for street: HandStreet) -> [PlayingCard] {
+        switch street {
+        case .preflop: return []
+        case .flop: return board.count >= 3 ? Array(board[0..<3]) : []
+        case .turn: return board.count >= 4 ? [board[3]] : []
+        case .river: return board.count >= 5 ? [board[4]] : []
+        }
+    }
+
+    /// Short actor label for narration lines: bare "Hero" (the fuller
+    /// "Hero (BTN)" form from `label(for:)` would duplicate the hero segment).
+    private func actorLabel(_ participant: Participant) -> String {
+        switch participant {
+        case .hero: return "Hero"
+        case .villain: return label(for: participant)
+        }
+    }
+
+    private func describe(_ entry: LedgerEntry) -> String {
+        let actor = actorLabel(entry.participant)
+        switch entry.action {
+        case .fold: return "\(actor) folds"
+        case .check: return "\(actor) checks"
+        case .call: return "\(actor) calls \(entry.toAmount.formatted())"
+        case .bet: return "\(actor) bets \(entry.toAmount.formatted())"
+        case .raise: return "\(actor) raises to \(entry.toAmount.formatted())"
+        case .allIn: return "\(actor) is all-in for \(entry.toAmount.formatted())"
+        }
+    }
+
     // MARK: - Showdown / result flow
 
     /// Sets a villain's shown holding (exactly two cards for a hold'em read).

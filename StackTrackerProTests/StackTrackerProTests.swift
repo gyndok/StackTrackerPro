@@ -2280,4 +2280,34 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertEqual(hand.result, .lost)
         XCTAssertFalse(hand.winnerOverride.isEmpty)
     }
+
+    // MARK: - narration (Task 14)
+
+    func testNarrationRendersHandSoFar() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ks Qs") { XCTAssertTrue(model.addCard(c)) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+
+        model.add(action: .raise, toAmount: 75_000)    // UTG opens
+        model.add(action: .raise, toAmount: 200_000)   // Hero 3-bets
+
+        let narration = model.narration
+        XCTAssertTrue(narration.contains("Hero BTN"), narration)
+        XCTAssertTrue(narration.contains("K♠"), narration)
+        XCTAssertTrue(narration.contains("Q♠"), narration)
+        XCTAssertTrue(narration.contains("UTG"), narration)
+        XCTAssertTrue(narration.contains("raises to 75,000"), narration)
+        XCTAssertTrue(narration.contains("raises to 200,000"), narration)
+        XCTAssertFalse(narration.contains("Pot"), narration)
+
+        model.add(action: .call, toAmount: 0)          // UTG calls, closing preflop
+
+        // Board cards fold into the street segment once dealt.
+        for c in PlayingCard.parseList("Jh 8h 4d") { XCTAssertTrue(model.addBoardCard(c)) }
+        let flopNarration = model.narration
+        XCTAssertTrue(flopNarration.contains("FLOP"), flopNarration)
+        XCTAssertTrue(flopNarration.contains("J♥"), flopNarration)
+    }
 }
