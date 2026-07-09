@@ -19,6 +19,7 @@ enum TournamentRecapExporter {
         sections.append(stackSeriesSection(for: tournament))
         sections.append(handNotesSection(for: tournament))
         sections.append(structuredHandsSection(for: tournament))
+        sections.append(pendingStubsSection(for: tournament))
         sections.append(chatTranscriptSection(for: tournament))
         return sections.joined(separator: "\n\n")
     }
@@ -78,8 +79,9 @@ enum TournamentRecapExporter {
         > remaining progression chart from the timeline data; (4) a financial
         > breakdown (buy-in, fees, add-ons, bounties, payout, net); (5) a
         > narrative of the session's key moments using the timeline, hand
-        > notes, and the street-by-street Structured Hands — call out swings,
-        > the bubble, and any notable hands; (6) the
+        > notes, and the street-by-street Structured Hands, and FadeNotes
+        > (player-confirmed gradual losses — treat them as authoritative, not
+        > unknowns) — call out swings, the bubble, and any notable hands; (6) the
         > blind structure as an appendix table. Keep the tone knowledgeable and
         > concise, like a poker coach's session debrief. All timestamps are
         > local to the player.
@@ -174,6 +176,11 @@ enum TournamentRecapExporter {
         for note in tournament.sortedHandNotes {
             rows.append((note.timestamp, "Hand note: \(note.descriptionText)"))
         }
+        for fade in tournament.sortedFadeNotes {
+            let sign = fade.chipDelta >= 0 ? "+" : "−"
+            rows.append((fade.intervalEnd,
+                "Fade: \(sign)\(abs(fade.chipDelta).formatted()) — \(fade.userExplanation)"))
+        }
         if let end = tournament.endDate {
             rows.append((end, "Tournament ended"))
         }
@@ -255,6 +262,19 @@ enum TournamentRecapExporter {
             if !hand.tags.isEmpty { lines.append("Tags: \(hand.tags.joined(separator: ", "))") }
             if !hand.notes.isEmpty { lines.append("Note: \(hand.notes)") }
             lines.append("")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func pendingStubsSection(for tournament: Tournament) -> String {
+        var lines: [String] = ["## Pending Hands (stubs awaiting enrichment)", ""]
+        let stubs = tournament.pendingStubs
+        guard !stubs.isEmpty else {
+            lines.append("_None — every captured hand was enriched._")
+            return lines.joined(separator: "\n")
+        }
+        for stub in stubs {
+            lines.append("- \(stamp(stub.createdAt)) — \(stub.exportLine)")
         }
         return lines.joined(separator: "\n")
     }

@@ -917,6 +917,34 @@ final class TournamentRecapExporterTests: XCTestCase {
         let contents = try String(contentsOf: url, encoding: .utf8)
         XCTAssertTrue(contents.hasPrefix("# Tournament Recap Data"))
     }
+
+    @MainActor
+    func testRecapIncludesStubsAndFadeNotes() throws {
+        let container = try makeInMemoryContainer()
+        defer { withExtendedLifetime(container) {} }
+        let context = container.mainContext
+        let manager = TournamentManager()
+        manager.setContext(context)
+        let tournament = Tournament(name: "Stub Test", buyIn: 250)
+        context.insert(tournament)
+        manager.startTournament(tournament)
+
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 390_000)
+        let stub = manager.createHandStub(holeCards: "KQs", quickResult: .won,
+                                          quickVillain: .covered, origin: .manual)
+        XCTAssertNotNil(stub)
+        let fade = FadeNote(intervalStart: .now, intervalEnd: .now, chipDelta: -340_000,
+                            userExplanation: "card dead, paid blinds")
+        fade.tournament = tournament
+        context.insert(fade)
+
+        let md = TournamentRecapExporter.markdown(for: tournament)
+        XCTAssertTrue(md.contains("## Pending Hands"))
+        XCTAssertTrue(md.contains("KQs"))
+        XCTAssertTrue(md.contains("(unenriched)"))
+        XCTAssertTrue(md.contains("card dead, paid blinds"))
+    }
 }
 
 // MARK: - Hand model
