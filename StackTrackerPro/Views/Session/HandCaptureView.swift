@@ -94,7 +94,22 @@ struct HandCaptureView: View {
                         LedgerList(model: model, truncateIndex: $truncateIndex)
 
                         if model.participantToAct != nil {
-                            ActionRow(model: model, pendingActionType: $pendingActionType)
+                            // With zero committed villains the hero is the only
+                            // participant, so the engine (correctly) ends the
+                            // hand after a single action — "Hero wins" out of
+                            // nowhere. Gate action entry behind having an
+                            // opponent instead of rendering that footgun. Only
+                            // for pristine hands (empty ledger); a hand already
+                            // in flight is never blocked. Committed villains
+                            // only: an open-but-uncommitted editor still shows
+                            // the hint.
+                            if model.villains.isEmpty && model.ledger.isEmpty {
+                                Text("Add at least one villain first — the hand needs an opponent")
+                                    .font(PokerTypography.chipLabel)
+                                    .foregroundColor(.textSecondary)
+                            } else {
+                                ActionRow(model: model, pendingActionType: $pendingActionType)
+                            }
                         }
                         if let type = pendingActionType {
                             SizingRow(model: model, actionType: type,
@@ -559,20 +574,24 @@ private struct HeroStrip: View {
 // MARK: - Villain editor
 
 /// Which inline villain editor is expanded, if any: a fresh add, or an
-/// existing villain re-opened for editing (tap position → tap relative-stack
-/// commits immediately, matching the brief's "inline editor" — no modal, no
-/// separate Save tap).
+/// existing villain re-opened for editing.
 private enum VillainEditorTarget: Hashable {
     case adding
     case editing(UUID)
 }
 
+/// Inline villain add/edit form. Every control SELECTS (position, relative
+/// stack, optional approx stack) and nothing commits until the explicit
+/// primary button ("Add Villain" / "Done") — the earlier tap-a-stack-chip-to-
+/// commit flow stranded anyone who typed the stack amount first and left no
+/// discoverable way to finish (device finding 6).
 private struct VillainInlineEditor: View {
     let model: HandCaptureModel
     let editing: HandCaptureModel.VillainDraft?
     let onDone: () -> Void
 
     @State private var position: HeroPosition
+    @State private var relative: RelativeStack
     @State private var approxText: String
 
     init(model: HandCaptureModel, editing: HandCaptureModel.VillainDraft?, onDone: @escaping () -> Void) {
@@ -583,6 +602,10 @@ private struct VillainInlineEditor: View {
             ?? HeroPosition.allCases.first { seat in
                 seat != model.heroPosition && !model.villains.contains { $0.position == seat }
             } ?? .utg)
+        // "Covers me" preselected: the most common read, and it means the
+        // primary button is always one tap away even if the user skips the
+        // relative-stack row entirely.
+        _relative = State(initialValue: editing?.relative ?? .coversHero)
         _approxText = State(initialValue: (editing?.approxStack).map { $0 > 0 ? String($0) : "" } ?? "")
     }
 
@@ -602,9 +625,9 @@ private struct VillainInlineEditor: View {
             Text("Relative Stack").font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
             HStack(spacing: 8) {
                 ForEach(RelativeStack.allCases, id: \.self) { option in
-                    Button(option.rawValue) { commit(relative: option) }
+                    Button(option.rawValue) { relative = option }
                         .buttonStyle(.bordered)
-                        .tint(.secondary)
+                        .tint(relative == option ? .goldAccent : .secondary)
                 }
             }
 
@@ -612,19 +635,22 @@ private struct VillainInlineEditor: View {
                 .textFieldStyle(.roundedBorder)
                 .keyboardType(.numbersAndPunctuation)
 
-            Button("Cancel", action: onDone)
-                .font(.caption)
-                .foregroundColor(.textSecondary)
+            HStack {
+                Button(editing == nil ? "Add Villain" : "Done", action: commit)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.goldAccent)
+                Button("Cancel", action: onDone)
+                    .font(.caption)
+                    .foregroundColor(.textSecondary)
+            }
         }
         .padding(.top, 4)
     }
 
-    /// Tapping a relative-stack option is the commit: it carries enough
-    /// information (position + relative size) to add the villain outright.
-    /// Editing an existing villain replaces it (remove + re-add) — safe
-    /// before the villain has acted, and the engine already drops any of
-    /// their recorded actions on removal.
-    private func commit(relative: RelativeStack) {
+    /// Explicit commit from the primary button. Editing an existing villain
+    /// replaces it (remove + re-add) — safe before the villain has acted, and
+    /// the engine already drops any of their recorded actions on removal.
+    private func commit() {
         if let editing {
             // Race guard: the chip locks once a villain has acted, but the
             // editor may already be open when their first action is recorded

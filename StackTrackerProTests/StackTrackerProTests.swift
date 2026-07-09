@@ -2680,6 +2680,46 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertTrue(issues.contains { if case .unknownPosition(let s) = $0 { return s == "banana" }; return false })
     }
 
+    /// Zero-villain guard: with no villains resolved, the hero is the only
+    /// participant and applying any hero action would end the hand instantly
+    /// ("hero raises to 1800" → "Hero wins" with an empty table). The mapper
+    /// must skip such actions with an out-of-turn issue instead — mirroring
+    /// the manual action row's add-a-villain-first gate.
+    @MainActor
+    func testMapperSkipsHeroActionsWhenNoVillainsResolved() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kh"
+        // No villains in the draft, but a hero action that would otherwise be
+        // perfectly legal (hero IS participantToAct when alone at the table).
+        draft.actions = [
+            SpokenAction(actor: "hero", street: "preflop", action: "raise", amount: 1800, isAllIn: false),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(model.ledger.isEmpty)                     // nothing applied
+        XCTAssertFalse(model.isHandOver)                        // no instant win booked
+        XCTAssertTrue(issues.contains { if case .outOfTurnAction = $0 { return true }; return false })
+
+        // Same guard when the draft HAD a villain but it failed to resolve
+        // (unknown seat): the model still has zero villains, so the action is
+        // skipped, not applied.
+        let model2 = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                      ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft2 = emptyDraft()
+        draft2.heroPosition = "BTN"
+        draft2.heroCards = "Ah Kh"
+        draft2.villains = [SpokenVillain(position: "banana", relativeStack: nil, approxStack: nil, shownCards: nil)]
+        draft2.actions = [
+            SpokenAction(actor: "hero", street: "preflop", action: "raise", amount: 1800, isAllIn: false),
+        ]
+        let issues2 = VoiceHandMapper.apply(draft2, to: model2)
+        XCTAssertTrue(model2.ledger.isEmpty)
+        XCTAssertFalse(model2.isHandOver)
+        XCTAssertTrue(issues2.contains { if case .outOfTurnAction = $0 { return true }; return false })
+    }
+
     /// Legality rule: a spoken action the engine would not currently offer
     /// (a check when a call is owed) is flagged out-of-turn and skipped rather
     /// than force-applied.

@@ -232,6 +232,16 @@ enum VoiceHandMapper {
         let actorLabel = action.actor ?? "?"
         let streetLabel = action.street ?? "?"
 
+        // With zero villains the hero is the only participant, so applying any
+        // hero action ends the hand instantly ("hero-only instant win") — same
+        // footgun the manual action row gates on. When no villains resolved
+        // from the draft, skip actions with an issue chip instead; the user
+        // adds the opponent by tap and re-enters the actions.
+        guard !model.villains.isEmpty else {
+            issues.append(.outOfTurnAction(actor: actorLabel, street: streetLabel))
+            return
+        }
+
         // Resolve actor and demand it exactly matches whose turn the engine says
         // it is — never force the engine out of order.
         guard let target = resolveActor(action.actor, in: model),
