@@ -2688,4 +2688,92 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertEqual(model.board.count, 0)
         XCTAssertTrue(issues.contains { if case .boardMismatch = $0 { return true }; return false })
     }
+
+    /// Verb normalization: a preflop open spoken as "bet" must map cleanly —
+    /// the engine offers .raise there (currentBet == BB), and the two verbs are
+    /// treated identically in replay, so the mapper coerces to the offered one.
+    @MainActor
+    func testMapperCoercesPreflopBetToRaise() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "bet", amount: 600, isAllIn: false),
+            SpokenAction(actor: "hero", street: "preflop", action: "fold", amount: nil, isAllIn: false),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(issues.isEmpty, "unexpected issues: \(issues.map(\.label))")
+        let first = try XCTUnwrap(model.ledger.first)
+        XCTAssertEqual(first.action, .raise)     // coerced to the offered verb
+        XCTAssertEqual(first.toAmount, 600)
+        XCTAssertTrue(model.isHandOver)
+    }
+
+    /// Verb normalization, other direction: a postflop lead spoken as "raise"
+    /// (currentBet == 0 → the engine offers .bet) maps cleanly as a bet.
+    @MainActor
+    func testMapperCoercesPostflopRaiseToBet() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "covers", approxStack: nil, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: 600, isAllIn: false),
+            SpokenAction(actor: "hero", street: "preflop", action: "call", amount: nil, isAllIn: false),
+            SpokenAction(actor: "UTG", street: "flop", action: "raise", amount: 800, isAllIn: false),
+            SpokenAction(actor: "hero", street: "flop", action: "fold", amount: nil, isAllIn: false),
+        ]
+        draft.flop = "Jh 8h 4d"
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(issues.isEmpty, "unexpected issues: \(issues.map(\.label))")
+        let flopLead = try XCTUnwrap(model.ledger.first { $0.street == .flop })
+        XCTAssertEqual(flopLead.action, .bet)    // coerced to the offered verb
+        XCTAssertEqual(flopLead.toAmount, 800)
+        XCTAssertTrue(model.isHandOver)
+    }
+
+    /// Villain jam with nil amount but a stated approxStack: the mapper uses the
+    /// approxStack as the all-in toAmount instead of emitting missingAmount.
+    @MainActor
+    func testMapperUsesVillainApproxStackForNilAllInAmount() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "shorter", approxStack: 12_000, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: nil, isAllIn: true),
+            SpokenAction(actor: "hero", street: "preflop", action: "fold", amount: nil, isAllIn: false),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(issues.isEmpty, "unexpected issues: \(issues.map(\.label))")
+        let jam = try XCTUnwrap(model.ledger.first)
+        XCTAssertEqual(jam.action, .allIn)
+        XCTAssertEqual(jam.toAmount, 12_000)
+        XCTAssertTrue(model.isHandOver)
+    }
+
+    /// Villain jam with nil amount AND no approxStack still falls back to
+    /// missingAmount + skip.
+    @MainActor
+    func testMapperFlagsVillainNilAllInWithoutApproxStack() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        var draft = emptyDraft()
+        draft.heroPosition = "BTN"
+        draft.heroCards = "Ah Kd"
+        draft.villains = [SpokenVillain(position: "UTG", relativeStack: "shorter", approxStack: nil, shownCards: nil)]
+        draft.actions = [
+            SpokenAction(actor: "UTG", street: "preflop", action: "raise", amount: nil, isAllIn: true),
+        ]
+        let issues = VoiceHandMapper.apply(draft, to: model)
+        XCTAssertTrue(model.ledger.isEmpty)
+        XCTAssertTrue(issues.contains { if case .missingAmount = $0 { return true }; return false })
+    }
 }

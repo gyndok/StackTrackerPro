@@ -176,7 +176,7 @@ enum VoiceHandMapper {
         let isHero = (target == .hero)
 
         // Determine the engine action type.
-        let type: HandActionType
+        var type: HandActionType
         if isAllIn {
             type = .allIn
         } else if let parsed = parseActionType(action.action) {
@@ -185,6 +185,16 @@ enum VoiceHandMapper {
             // Unrecognised verb that isn't an all-in — can't map it.
             issues.append(.outOfTurnAction(actor: actorLabel, street: streetLabel))
             return
+        }
+
+        // Normalize the aggressive verb: the engine offers exactly ONE of
+        // .bet/.raise per state (.bet iff currentBet == 0, else .raise) and
+        // treats the two identically in replay — only the ledger label
+        // differs. Speech blurs them ("bets 600" for a preflop open), so
+        // coerce to whichever the engine currently offers.
+        if type == .bet || type == .raise {
+            if model.legalActions.contains(.bet) { type = .bet }
+            else if model.legalActions.contains(.raise) { type = .raise }
         }
 
         // Legality: trust the draft only when the engine currently offers it.
@@ -203,6 +213,10 @@ enum VoiceHandMapper {
                 toAmount = amount
             } else if isHero {
                 toAmount = model.heroStackBefore   // hero jam with no stated amount
+            } else if case .villain(let id) = target,
+                      let stack = model.villains.first(where: { $0.id == id })?.approxStack,
+                      stack > 0 {
+                toAmount = stack   // villain jam sized by their stated approx stack
             } else {
                 issues.append(.missingAmount(actor: actorLabel, street: streetLabel))
                 return
