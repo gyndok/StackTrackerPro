@@ -16,6 +16,9 @@ struct HandCaptureView: View {
     let cashSession: CashSession?
     let stub: HandStub?
     let onSaved: (Hand) -> Void
+    /// When true and the ledger is still empty on appear, opens the dictation
+    /// sheet immediately — the voice-first entry points (Task 5) route here.
+    let autoStartDictation: Bool
 
     @State private var model: HandCaptureModel
     @AppStorage(SettingsKeys.defaultSeatsPerTable) private var seatsDefault = 9
@@ -29,11 +32,15 @@ struct HandCaptureView: View {
     @State private var villainEditorTarget: VillainEditorTarget?
     @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
+    @State private var showDictation = false
+    @State private var mappingIssues: [MappingIssue] = []
 
-    init(tournament: Tournament?, cashSession: CashSession?, stub: HandStub?, onSaved: @escaping (Hand) -> Void) {
+    init(tournament: Tournament?, cashSession: CashSession?, stub: HandStub?,
+         autoStartDictation: Bool = false, onSaved: @escaping (Hand) -> Void) {
         self.tournament = tournament
         self.cashSession = cashSession
         self.stub = stub
+        self.autoStartDictation = autoStartDictation
         self.onSaved = onSaved
 
         let gameType = tournament?.gameType ?? cashSession?.gameType
@@ -73,6 +80,9 @@ struct HandCaptureView: View {
                         HeroStrip(model: model, stubHint: stubHint,
                                  showStackPad: $showStackPad, stackPadText: $stackPadText)
                         villainSection
+                        if !mappingIssues.isEmpty {
+                            issuesChipRow
+                        }
                         LedgerList(model: model, truncateIndex: $truncateIndex)
 
                         if model.participantToAct != nil {
@@ -107,6 +117,14 @@ struct HandCaptureView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
+                        showDictation = true
+                    } label: {
+                        Image(systemName: "mic.fill")
+                    }
+                    .foregroundColor(.goldAccent)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
                         model.undoLast()
                         pendingActionType = nil
                     } label: {
@@ -116,6 +134,14 @@ struct HandCaptureView: View {
                     .disabled(model.ledger.isEmpty && model.board.isEmpty)
                 }
             }
+        }
+        .onAppear {
+            if autoStartDictation && model.ledger.isEmpty {
+                showDictation = true
+            }
+        }
+        .sheet(isPresented: $showDictation) {
+            DictationSheet(context: handContext, onResult: applyDraft)
         }
         .preferredColorScheme(.dark)
         .confirmationDialog("Discard this hand?", isPresented: $showCloseConfirm, titleVisibility: .visible) {
@@ -226,6 +252,49 @@ struct HandCaptureView: View {
             text += " (mucked)"
         }
         return text
+    }
+
+    // MARK: - Voice entry
+
+    /// Table context handed to the parser so spoken numbers resolve against
+    /// this hand's actual stakes — rebuilt fresh each time the sheet opens so
+    /// mid-hand edits (e.g. a corrected hero stack) are reflected.
+    private var handContext: HandContext {
+        HandContext(levelNumber: model.levelNumber, smallBlind: model.smallBlind,
+                    bigBlind: model.bigBlind, ante: model.ante,
+                    heroStack: model.heroStackBefore, heroCardCount: model.heroCardCount)
+    }
+
+    /// Voice fills the SAME state taps do — the mapper only ever calls the
+    /// engine's own mutation surface, so the narration bar and ledger update
+    /// live. Never calls `model.save`; anything the mapper couldn't place
+    /// deterministically becomes a chip in `mappingIssues`.
+    private func applyDraft(_ draft: ParsedHandDraft) {
+        mappingIssues = VoiceHandMapper.apply(draft, to: model)
+    }
+
+    private var issuesChipRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(mappingIssues) { issue in
+                    HStack(spacing: 6) {
+                        Text(issue.label)
+                            .font(PokerTypography.chipLabel)
+                        Button {
+                            mappingIssues.removeAll { $0.id == issue.id }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.mZoneOrange.opacity(0.15))
+                    .foregroundColor(.mZoneOrange)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.mZoneOrange.opacity(0.3), lineWidth: 1))
+                }
+            }
+        }
     }
 
     // MARK: - Tags + Save

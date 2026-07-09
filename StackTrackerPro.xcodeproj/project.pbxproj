@@ -43,6 +43,7 @@
 		7E5700000000000000000124 /* PokerHandEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000123 /* PokerHandEvaluator.swift */; };
 		7E5700000000000000000126 /* HandCaptureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000125 /* HandCaptureModel.swift */; };
 		7E570000000000000000012E /* VoiceHandMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012D /* VoiceHandMapper.swift */; };
+		7E5700000000000000000130 /* DictationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012F /* DictationSheet.swift */; };
 		7E5700000000000000000128 /* HandCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000127 /* HandCaptureView.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
@@ -170,6 +171,7 @@
 		7E5700000000000000000123 /* PokerHandEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerHandEvaluator.swift; sourceTree = "<group>"; };
 		7E5700000000000000000125 /* HandCaptureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureModel.swift; sourceTree = "<group>"; };
 		7E570000000000000000012D /* VoiceHandMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceHandMapper.swift; sourceTree = "<group>"; };
+		7E570000000000000000012F /* DictationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSheet.swift; sourceTree = "<group>"; };
 		7E5700000000000000000127 /* HandCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureView.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
@@ -299,6 +301,7 @@
 				DD2233445566778899001122 /* BreakTimerSheet.swift */,
 				7E570000000000000000011B /* HandStubSheet.swift */,
 				7E5700000000000000000127 /* HandCaptureView.swift */,
+				7E570000000000000000012F /* DictationSheet.swift */,
 			);
 			path = Session;
 			sourceTree = "<group>";
@@ -598,6 +601,7 @@
 				7E5700000000000000000124 /* PokerHandEvaluator.swift in Sources */,
 				7E5700000000000000000126 /* HandCaptureModel.swift in Sources */,
 				7E5700000000000000000128 /* HandCaptureView.swift in Sources */,
+				7E5700000000000000000130 /* DictationSheet.swift in Sources */,
 				7E570000000000000000012C /* HandTranscriptParser.swift in Sources */,
 				7E570000000000000000012E /* VoiceHandMapper.swift in Sources */,
 				7E570000000000000000012A /* DictationEngine.swift in Sources */,
