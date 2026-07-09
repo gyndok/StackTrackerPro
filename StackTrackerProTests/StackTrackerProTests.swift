@@ -1524,4 +1524,61 @@ final class ChatManagerTests: XCTestCase {
         XCTAssertNil(ChatManager.stubShorthand(from: "18000"))
         XCTAssertNil(ChatManager.stubShorthand(from: "stub 18000"))
     }
+
+    // MARK: - Swing Integration
+
+    @MainActor
+    func testSwingCreatesAutoStubAndPrompt() async throws {
+        // The on-device AI parser is non-deterministic when available (some
+        // simulator hosts have Apple Intelligence enabled); force the regex
+        // parser so exact parsed-entity assertions below are stable.
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        let chat = ChatManager(tournamentManager: manager)
+        await chat.processUserMessage(text: "390000")
+
+        await chat.processUserMessage(text: "985000")
+        XCTAssertEqual(tournament.pendingStubs.count, 1)
+        XCTAssertEqual(tournament.pendingStubs.first?.origin, .swingDetected)
+        let prompt = tournament.sortedChatMessages.last(where: { $0.sender == .ai })
+        XCTAssertTrue(prompt?.text.contains("Big pot") ?? false)
+
+        // Reply with cards → attaches
+        await chat.processUserMessage(text: "AK suited")
+        XCTAssertEqual(tournament.pendingStubs.first?.holeCards, "AKs")
+    }
+
+    @MainActor
+    func testSwingPromptDismissedByUnrelatedMessage() async throws {
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        let chat = ChatManager(tournamentManager: manager)
+        await chat.processUserMessage(text: "390000")
+        await chat.processUserMessage(text: "985000")
+        XCTAssertEqual(tournament.pendingStubs.count, 1)
+
+        // Unrelated message → silent dismissal, message still processed
+        await chat.processUserMessage(text: "120 players left")
+        XCTAssertTrue(tournament.pendingStubs.isEmpty)   // dismissed, not pending
+        XCTAssertEqual(tournament.playersRemaining, 120) // still applied
+    }
+
+    @MainActor
+    func testNoSwingPromptForRoutineDrift() async throws {
+        ChatManager.disableAIParsingForTesting = true
+        defer { ChatManager.disableAIParsingForTesting = false }
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        let chat = ChatManager(tournamentManager: manager)
+        await chat.processUserMessage(text: "390000")
+        await chat.processUserMessage(text: "380000")
+        XCTAssertTrue(tournament.pendingStubs.isEmpty)
+    }
 }

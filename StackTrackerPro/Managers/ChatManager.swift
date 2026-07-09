@@ -7,6 +7,11 @@ import os
 final class ChatManager {
     var isProcessing = false
 
+    /// Auto-created stub awaiting a one-ask follow-up ("Log it? Just tell me
+    /// your cards."). Cleared on the very next message regardless of outcome
+    /// so the user is never nagged twice for the same swing.
+    private(set) var pendingSwingStub: HandStub?
+
     @ObservationIgnored
     private let logger = Logger(subsystem: "com.gyndok.stacktrackerpro", category: "ChatManager")
 
@@ -14,6 +19,21 @@ final class ChatManager {
     private let responseEngine = ResponseEngine.shared
     private let regexParser = RegexPokerParser.shared
     private let aiParser = AIPokerParser.shared
+
+    private var swingSensitivity: Int {
+        UserDefaults.standard.object(forKey: SettingsKeys.swingSensitivity) as? Int ?? 20
+    }
+
+    private static let declineWords: Set<String> = ["no", "nope", "skip", "nah", "n"]
+
+    /// Test-only escape hatch: forces the regex parser even when the on-device
+    /// AI model is available. The AI model is available on some simulator
+    /// configurations (Apple Intelligence-capable hosts), and its extraction
+    /// is inherently non-deterministic — without this, chat-flow tests that
+    /// assert on exact parsed entities become flaky. Defaults to false so
+    /// production behavior (and the app UI) is never affected. Not exposed
+    /// outside @testable-import test targets.
+    static var disableAIParsingForTesting = false
 
     var isAIAvailable: Bool {
         aiParser.isAvailable
@@ -76,14 +96,59 @@ final class ChatManager {
             return
         }
 
+        // One-ask swing follow-up: cards attach, anything else dismisses silently.
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let pending = pendingSwingStub {
+            pendingSwingStub = nil
+            if pending.status == .pending {
+                if tournament.status != .completed, let cards = HoleCardShorthand.normalize(trimmed) {
+                    tournamentManager.attachCards(cards, to: pending)
+                    let ack = "Logged: \(HoleCardShorthand.display(cards)) — open it in Hands to add the full story."
+                    tournament.chatMessages?.append(ChatMessage(sender: .ai, text: ack))
+                    saveContext()
+                    HapticFeedback.impact(.light)
+                    return
+                }
+                // "no"/"skip" or unrelated → dismiss, never nag again.
+                if tournament.status != .completed {
+                    tournamentManager.dismissStub(pending)
+                }
+                if Self.declineWords.contains(trimmed.lowercased()) {
+                    saveContext()
+                    return
+                }
+                // fall through: process the unrelated message normally
+            }
+        }
+
         // 2. Parse (AI with regex fallback)
+        let previousEntry = tournament.latestStack
         let entities = await parseMessage(text)
 
         // 3. Apply entities to tournament state
         applyEntities(entities, to: tournament)
 
         // 4. Generate response
-        let responseText = responseEngine.generateResponse(entities: entities, tournament: tournament)
+        var responseText = responseEngine.generateResponse(entities: entities, tournament: tournament)
+
+        if let newChips = entities.chipCount, let previous = previousEntry,
+           tournament.status != .completed {
+            let bb = tournament.currentBlinds?.bigBlind ?? 0
+            let latestPendingStub = tournament.pendingStubs.last?.createdAt
+            if SwingDetector.isSwing(previous: previous.chipCount, new: newChips,
+                                     currentBB: bb, sensitivityPercent: swingSensitivity),
+               !SwingDetector.shouldSuppress(previousEntryDate: previous.timestamp, now: .now,
+                                             latestPendingStubDate: latestPendingStub) {
+                let stub = tournamentManager.createHandStub(holeCards: "", origin: .swingDetected)
+                pendingSwingStub = stub
+                let delta = newChips - previous.chipCount
+                let sign = delta >= 0 ? "+" : "−"
+                var line = "\n\nBig pot — \(sign)\(abs(delta).formatted())"
+                if let level = tournament.currentDisplayLevel { line += " at Level \(level)" }
+                line += ". Log it? Just tell me your cards."
+                responseText += line
+            }
+        }
 
         // 5. Save AI response
         let aiMessage = ChatMessage(sender: .ai, text: responseText)
@@ -147,7 +212,7 @@ final class ChatManager {
         // extraction (especially a hallucinated value from the AI model) can
         // never write garbage into the live session, and so the generated
         // response is built from the same clean values.
-        if aiParser.isAvailable {
+        if aiParser.isAvailable && !Self.disableAIParsingForTesting {
             do {
                 return try await aiParser.parse(text).sanitized()
             } catch {
