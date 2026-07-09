@@ -27,6 +27,23 @@ final class ChatManager {
         self.tournamentManager = tournamentManager
     }
 
+    // MARK: - Stub Shorthand
+
+    /// "stub KQs" or ". KQs" → normalized cards; nil when not a stub command.
+    nonisolated static func stubShorthand(from text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        let payload: String
+        if lower.hasPrefix("stub ") {
+            payload = String(trimmed.dropFirst(5))
+        } else if trimmed.hasPrefix(". ") {
+            payload = String(trimmed.dropFirst(2))
+        } else {
+            return nil
+        }
+        return HoleCardShorthand.normalize(payload)
+    }
+
     // MARK: - Core Flow
 
     func processUserMessage(text: String) async {
@@ -39,6 +56,23 @@ final class ChatManager {
         // 1. Save user message
         let userMessage = ChatMessage(sender: .user, text: text)
         tournament.chatMessages?.append(userMessage)
+
+        // Stub shorthand: "stub KQs" / ". KQs" — no parse, no sheet, one-line ack.
+        if let cards = Self.stubShorthand(from: text) {
+            let stub = tournamentManager.createHandStub(holeCards: cards, origin: .manual)
+            var ack = "Stub saved: \(HoleCardShorthand.display(cards))"
+            if let stub {
+                var ctx: [String] = []
+                if stub.levelNumber > 0 { ctx.append("at L\(stub.levelNumber)") }
+                if stub.heroStackBefore > 0 { ctx.append("stack \(stub.heroStackBefore.formatted())") }
+                if !ctx.isEmpty { ack += " " + ctx.joined(separator: ", ") }
+            }
+            ack += "."
+            tournament.chatMessages?.append(ChatMessage(sender: .ai, text: ack))
+            saveContext()
+            HapticFeedback.impact(.light)
+            return
+        }
 
         // 2. Parse (AI with regex fallback)
         let entities = await parseMessage(text)

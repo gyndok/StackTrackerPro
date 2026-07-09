@@ -1431,3 +1431,45 @@ final class HoleCardShorthandTests: XCTestCase {
         XCTAssertEqual(HoleCardShorthand.display("KQs"), "KQs")
     }
 }
+
+// MARK: - ChatManager
+
+final class ChatManagerTests: XCTestCase {
+
+    @MainActor
+    private func makeManagerAndTournament() throws -> (TournamentManager, Tournament, ModelContainer) {
+        let container = try makeInMemoryContainer()
+        let manager = TournamentManager()
+        manager.setContext(container.mainContext)
+        let t = Tournament(name: "Chat Test", buyIn: 250)
+        container.mainContext.insert(t)
+        manager.startTournament(t)
+        return (manager, t, container)
+    }
+
+    @MainActor
+    func testChatStubShorthandCreatesStubAndAcks() async throws {
+        let (manager, tournament, container) = try makeManagerAndTournament()
+        defer { withExtendedLifetime(container) {} }
+        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        manager.updateStack(chipCount: 390_000)
+        let chat = ChatManager(tournamentManager: manager)
+
+        await chat.processUserMessage(text: "stub KQs")
+
+        XCTAssertEqual(tournament.pendingStubs.count, 1)
+        XCTAssertEqual(tournament.pendingStubs.first?.holeCards, "KQs")
+        let lastAI = tournament.sortedChatMessages.last(where: { $0.sender == .ai })
+        XCTAssertTrue(lastAI?.text.contains("Stub saved") ?? false)
+        XCTAssertTrue(lastAI?.text.contains("KQs") ?? false)
+    }
+
+    func testStubShorthandDetection() {
+        XCTAssertEqual(ChatManager.stubShorthand(from: "stub KQs"), "KQs")
+        XCTAssertEqual(ChatManager.stubShorthand(from: ". AhKd"), "Ah Kd")
+        XCTAssertEqual(ChatManager.stubShorthand(from: "STUB 99"), "99")
+        XCTAssertNil(ChatManager.stubShorthand(from: "stubborn opponent"))
+        XCTAssertNil(ChatManager.stubShorthand(from: "18000"))
+        XCTAssertNil(ChatManager.stubShorthand(from: "stub 18000"))
+    }
+}
