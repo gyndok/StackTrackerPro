@@ -1858,3 +1858,229 @@ final class PokerHandEvaluatorTests: XCTestCase {
             holdings: [(hero, PlayingCard.parseList("Kh Kd"))]), [])
     }
 }
+
+// MARK: - HandCaptureModel (Task 12)
+
+@MainActor
+final class HandCaptureModelTests: XCTestCase {
+
+    // MARK: Brief contract tests
+
+    func testCaptureTurnOrderAndPot() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { XCTAssertTrue(model.addCard(c)) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        guard let utg = model.villains.first?.id else { return XCTFail("no villain") }
+
+        // Preflop: UTG acts first (hero BTN, villain UTG; blinds are dead)
+        XCTAssertEqual(model.participantToAct, .villain(utg))
+        model.add(action: .raise, toAmount: 75_000)
+        XCTAssertEqual(model.participantToAct, .hero)
+        XCTAssertEqual(model.currentBet, 75_000)
+        model.add(action: .call, toAmount: 0)
+
+        // Street closed → flop needs 3 cards. Pot: ante+sb+bb dead (60K) + 150K
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        XCTAssertEqual(model.pot, 25_000 + 10_000 + 25_000 + 150_000)
+        for c in PlayingCard.parseList("Jh 8h 4d") { XCTAssertTrue(model.addBoardCard(c)) }
+        XCTAssertEqual(model.currentStreet, .flop)
+        // Postflop: UTG first again (no SB/BB participants)
+        XCTAssertEqual(model.participantToAct, .villain(utg))
+
+        // Undo rewinds the board card and street state
+        model.undoLast()
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertEqual(model.board.count, 2)
+    }
+
+    func testCaptureFoldEndsHand() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 200, heroCardCount: 2, heroStackBefore: 40_000)
+        model.heroPosition = .co
+        for c in PlayingCard.parseList("As Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .bb, relative: .shorter, approxStack: 0)
+        // Hero (CO) first preflop; BB already has 200 committed
+        XCTAssertEqual(model.participantToAct, .hero)
+        model.add(action: .raise, toAmount: 500)
+        model.add(action: .fold, toAmount: 0)     // BB folds
+        XCTAssertTrue(model.isHandOver)
+        // Pot: ante 200 + sb dead 100 + bb 200 + hero 500 = 1000
+        XCTAssertEqual(model.pot, 1000)
+    }
+
+    // MARK: Additional coverage
+
+    /// Postflop turn order with an SB participant: action starts at SB, then BB,
+    /// then wraps to the later positions.
+    func testThreeWayPostflopOrderStartsAtSB() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .sb, relative: .similar, approxStack: 0)
+        model.addVillain(position: .bb, relative: .coversHero, approxStack: 0)
+        guard let sb = model.villains.first(where: { $0.position == .sb })?.id,
+              let bb = model.villains.first(where: { $0.position == .bb })?.id else {
+            return XCTFail("missing villains")
+        }
+        // Preflop: BTN (hero) acts first (first after BB, wrapping).
+        XCTAssertEqual(model.participantToAct, .hero)
+        model.add(action: .call, toAmount: 0)       // hero limps 200
+        XCTAssertEqual(model.participantToAct, .villain(sb))
+        model.add(action: .call, toAmount: 0)       // SB completes to 200
+        XCTAssertEqual(model.participantToAct, .villain(bb))
+        model.add(action: .check, toAmount: 0)      // BB checks option → close
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        for c in PlayingCard.parseList("2c 7d 9s") { XCTAssertTrue(model.addBoardCard(c)) }
+        XCTAssertEqual(model.currentStreet, .flop)
+        // Postflop: SB first.
+        XCTAssertEqual(model.participantToAct, .villain(sb))
+        // Pot = sb100 + bb200 dead? both are participants; committed preflop
+        // hero200 + sb200 + bb200 = 600 (ante 0).
+        XCTAssertEqual(model.pot, 600)
+    }
+
+    /// Check-check closes a postflop street.
+    func testCheckCheckClosesStreet() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .co, relative: .similar, approxStack: 0)
+        guard let co = model.villains.first?.id else { return XCTFail("no villain") }
+        // Preflop: CO acts first, both call to close (no BB participant).
+        XCTAssertEqual(model.participantToAct, .villain(co))
+        model.add(action: .call, toAmount: 0)       // CO calls the big blind
+        model.add(action: .call, toAmount: 0)       // hero (BTN) calls
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        for c in PlayingCard.parseList("2c 7d 9s") { XCTAssertTrue(model.addBoardCard(c)) }
+        XCTAssertEqual(model.currentStreet, .flop)
+        // Flop: both check → street closes, turn needs 1.
+        model.add(action: .check, toAmount: 0)
+        XCTAssertEqual(model.boardCardsNeeded, 0)   // one check, other still to act
+        model.add(action: .check, toAmount: 0)
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertTrue(model.legalActions.isEmpty)   // awaiting board
+    }
+
+    /// A short all-in below the current bet still closes the street and the
+    /// remaining board runs out to the river.
+    func testShortAllInRunsOutBoard() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .co
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .bb, relative: .shorter, approxStack: 300)
+        guard let bb = model.villains.first?.id else { return XCTFail("no villain") }
+        XCTAssertEqual(model.participantToAct, .hero)
+        model.add(action: .raise, toAmount: 500)          // hero opens 500
+        XCTAssertEqual(model.participantToAct, .villain(bb))
+        model.add(action: .allIn, toAmount: 300)          // BB jams short for 300 total
+        // Hero already committed 500 (> 300): nothing to call, street closes.
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        XCTAssertFalse(model.isHandOver)
+        for c in PlayingCard.parseList("2c 7d 9s") { XCTAssertTrue(model.addBoardCard(c)) }
+        // All remaining players all-in/uncontested → turn then river requested.
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertTrue(model.addBoardCard(PlayingCard("Ts")!))
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertTrue(model.addBoardCard(PlayingCard("3h")!))
+        XCTAssertEqual(model.board.count, 5)
+        XCTAssertTrue(model.isHandOver)
+        // Pot: sb100 dead + bb participant present + hero 500 + bb 300 = 900.
+        XCTAssertEqual(model.pot, 100 + 500 + 300)
+    }
+
+    /// Legal actions reflect the betting state.
+    func testLegalActions() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .co, relative: .similar, approxStack: 0)
+        // Preflop, CO faces the big blind (currentBet 200 > 0 committed).
+        XCTAssertEqual(model.legalActions, [.fold, .call, .raise, .allIn])
+        model.add(action: .call, toAmount: 0)              // CO calls
+        model.add(action: .call, toAmount: 0)              // hero (BTN) calls to close (no BB participant)
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        for c in PlayingCard.parseList("2c 7d 9s") { _ = model.addBoardCard(c) }
+        // Flop, first to act facing no bet.
+        XCTAssertEqual(model.legalActions, [.fold, .check, .bet, .allIn])
+    }
+
+    /// Undo and truncate both recompute state deterministically via replay.
+    func testUndoTruncateReplayDeterminism() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        model.add(action: .raise, toAmount: 600)           // UTG raise (ledger 0)
+        model.add(action: .call, toAmount: 0)              // hero call (ledger 1)
+        XCTAssertEqual(model.ledger.count, 2)
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        // Truncate back to the raise: drops hero's call, back to hero to act.
+        model.truncate(toLedgerIndex: 1)
+        XCTAssertEqual(model.ledger.count, 1)
+        XCTAssertEqual(model.boardCardsNeeded, 0)
+        XCTAssertEqual(model.participantToAct, .hero)
+        XCTAssertEqual(model.currentBet, 600)
+        // Undo the raise entirely: back to UTG to act at the big blind.
+        model.undoLast()
+        XCTAssertEqual(model.ledger.count, 0)
+        guard let utg = model.villains.first?.id else { return XCTFail("no villain") }
+        XCTAssertEqual(model.participantToAct, .villain(utg))
+        XCTAssertEqual(model.currentBet, 200)
+    }
+
+    /// Removing a villain with recorded actions drops their ledger entries and
+    /// the pot/turn state recomputes cleanly.
+    func testRemoveVillainDropsLedger() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Ad") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        model.addVillain(position: .co, relative: .similar, approxStack: 0)
+        guard let utg = model.villains.first(where: { $0.position == .utg })?.id,
+              let co = model.villains.first(where: { $0.position == .co })?.id else {
+            return XCTFail("missing villains")
+        }
+        model.add(action: .raise, toAmount: 600)           // UTG
+        model.add(action: .call, toAmount: 0)              // CO
+        XCTAssertEqual(model.ledger.count, 2)
+        // Remove UTG: their raise disappears; only CO's action remains.
+        model.removeVillain(id: utg)
+        XCTAssertFalse(model.ledger.contains { $0.participant == .villain(utg) })
+        XCTAssertTrue(model.ledger.contains { $0.participant == .villain(co) })
+        XCTAssertNil(model.villains.first(where: { $0.id == utg }))
+    }
+
+    /// Labels format hero and villains per the spec.
+    func testLabels() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        model.addVillain(position: .hj, relative: .similar, approxStack: 0)
+        model.addVillain(position: .co, relative: .shorter, approxStack: 0)
+        guard model.villains.count == 3 else { return XCTFail("expected 3") }
+        XCTAssertEqual(model.label(for: .hero), "Hero (BTN)")
+        XCTAssertEqual(model.label(for: .villain(model.villains[0].id)), "UTG (covers)")
+        XCTAssertEqual(model.label(for: .villain(model.villains[1].id)), "HJ (~same)")
+        XCTAssertEqual(model.label(for: .villain(model.villains[2].id)), "CO (short)")
+    }
+
+    /// addCard rejects duplicates and respects the hole-card cap.
+    func testAddCardCapAndDuplicates() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        XCTAssertTrue(model.addCard(PlayingCard("Ah")!))
+        XCTAssertFalse(model.addCard(PlayingCard("Ah")!))    // duplicate
+        XCTAssertTrue(model.addCard(PlayingCard("Kd")!))
+        XCTAssertFalse(model.addCard(PlayingCard("Qs")!))    // over cap of 2
+        XCTAssertEqual(model.heroCards.count, 2)
+    }
+}
