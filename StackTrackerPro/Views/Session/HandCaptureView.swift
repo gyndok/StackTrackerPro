@@ -100,7 +100,14 @@ struct HandCaptureView: View {
                             SizingRow(model: model, actionType: type,
                                      onCommit: commitSizedAction, onCancel: { pendingActionType = nil })
                         }
-                        if model.boardCardsNeeded > 0 {
+                        // Mounted whenever any board exists, not just while
+                        // cards are owed: addBoardCard rebuilds synchronously,
+                        // so a street-closing card drops boardCardsNeeded to 0
+                        // in the same call — gating on `needed > 0` alone would
+                        // unmount the section (and the last card's inline
+                        // delete) the instant the flop's 3rd / turn / river
+                        // card is picked.
+                        if !model.board.isEmpty || model.boardCardsNeeded > 0 {
                             BoardEntry(model: model)
                         }
                         if model.isHandOver {
@@ -219,9 +226,10 @@ struct HandCaptureView: View {
                     Button {
                         shownCardsTarget = shownCardsTarget == villain.id ? nil : villain.id
                     } label: {
-                        Image(systemName: "eye")
+                        Image(systemName: shownCardsTarget == villain.id ? "eye.fill" : "eye")
                     }
                     .foregroundColor(.goldAccent)
+                    .accessibilityLabel("Shown cards")
                     Spacer()
                     Button {
                         if hasActed {
@@ -663,9 +671,14 @@ private struct VillainShownCardsEditor: View {
                         }
                     }
                     Spacer()
-                    Button("Clear") { model.setShownHolding([], for: villainID) }
-                        .font(.caption)
-                        .foregroundColor(.chipRed)
+                    // With a single card the chip's own remove badge already
+                    // covers clearing; the bulk Clear only earns its spot
+                    // once there are 2+ cards to wipe in one tap.
+                    if villain.shownHolding.count > 1 {
+                        Button("Clear") { model.setShownHolding([], for: villainID) }
+                            .font(.caption)
+                            .foregroundColor(.chipRed)
+                    }
                 }
             }
             if let villain, villain.shownHolding.count < model.heroCardCount {
@@ -882,7 +895,13 @@ private struct BoardEntry: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("\(model.streetBeingDealt.label) card\(model.boardCardsNeeded > 1 ? "s (\(model.boardCardsNeeded))" : "")")
+            // Street header only while cards are owed; once a street's cards
+            // complete this section stays mounted (see the mount condition in
+            // HandCaptureView.body) so the board — and the last card's inline
+            // delete — remains visible through the following betting round.
+            Text(model.boardCardsNeeded > 0
+                 ? "\(model.streetBeingDealt.label) card\(model.boardCardsNeeded > 1 ? "s (\(model.boardCardsNeeded))" : "")"
+                 : "Board")
                 .font(PokerTypography.sectionHeader)
                 .foregroundColor(.goldAccent)
             if !model.board.isEmpty {
@@ -892,8 +911,10 @@ private struct BoardEntry: View {
                     }
                 }
             }
-            CardPickerGrid(dealt: model.dealtCards) { card in
-                if model.addBoardCard(card) { HapticFeedback.impact(.light) }
+            if model.boardCardsNeeded > 0 {
+                CardPickerGrid(dealt: model.dealtCards) { card in
+                    if model.addBoardCard(card) { HapticFeedback.impact(.light) }
+                }
             }
         }
         .pokerCard()

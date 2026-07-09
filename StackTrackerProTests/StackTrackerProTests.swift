@@ -2144,7 +2144,13 @@ final class HandCaptureModelTests: XCTestCase {
         XCTAssertTrue(model.addBoardCard(PlayingCard("7d")!))
         XCTAssertTrue(model.lastInputWasBoardCard)
         XCTAssertTrue(model.addBoardCard(PlayingCard("9s")!))
-        XCTAssertTrue(model.lastInputWasBoardCard)              // flop complete, still last input
+        // The street-closing card drops boardCardsNeeded to 0 synchronously
+        // within the same addBoardCard call, yet it must remain removable —
+        // this exact state (needed == 0, last input a board card) is the one
+        // the board section's inline delete has to be reachable in, so the
+        // flag must be TRUE here.
+        XCTAssertEqual(model.boardCardsNeeded, 0)
+        XCTAssertTrue(model.lastInputWasBoardCard)
 
         // An action after the flop completes flips it false again.
         model.add(action: .check, toAmount: 0)
@@ -2153,6 +2159,23 @@ final class HandCaptureModelTests: XCTestCase {
         // Undoing that action restores the board card as the last input.
         model.undoLast()
         XCTAssertTrue(model.lastInputWasBoardCard)
+
+        // Same invariant on a single-card street: check-check closes the flop,
+        // the turn card is owed, and dealing it (needed 1 → 0 in one call)
+        // still leaves the just-placed card deletable while the turn betting
+        // round opens.
+        model.add(action: .check, toAmount: 0)
+        model.add(action: .check, toAmount: 0)
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertTrue(model.addBoardCard(PlayingCard("Ts")!))
+        XCTAssertEqual(model.boardCardsNeeded, 0)
+        XCTAssertTrue(model.lastInputWasBoardCard)
+        // The inline delete calls undoLast(): the turn card comes back off
+        // and is owed again; the last input is now the closing check.
+        model.undoLast()
+        XCTAssertEqual(model.board.count, 3)
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertFalse(model.lastInputWasBoardCard)
     }
 }
 
