@@ -2369,3 +2369,39 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertTrue(flopNarration.contains("J♥"), flopNarration)
     }
 }
+
+// MARK: - HandTranscriptParser (Voice Task 1)
+
+final class HandTranscriptParserTests: XCTestCase {
+
+    func testHandTranscriptInstructionsIncludeContext() {
+        let ctx = HandContext(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                              ante: 25_000, heroStack: 390_000, heroCardCount: 2)
+        let instructions = HandTranscriptParser.instructions(for: ctx)
+        XCTAssertTrue(instructions.contains("10,000/25,000"))
+        XCTAssertTrue(instructions.contains("390,000"))
+        XCTAssertTrue(instructions.contains("Jh 8h 4d"))       // canonical card format example
+        XCTAssertTrue(instructions.lowercased().contains("only the transcript provided"))
+    }
+
+    func testHandTranscriptParserParsesReferenceHand() async throws {
+        let parser = HandTranscriptParser.shared
+        try XCTSkipUnless(parser.isAvailable, "on-device model unavailable")
+        let ctx = HandContext(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                              ante: 25_000, heroStack: 390_000, heroCardCount: 2)
+        let transcript = """
+            I had kings on the button, king of hearts king of diamonds. UTG covered me and \
+            raised to seventy five thousand, I three-bet to two hundred K, he jammed, I called. \
+            Board came jack of hearts eight of hearts four of diamonds, deuce of clubs, three of spades. \
+            He showed nine ten of hearts.
+            """
+        let draft = try await parser.parse(transcript: transcript, context: ctx)
+        // Loose invariants only — model output is non-deterministic.
+        XCTAssertEqual(HoleCardShorthand.normalize(draft.heroCards ?? ""), "Kh Kd")
+        XCTAssertEqual(draft.heroPosition?.uppercased(), "BTN")
+        XCTAssertGreaterThanOrEqual(draft.villains.count, 1)
+        XCTAssertGreaterThanOrEqual(draft.actions.count, 3)
+        let flopCards = PlayingCard.parseList(draft.flop ?? "")
+        XCTAssertEqual(flopCards.count, 3)
+    }
+}
