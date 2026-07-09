@@ -1220,14 +1220,34 @@ final class TournamentEventTests: XCTestCase {
         let (manager, tournament, container) = try makeManagerAndTournament()
         defer { withExtendedLifetime(container) {} }
 
-        manager.updateBlinds(levelNumber: 21, sb: 10_000, bb: 25_000, ante: 25_000)
+        // Structure with a break row so display level != internal level:
+        // internal 1–7 play, internal 8 is a break, internal 9–22 play.
+        // Internal level 22 is therefore the 21st playing level (display L21).
+        for n in 1...22 {
+            if n == 8 {
+                tournament.blindLevels?.append(
+                    BlindLevel(levelNumber: n, smallBlind: 0, bigBlind: 0, isBreak: true))
+            } else if n == 22 {
+                tournament.blindLevels?.append(
+                    BlindLevel(levelNumber: n, smallBlind: 10_000, bigBlind: 25_000, ante: 25_000))
+            } else {
+                tournament.blindLevels?.append(
+                    BlindLevel(levelNumber: n, smallBlind: 100 * n, bigBlind: 200 * n))
+            }
+        }
+        manager.updateBlinds(levelNumber: 22)
         manager.updateStack(chipCount: 390_000)
         manager.updateField(playersRemaining: 43)
+        XCTAssertEqual(tournament.currentBlindLevelNumber, 22)
+        XCTAssertEqual(tournament.currentDisplayLevel, 21)
 
         let stub = manager.createHandStub(holeCards: "KQs", quickResult: .won,
                                           quickVillain: .covered, origin: .manual)
         XCTAssertNotNil(stub)
-        XCTAssertEqual(stub?.levelNumber, 21)
+        XCTAssertEqual(stub?.levelNumber, 21, "stub snapshots the user-facing display level")
+        XCTAssertEqual(stub?.levelNumber, tournament.currentDisplayLevel)
+        XCTAssertNotEqual(stub?.levelNumber, tournament.currentBlindLevelNumber,
+                          "with breaks in the structure, display level must differ from internal")
         XCTAssertEqual(stub?.smallBlind, 10_000)
         XCTAssertEqual(stub?.bigBlind, 25_000)
         XCTAssertEqual(stub?.ante, 25_000)

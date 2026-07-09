@@ -356,7 +356,7 @@ final class TournamentManager {
         guard let tournament = mutableTournament else { return nil }
         let blinds = tournament.currentBlinds
         let stub = HandStub(
-            levelNumber: tournament.currentBlindLevelNumber,
+            levelNumber: tournament.currentDisplayLevel ?? tournament.currentBlindLevelNumber,
             smallBlind: blinds?.smallBlind ?? 0,
             bigBlind: blinds?.bigBlind ?? 0,
             ante: blinds?.ante ?? 0,
