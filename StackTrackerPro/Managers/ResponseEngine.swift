@@ -203,12 +203,13 @@ final class ResponseEngine: @unchecked Sendable {
         return lines.joined(separator: "\n")
     }
 
-    // MARK: - Hand Note
+    // MARK: - Note
 
     func handNoteResponse(noteText: String, tournament: Tournament) -> String {
         let preview = noteText.count > 60 ? String(noteText.prefix(60)) + "..." : noteText
         var lines: [String] = []
-        lines.append("Hand noted: \"\(preview)\"")
+        // General session notes, not just hands (F19).
+        lines.append("Noted: \"\(preview)\"")
 
         var context: [String] = []
         if let displayLevel = tournament.currentDisplayLevel {

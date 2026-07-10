@@ -61,7 +61,7 @@ struct ActiveSessionView: View {
                 ReceiptCapturePane(tournament: tournament)
                     .tag(4)
 
-                // Hand notes pane
+                // Notes pane (general session notes — F19)
                 HandNotesPane(tournament: tournament)
                     .tag(5)
 

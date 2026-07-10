@@ -30,7 +30,7 @@ struct CashActiveSessionView: View {
                 CashSessionStatsView(session: session)
                     .tag(1)
 
-                // Hand notes pane
+                // Notes pane (general session notes — F19)
                 HandNotesPane(cashSession: session)
                     .tag(2)
 

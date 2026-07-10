@@ -54,6 +54,14 @@ struct ChatInputView: View {
                     )
                     .focused($isFocused)
                     .onSubmit { sendIfReady() }
+                    // Keyboard Done: an explicit dismiss for when the user
+                    // opened the field but doesn't want to send (F18).
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") { isFocused = false }
+                        }
+                    }
 
                 Button {
                     sendIfReady()

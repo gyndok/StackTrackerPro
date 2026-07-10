@@ -19,6 +19,9 @@ struct ChatThreadView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
+            // The chat input sits directly below this scroll; dragging the
+            // thread is the natural "put the keyboard away" gesture (F18).
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: messages.count) { _, _ in
                 if let last = messages.last {
                     withAnimation(.easeOut(duration: 0.3)) {

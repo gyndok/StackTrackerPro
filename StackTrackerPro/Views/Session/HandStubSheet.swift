@@ -14,6 +14,7 @@ struct HandStubSheet: View {
     @State private var shorthand = ""
     @State private var quickResult: QuickResult?
     @State private var quickVillain: QuickVillain?
+    @FocusState private var shorthandFocused: Bool
 
     private var storedCards: String? {
         if pickedCards.count == 2 { return PlayingCard.joinList(pickedCards) }
@@ -48,6 +49,15 @@ struct HandStubSheet: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
+                    .focused($shorthandFocused)
+                    // Keyboard Done: lets the user put the keyboard away to
+                    // reach the result chips below (F18).
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") { shorthandFocused = false }
+                        }
+                    }
 
                 // Optional one-tap chips
                 HStack {

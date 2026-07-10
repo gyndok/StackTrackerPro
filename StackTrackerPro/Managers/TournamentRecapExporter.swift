@@ -3,7 +3,7 @@ import Foundation
 /// Builds a single self-contained Markdown file for a completed tournament:
 /// a ready-made prompt for a frontier AI model, the tournament's summary and
 /// structure, a chronological merged timeline, the raw stack series as CSV,
-/// hand notes, and the chat transcript. The user shares the file straight
+/// session notes, and the chat transcript. The user shares the file straight
 /// into an AI app to get a polished PDF recap.
 enum TournamentRecapExporter {
 
@@ -78,7 +78,7 @@ enum TournamentRecapExporter {
         > the blind level on the x-axis context; (3) an entrants vs. players-
         > remaining progression chart from the timeline data; (4) a financial
         > breakdown (buy-in, fees, add-ons, bounties, payout, net); (5) a
-        > narrative of the session's key moments using the timeline, hand
+        > narrative of the session's key moments using the timeline, the
         > notes, and the street-by-street Structured Hands, and FadeNotes
         > (player-confirmed gradual losses — treat them as authoritative, not
         > unknowns) — call out swings, the bubble, and any notable hands; (6) the
@@ -213,10 +213,10 @@ enum TournamentRecapExporter {
     }
 
     private static func handNotesSection(for tournament: Tournament) -> String {
-        var lines: [String] = ["## Hand Notes", ""]
+        var lines: [String] = ["## Notes", ""]
         let notes = tournament.sortedHandNotes
         guard !notes.isEmpty else {
-            lines.append("_No hand notes recorded._")
+            lines.append("_No notes recorded._")
             return lines.joined(separator: "\n")
         }
         for note in notes {

@@ -46,7 +46,7 @@ struct CashChatInputView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "note.text")
                                 .font(.caption)
-                            Text("Hand Note")
+                            Text("Note")
                         }
                         .quickChip()
                     }
@@ -70,6 +70,15 @@ struct CashChatInputView: View {
                     )
                     .focused($isFocused)
                     .onSubmit { sendStack() }
+                    // Keyboard Done: the number pad has no return key at all,
+                    // so this is the only way to put the keyboard away without
+                    // sending (F18).
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") { isFocused = false }
+                        }
+                    }
 
                 Button {
                     sendStack()

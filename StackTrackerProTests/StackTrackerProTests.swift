@@ -879,7 +879,7 @@ final class TournamentRecapExporterTests: XCTestCase {
 
         // All sections present
         for heading in ["# Tournament Recap Data", "## Summary", "## Blind Structure",
-                        "## Timeline", "## Stack Series (CSV)", "## Hand Notes", "## Chat Transcript"] {
+                        "## Timeline", "## Stack Series (CSV)", "## Notes", "## Chat Transcript"] {
             XCTAssertTrue(markdown.contains(heading), "missing section: \(heading)")
         }
 

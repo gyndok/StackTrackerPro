@@ -124,6 +124,9 @@ struct HandsPane: View {
                 }
                 .scrollContentBackground(.hidden)
                 .listStyle(.plain)
+                // This pane sits behind the session's chat input — dragging
+                // the list is the natural keyboard-dismiss gesture (F18).
+                .scrollDismissesKeyboard(.interactively)
             }
             if !isReadOnly {
                 Button {

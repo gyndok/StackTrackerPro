@@ -64,6 +64,9 @@ struct HandNotesPane: View {
                 }
             }
         }
+        // This pane sits behind the session's chat input — dragging the notes
+        // list is the natural keyboard-dismiss gesture (F18).
+        .scrollDismissesKeyboard(.interactively)
         .sheet(isPresented: $showAddSheet) {
             addEditSheet(isNew: true)
         }
@@ -132,7 +135,7 @@ struct HandNotesPane: View {
             HStack {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
-                Text("Add Hand Note")
+                Text("Add Note")
                     .font(PokerTypography.chipLabel)
             }
             .foregroundColor(.goldAccent)
@@ -171,7 +174,7 @@ struct HandNotesPane: View {
                 Spacer()
             }
             .background(Color.backgroundPrimary)
-            .navigationTitle(isNew ? "Add Hand Note" : "Edit Hand Note")
+            .navigationTitle(isNew ? "Add Note" : "Edit Note")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -265,11 +268,16 @@ struct HandNotesPane: View {
                 .foregroundColor(.textSecondary.opacity(0.5))
                 .accessibilityHidden(true)
 
-            Text("No hand notes yet")
+            Text("No notes yet")
                 .font(PokerTypography.chatBody)
                 .foregroundColor(.textSecondary)
 
-            Text("Use chat: \"note: flopped a set of jacks\"")
+            // General session notes, not just hands (F19) — structured hands
+            // have their own pane now.
+            Text("Use chat: \"note: dinner break at 7\"")
+                .font(PokerTypography.chatCaption)
+                .foregroundColor(.textSecondary.opacity(0.7))
+            Text("or \"note: table 14 is soft\"")
                 .font(PokerTypography.chatCaption)
                 .foregroundColor(.textSecondary.opacity(0.7))
 

@@ -164,6 +164,10 @@ struct HandCaptureView: View {
                     }
                     .padding(16)
                 }
+                // Inline number fields (sizing "#", villain approx stack) open
+                // the keyboard mid-scroll; dragging the capture surface should
+                // put it away (F18).
+                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Log Hand")
             .navigationBarTitleDisplayMode(.inline)
@@ -845,6 +849,7 @@ private struct VillainInlineEditor: View {
     @State private var position: HeroPosition
     @State private var relative: RelativeStack
     @State private var approxText: String
+    @FocusState private var approxFocused: Bool
 
     init(model: HandCaptureModel, editing: HandCaptureModel.VillainDraft?, onDone: @escaping () -> Void) {
         self.model = model
@@ -886,6 +891,14 @@ private struct VillainInlineEditor: View {
             TextField("≈ stack (optional, e.g. 300k)", text: $approxText)
                 .textFieldStyle(.roundedBorder)
                 .keyboardType(.numbersAndPunctuation)
+                .focused($approxFocused)
+                // Keyboard Done: no return key on this layout either (F18).
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") { approxFocused = false }
+                    }
+                }
 
             HStack {
                 Button(editing == nil ? "Add Villain" : "Done", action: commit)
@@ -1087,6 +1100,7 @@ private struct SizingRow: View {
 
     @State private var showNumberPad = false
     @State private var numberPadText = ""
+    @FocusState private var numberPadFocused: Bool
 
     private let fractionChips: [(String, Double)] = [
         ("⅓", 1.0 / 3), ("½", 0.5), ("⅔", 2.0 / 3), ("Pot", 1.0), ("1.5x", 1.5),
@@ -1146,6 +1160,16 @@ private struct SizingRow: View {
                     TextField("e.g. 2300, 4bb or 42.5k", text: $numberPadText)
                         .textFieldStyle(.roundedBorder)
                         .keyboardType(.numbersAndPunctuation)
+                        .focused($numberPadFocused)
+                        // Keyboard Done: numbers-and-punctuation has no return
+                        // key to lean on, so give the keyboard an explicit
+                        // dismiss (F18).
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") { numberPadFocused = false }
+                            }
+                        }
                     Button(confirmLabel) {
                         if let amount = resolvedAmount {
                             onCommit(actionType, amount)
