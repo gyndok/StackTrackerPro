@@ -167,19 +167,6 @@ final class HandCaptureModel {
         return idx
     }
 
-    /// Participants in the order they act on `street`. Preflop starts with the
-    /// first seat after the big blind (i.e. UTG, wrapping); postflop starts at
-    /// the small blind and proceeds clockwise.
-    private func streetOrder(_ street: HandStreet) -> [Participant] {
-        let parts = participants
-        if street == .preflop {
-            return parts.sorted { tableIndex($0) < tableIndex($1) }
-        }
-        let sbIndex = Self.tableOrder.firstIndex(of: .sb) ?? 7
-        func key(_ p: Participant) -> Int { (tableIndex(p) - sbIndex + Self.tableOrder.count) % Self.tableOrder.count }
-        return parts.sorted { key($0) < key($1) }
-    }
-
     // MARK: - Setup mutations
 
     func addVillain(position: HeroPosition, relative: RelativeStack, approxStack: Int) {
@@ -655,29 +642,48 @@ final class HandCaptureModel {
 
     // MARK: - Replay
 
-    // Cards the next street needs before betting resumes (flop 3, otherwise 1).
-    private func cardsForNextStreet(after street: HandStreet) -> Int {
-        street == .preflop ? 3 : 1
+    /// The finished output of one replay: exactly the derived properties
+    /// `rebuild()` publishes onto the model.
+    private struct ReplayResult {
+        var ledger: [LedgerEntry]
+        var board: [PlayingCard]
+        var currentStreet: HandStreet
+        var boardCardsNeeded: Int
+        var participantToAct: Participant?
+        var currentBet: Int
+        var isHandOver: Bool
+        var foldedParticipants: Set<Participant>
+        var allInParticipants: Set<Participant>
+        var committedByStreet: [HandStreet: [Participant: Int]]
     }
 
-    private func nextStreet(after street: HandStreet) -> HandStreet? {
-        switch street {
-        case .preflop: return .flop
-        case .flop: return .turn
-        case .turn: return .river
-        case .river: return nil
-        }
-    }
+    /// Pure, isolation-free replay of the input log.
+    ///
+    /// This is a value type that owns the replay's working state as stored
+    /// properties, so the step helpers are `mutating func`s over `self` rather
+    /// than nested functions closing over captured locals. That distinction is
+    /// what makes the engine safe under Release / whole-module region-based
+    /// concurrency checking: `@MainActor func rebuild()` used to keep the state
+    /// in `var` locals and drive it with nested functions, and the analysis
+    /// rejected those captures as data races (`sending 'committed'/'street'
+    /// risks causing data races`). Nothing here crosses an isolation boundary —
+    /// `rebuild()` constructs, runs, and discards the engine synchronously on
+    /// the MainActor — but the struct owes its state to nobody, so there is no
+    /// capture to flag. The replay *logic* is a byte-for-byte move of the old
+    /// nested-function body; the resolution rules and their order are unchanged.
+    private struct ReplayEngine {
+        // Immutable configuration, snapshotted from the model before replay.
+        let parts: [Participant]
+        let tableIndex: [Participant: Int]      // participant → seat index in tableOrder
+        let sbIndex: Int                        // index of the small blind seat
+        let orderCount: Int                     // tableOrder.count
+        let sbParticipant: Participant?
+        let bbParticipant: Participant?
+        let smallBlind: Int
+        let bigBlind: Int
+        let inputs: [Input]
 
-    /// Rebuilds every derived property by replaying `inputs` from scratch.
-    private func rebuild() {
-        // The hand just changed, so any manual winner ruling no longer
-        // describes it — drop the override (see the winnerOverride docs).
-        // Setting the override itself never calls rebuild, so a fresh ruling
-        // sticks until the next mutation.
-        winnerOverride = nil
-
-        // Replay-local state.
+        // Replay-local working state.
         var street: HandStreet = .preflop
         var committed: [HandStreet: [Participant: Int]] = [:]
         var folded: Set<Participant> = []
@@ -690,14 +696,32 @@ final class HandCaptureModel {
         var handOver = false
         var needed = 0
 
-        let parts = participants
+        // Cards the next street needs before betting resumes (flop 3, otherwise 1).
+        func cardsForNextStreet(after street: HandStreet) -> Int {
+            street == .preflop ? 3 : 1
+        }
 
-        // Seed preflop: blind seats that are participants post their blinds; the
-        // amount to match preflop is the big blind whether or not a BB sits.
-        committed[.preflop] = [:]
-        if let sbP = participant(at: .sb) { committed[.preflop]?[sbP] = smallBlind }
-        if let bbP = participant(at: .bb) { committed[.preflop]?[bbP] = bigBlind }
-        curBet = bigBlind
+        func nextStreet(after street: HandStreet) -> HandStreet? {
+            switch street {
+            case .preflop: return .flop
+            case .flop: return .turn
+            case .turn: return .river
+            case .river: return nil
+            }
+        }
+
+        /// Participants in the order they act on `street`. Preflop starts with the
+        /// first seat after the big blind (i.e. UTG, wrapping); postflop starts at
+        /// the small blind and proceeds clockwise.
+        func streetOrder(_ street: HandStreet) -> [Participant] {
+            if street == .preflop {
+                return parts.sorted { (tableIndex[$0] ?? .max) < (tableIndex[$1] ?? .max) }
+            }
+            func key(_ p: Participant) -> Int {
+                ((tableIndex[p] ?? .max) - sbIndex + orderCount) % orderCount
+            }
+            return parts.sorted { key($0) < key($1) }
+        }
 
         func committedOf(_ p: Participant) -> Int { committed[street]?[p] ?? 0 }
         func nonFolded() -> [Participant] { parts.filter { !folded.contains($0) } }
@@ -716,11 +740,13 @@ final class HandCaptureModel {
             }
         }
 
-        // Both resolvers return the hand-over flag instead of writing the
-        // captured `handOver` var: Xcode's emit-module pass (skip-bodies +
-        // code coverage) drops nested-function captures and would otherwise
-        // mis-diagnose the loop's `if handOver` check as unreachable.
-        func startNextStreet() -> Bool {
+        // Both resolvers return the hand-over flag rather than writing `handOver`
+        // in place. That shape predates this struct — it worked around an
+        // emit-module (skip-bodies + code-coverage) mis-diagnosis of the loop's
+        // `if handOver` check as unreachable when these were nested functions —
+        // and it is kept because it reads cleanly and there is no reason to
+        // reintroduce the churn.
+        mutating func startNextStreet() -> Bool {
             guard let next = nextStreet(after: street) else { return true }
             street = next
             committed[street] = [:]
@@ -739,7 +765,7 @@ final class HandCaptureModel {
         }
 
         // Called after each action to resolve hand-end / street-close.
-        func resolveAfterAction() -> Bool {
+        mutating func resolveAfterAction() -> Bool {
             if nonFolded().count <= 1 { needed = 0; return true }
             guard streetClosed() else { return false }
             if street == .river { needed = 0; return true }
@@ -747,69 +773,119 @@ final class HandCaptureModel {
             return false
         }
 
-        for input in inputs {
-            if handOver { break }
-            switch input {
-            case .action(let id, let actor, let type, let amount):
-                switch type {
-                case .fold:
-                    folded.insert(actor)
-                    acted.insert(actor)
-                case .check:
-                    acted.insert(actor)
-                case .call:
-                    committed[street, default: [:]][actor] = curBet
-                    acted.insert(actor)
-                case .bet, .raise:
-                    committed[street, default: [:]][actor] = amount
-                    curBet = max(curBet, amount)
-                    acted.insert(actor)
-                case .allIn:
-                    committed[street, default: [:]][actor] = amount
-                    curBet = max(curBet, amount)
-                    allIn.insert(actor)
-                    acted.insert(actor)
-                }
-                lastActor = actor
-                ledgerArr.append(LedgerEntry(id: id, street: street, participant: actor,
-                                             action: type, toAmount: committedOf(actor)))
-                handOver = resolveAfterAction()
+        /// Replays `inputs` from scratch and returns the derived state.
+        mutating func run() -> ReplayResult {
+            // Seed preflop: blind seats that are participants post their blinds; the
+            // amount to match preflop is the big blind whether or not a BB sits.
+            var preflop: [Participant: Int] = [:]
+            if let sbParticipant { preflop[sbParticipant] = smallBlind }
+            if let bbParticipant { preflop[bbParticipant] = bigBlind }
+            committed[.preflop] = preflop
+            curBet = bigBlind
 
-            case .boardCard(let card):
-                // A board card only ever appears in the log while one is owed;
-                // guarding keeps replay correct even after odd truncations.
-                guard needed > 0 else { break }
-                boardArr.append(card)
-                needed -= 1
-                if needed == 0 { handOver = startNextStreet() }
-            }
-        }
+            for input in inputs {
+                if handOver { break }
+                switch input {
+                case .action(let id, let actor, let type, let amount):
+                    switch type {
+                    case .fold:
+                        folded.insert(actor)
+                        acted.insert(actor)
+                    case .check:
+                        acted.insert(actor)
+                    case .call:
+                        committed[street, default: [:]][actor] = curBet
+                        acted.insert(actor)
+                    case .bet, .raise:
+                        committed[street, default: [:]][actor] = amount
+                        curBet = max(curBet, amount)
+                        acted.insert(actor)
+                    case .allIn:
+                        committed[street, default: [:]][actor] = amount
+                        curBet = max(curBet, amount)
+                        allIn.insert(actor)
+                        acted.insert(actor)
+                    }
+                    lastActor = actor
+                    ledgerArr.append(LedgerEntry(id: id, street: street, participant: actor,
+                                                 action: type, toAmount: committedOf(actor)))
+                    handOver = resolveAfterAction()
 
-        // Compute whose turn it is: nobody while the hand is over or a board is
-        // pending; otherwise the next owed participant after the last actor.
-        var toAct: Participant?
-        if !handOver && needed == 0 {
-            let order = streetOrder(street)
-            if !order.isEmpty {
-                var start = 0
-                if let la = lastActor, let i = order.firstIndex(of: la) { start = i + 1 }
-                for k in 0..<order.count {
-                    let p = order[(start + k) % order.count]
-                    if needsToAct(p) { toAct = p; break }
+                case .boardCard(let card):
+                    // A board card only ever appears in the log while one is owed;
+                    // guarding keeps replay correct even after odd truncations.
+                    guard needed > 0 else { break }
+                    boardArr.append(card)
+                    needed -= 1
+                    if needed == 0 { handOver = startNextStreet() }
                 }
             }
+
+            // Compute whose turn it is: nobody while the hand is over or a board is
+            // pending; otherwise the next owed participant after the last actor.
+            var toAct: Participant?
+            if !handOver && needed == 0 {
+                let order = streetOrder(street)
+                if !order.isEmpty {
+                    var start = 0
+                    if let la = lastActor, let i = order.firstIndex(of: la) { start = i + 1 }
+                    for k in 0..<order.count {
+                        let p = order[(start + k) % order.count]
+                        if needsToAct(p) { toAct = p; break }
+                    }
+                }
+            }
+
+            return ReplayResult(
+                ledger: ledgerArr,
+                board: boardArr,
+                currentStreet: street,
+                boardCardsNeeded: needed,
+                participantToAct: toAct,
+                currentBet: curBet,
+                isHandOver: handOver,
+                foldedParticipants: folded,
+                allInParticipants: allIn,
+                committedByStreet: committed)
         }
+    }
+
+    /// Rebuilds every derived property by replaying `inputs` from scratch.
+    private func rebuild() {
+        // The hand just changed, so any manual winner ruling no longer
+        // describes it — drop the override (see the winnerOverride docs).
+        // Setting the override itself never calls rebuild, so a fresh ruling
+        // sticks until the next mutation.
+        winnerOverride = nil
+
+        // Snapshot the (value-typed) turn-order context, then hand the replay
+        // to the isolation-free engine.
+        let parts = participants
+        var indexByParticipant: [Participant: Int] = [:]
+        for p in parts { indexByParticipant[p] = tableIndex(p) }
+
+        var engine = ReplayEngine(
+            parts: parts,
+            tableIndex: indexByParticipant,
+            sbIndex: Self.tableOrder.firstIndex(of: .sb) ?? 7,
+            orderCount: Self.tableOrder.count,
+            sbParticipant: participant(at: .sb),
+            bbParticipant: participant(at: .bb),
+            smallBlind: smallBlind,
+            bigBlind: bigBlind,
+            inputs: inputs)
+        let result = engine.run()
 
         // Publish.
-        ledger = ledgerArr
-        board = boardArr
-        currentStreet = street
-        boardCardsNeeded = needed
-        participantToAct = toAct
-        currentBet = curBet
-        isHandOver = handOver
-        foldedParticipants = folded
-        allInParticipants = allIn
-        committedByStreet = committed
+        ledger = result.ledger
+        board = result.board
+        currentStreet = result.currentStreet
+        boardCardsNeeded = result.boardCardsNeeded
+        participantToAct = result.participantToAct
+        currentBet = result.currentBet
+        isHandOver = result.isHandOver
+        foldedParticipants = result.foldedParticipants
+        allInParticipants = result.allInParticipants
+        committedByStreet = result.committedByStreet
     }
 }
