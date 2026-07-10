@@ -97,17 +97,20 @@ enum HandHistoryFormatter {
             .map { "\($0.positionRaw) shows \(glyphs($0.shownCards))" }
             .joined(separator: ", ")
 
+        // Negative amounts carry their own minus; only prefix "+" for gains
+        // (same conditional-sign pattern as HandsPane's net display).
+        let sign = hand.amountWon > 0 ? "+" : ""
         let outcome: String
         switch hand.result {
         case .won:
             var s = "Hero wins"
             if hand.potSize > 0 { s += " \(fmt(hand.potSize))" }
-            if hand.amountWon != 0 { s += " (+\(fmt(hand.amountWon)))" }
+            if hand.amountWon != 0 { s += " (\(sign)\(fmt(hand.amountWon)))" }
             outcome = s
         case .lost:
             outcome = hand.amountWon != 0 ? "Hero loses (\(fmt(hand.amountWon)))" : "Hero loses"
         case .chop:
-            outcome = hand.amountWon != 0 ? "Chop (+\(fmt(hand.amountWon)))" : "Chop"
+            outcome = hand.amountWon != 0 ? "Chop (\(sign)\(fmt(hand.amountWon)))" : "Chop"
         case .folded:
             outcome = "Hero folds"
         }

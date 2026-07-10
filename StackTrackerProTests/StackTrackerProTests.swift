@@ -3300,4 +3300,29 @@ final class HandHistoryFormatterTests: XCTestCase {
         let text = HandHistoryFormatter.text(for: hand)
         XCTAssertFalse(text.isEmpty)   // at least the result line ("Hero folds" default)
     }
+
+    /// A chop that leaves the hero net-negative (short-stack tie: the flat
+    /// split returns less than hero put in) must render "(-350)", never "(+-350)".
+    func testNetNegativeChopRendersProperSign() {
+        let hand = Hand(heroPosition: .sb, heroCardsRaw: "Ah Kh",
+                        levelNumber: 0, smallBlind: 100, bigBlind: 200,
+                        ante: 0, heroStackChips: 0)
+        hand.resultRaw = HandResult.chop.rawValue
+        hand.amountWon = -350
+        let text = HandHistoryFormatter.text(for: hand)
+        XCTAssertTrue(text.hasSuffix("Chop (-350)"), "got: \(text)")
+        XCTAssertFalse(text.contains("+-"), "malformed sign: \(text)")
+    }
+
+    /// A won hand with amountWon == 0 keeps omitting the parenthetical.
+    func testWonWithZeroAmountOmitsParenthetical() {
+        let hand = Hand(heroPosition: .sb, heroCardsRaw: "Ah Kh",
+                        levelNumber: 0, smallBlind: 100, bigBlind: 200,
+                        ante: 0, heroStackChips: 0)
+        hand.resultRaw = HandResult.won.rawValue
+        hand.potSize = 3_000
+        hand.amountWon = 0
+        let text = HandHistoryFormatter.text(for: hand)
+        XCTAssertTrue(text.hasSuffix("Hero wins 3,000"), "got: \(text)")
+    }
 }
