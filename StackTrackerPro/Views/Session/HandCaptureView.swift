@@ -444,11 +444,13 @@ struct HandCaptureView: View {
 // MARK: - Chip input parsing
 
 /// Parses free-form chip amounts: "390k"/"42.5k" for thousands, "1.2m" for
-/// millions, otherwise a bare integer. When `bigBlindMultiplier` is supplied
-/// (bet-sizing entry only) a short bare number (<= 3 digits) is treated as a
-/// multiple of the big blind, e.g. "3" -> 3 * bigBlind.
+/// millions, otherwise a literal bare integer. Used by the pot/stack pads and
+/// the villain approx-stack field. (The bet-sizing pad has its own parser,
+/// `SizingInput`, which adds the explicit "bb" suffix — the implicit
+/// short-number-means-BB-multiple heuristic that used to live here made
+/// typed amounts unpredictable and is gone.)
 enum ChipInput {
-    static func parse(_ raw: String, bigBlindMultiplier bigBlind: Int = 0) -> Int? {
+    static func parse(_ raw: String) -> Int? {
         let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !cleaned.isEmpty else { return nil }
         if cleaned.hasSuffix("k") {
@@ -460,9 +462,37 @@ enum ChipInput {
             return Int((num * 1_000_000).rounded())
         }
         guard let value = Int(cleaned), value >= 0 else { return nil }
-        if bigBlind > 0, value > 0, cleaned.count <= 3 {
-            return value * bigBlind
+        return value
+    }
+}
+
+/// Pure parser for the bet-sizing "#" pad. Semantics are LITERAL — what you
+/// type is the raise-to/bet total in chips (device finding 13; the old pad
+/// both multiplied short numbers by the big blind and added `currentBet` on
+/// top, so "2300" committed as 2300 + BB):
+/// - bare number ("2300") -> exactly 2300 chips;
+/// - "bb" suffix ("4bb", "2.5bb", "4 bb", case-insensitive) -> value x bigBlind,
+///   rounded to the nearest chip;
+/// - "k"/"m" shorthand ("42.5k", "1.2m") -> thousands/millions;
+/// - zero, empty, or unparseable -> nil.
+enum SizingInput {
+    static func parse(_ raw: String, bigBlind: Int) -> Int? {
+        let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !cleaned.isEmpty else { return nil }
+        if cleaned.hasSuffix("bb") {
+            let numText = cleaned.dropLast(2).trimmingCharacters(in: .whitespaces)
+            guard bigBlind > 0, let num = Double(numText), num > 0 else { return nil }
+            return Int((num * Double(bigBlind)).rounded())
         }
+        if cleaned.hasSuffix("k") {
+            guard let num = Double(cleaned.dropLast()), num > 0 else { return nil }
+            return Int((num * 1000).rounded())
+        }
+        if cleaned.hasSuffix("m") {
+            guard let num = Double(cleaned.dropLast()), num > 0 else { return nil }
+            return Int((num * 1_000_000).rounded())
+        }
+        guard let value = Int(cleaned), value > 0 else { return nil }
         return value
     }
 }
@@ -912,6 +942,23 @@ private struct SizingRow: View {
         ("⅓", 1.0 / 3), ("½", 0.5), ("⅔", 2.0 / 3), ("Pot", 1.0), ("1.5x", 1.5),
     ]
 
+    /// Preset chips with their fully-resolved raise-to totals. Preflop thinks
+    /// in big blinds (2bb / 2.5bb / 3bb / Pot — device finding 13A), computed
+    /// through `SizingInput.parse` so the chip labels ARE the parser inputs
+    /// (one tested source of truth); postflop keeps the pot-fraction presets.
+    private var presetChips: [(label: String, toAmount: Int)] {
+        if model.currentStreet == .preflop {
+            var chips: [(String, Int)] = ["2bb", "2.5bb", "3bb"].map {
+                ($0, SizingInput.parse($0, bigBlind: model.bigBlind) ?? 0)
+            }
+            chips.append(("Pot", normalizedTotal(roundedChip(Double(model.pot)))))
+            return chips
+        }
+        return fractionChips.map {
+            ($0.0, normalizedTotal(roundedChip(Double(model.pot) * $0.1)))
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -922,10 +969,14 @@ private struct SizingRow: View {
                     .foregroundColor(.textSecondary)
             }
             HStack(spacing: 6) {
-                ForEach(fractionChips, id: \.0) { label, fraction in
-                    Button(label) { commitFraction(fraction) }
+                ForEach(presetChips, id: \.label) { chip in
+                    Button(chip.label) { onCommit(actionType, chip.toAmount) }
                         .buttonStyle(.bordered)
                         .tint(.secondary)
+                        // An aggressive total at or below the amount to match
+                        // is nonsense (a "raise to 2.5bb" facing 5bb); gray it
+                        // out rather than let the engine book it.
+                        .disabled(chip.toAmount <= model.currentBet)
                 }
                 Button("Jam") { commitJam() }
                     .buttonStyle(.bordered)
@@ -937,18 +988,39 @@ private struct SizingRow: View {
                 .buttonStyle(.bordered)
                 .tint(.goldAccent)
             }
-        }
-        .pokerCard()
-        .alert("Amount", isPresented: $showNumberPad) {
-            TextField("e.g. 75k or 3 (BB)", text: $numberPadText)
-                .keyboardType(.numbersAndPunctuation)
-            Button("OK") {
-                if let amount = ChipInput.parse(numberPadText, bigBlindMultiplier: model.bigBlind) {
-                    onCommit(actionType, normalizedTotal(amount))
+            // Inline literal-amount entry (not an alert: the confirm label
+            // previews the resolved total live, and alert action buttons
+            // don't reliably re-render while typing).
+            if showNumberPad {
+                HStack(spacing: 8) {
+                    TextField("e.g. 2300, 4bb or 42.5k", text: $numberPadText)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numbersAndPunctuation)
+                    Button(confirmLabel) {
+                        if let amount = resolvedAmount {
+                            onCommit(actionType, amount)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.goldAccent)
+                    .disabled(resolvedAmount == nil)
                 }
             }
-            Button("Cancel", role: .cancel) {}
         }
+        .pokerCard()
+    }
+
+    /// The typed amount, resolved LITERALLY by `SizingInput` — no additions,
+    /// no big-blind heuristics (finding 13B).
+    private var resolvedAmount: Int? {
+        SizingInput.parse(numberPadText, bigBlind: model.bigBlind)
+    }
+
+    /// Live preview of exactly what will be committed, e.g. "Raise to 2,300".
+    private var confirmLabel: String {
+        let verb = actionType == .raise ? "Raise to" : "Bet"
+        guard let amount = resolvedAmount else { return verb }
+        return "\(verb) \(amount.formatted())"
     }
 
     /// Rounds a raw pot-fraction amount to a clean chip size: nearest 500
@@ -959,16 +1031,11 @@ private struct SizingRow: View {
         return max(unit, Int((raw / Double(unit)).rounded()) * unit)
     }
 
-    /// A pot-fraction or typed size is the *additional* amount being put in;
-    /// against an existing bet that becomes a raise-to total, otherwise it is
-    /// the opening bet itself.
+    /// A pot-fraction preset is the *additional* amount being put in; against
+    /// an existing bet that becomes a raise-to total, otherwise it is the
+    /// opening bet itself. (Preset math only — the "#" pad is literal.)
     private func normalizedTotal(_ sizeAmount: Int) -> Int {
         model.currentBet > 0 ? model.currentBet + sizeAmount : sizeAmount
-    }
-
-    private func commitFraction(_ fraction: Double) {
-        let sizeAmount = roundedChip(Double(model.pot) * fraction)
-        onCommit(actionType, normalizedTotal(sizeAmount))
     }
 
     private func commitJam() {

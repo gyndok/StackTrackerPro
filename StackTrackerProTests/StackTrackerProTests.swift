@@ -2301,6 +2301,72 @@ final class HandCaptureModelTests: XCTestCase {
     }
 }
 
+// MARK: - SizingInput (F13: literal # pad + BB presets)
+
+final class SizingInputTests: XCTestCase {
+
+    private let bb = 25_000
+
+    /// Bare numbers are LITERAL chips — exactly as typed, no additions, no
+    /// big-blind heuristics. "3" is 3 chips, not 3 big blinds (the old
+    /// ChipInput heuristic multiplied any bare number of <= 3 digits by the
+    /// big blind); "2300" is 2,300 chips, with nothing added on top.
+    func testBareNumbersAreLiteral() throws {
+        XCTAssertEqual(SizingInput.parse("2300", bigBlind: bb), 2300)
+        XCTAssertEqual(SizingInput.parse("3", bigBlind: bb), 3)
+        XCTAssertEqual(SizingInput.parse(" 75000 ", bigBlind: bb), 75_000)
+    }
+
+    /// Explicit "bb" suffix multiplies by the big blind (case-insensitive,
+    /// optional space, fractional multiples rounded to the nearest chip).
+    func testBBSuffixMultiplies() throws {
+        XCTAssertEqual(SizingInput.parse("4bb", bigBlind: bb), 100_000)
+        XCTAssertEqual(SizingInput.parse("2.5bb", bigBlind: bb), 62_500)
+        XCTAssertEqual(SizingInput.parse("2.5BB", bigBlind: bb), 62_500)
+        XCTAssertEqual(SizingInput.parse("4 bb", bigBlind: bb), 100_000)
+        // Rounding: 1.5 x 25 = 37.5 -> 38 chips at a 25-chip big blind.
+        XCTAssertEqual(SizingInput.parse("1.5bb", bigBlind: 25), 38)
+        // No big blind to multiply against -> unresolvable, not garbage-in.
+        XCTAssertNil(SizingInput.parse("4bb", bigBlind: 0))
+    }
+
+    /// k/m shorthand keeps working.
+    func testKMShorthand() throws {
+        XCTAssertEqual(SizingInput.parse("42.5k", bigBlind: bb), 42_500)
+        XCTAssertEqual(SizingInput.parse("390k", bigBlind: bb), 390_000)
+        XCTAssertEqual(SizingInput.parse("1.2m", bigBlind: bb), 1_200_000)
+    }
+
+    /// Zero, empty, negative, and unparseable input all resolve to nil (the
+    /// confirm button stays disabled).
+    func testInvalidInputIsNil() throws {
+        XCTAssertNil(SizingInput.parse("0", bigBlind: bb))
+        XCTAssertNil(SizingInput.parse("", bigBlind: bb))
+        XCTAssertNil(SizingInput.parse("   ", bigBlind: bb))
+        XCTAssertNil(SizingInput.parse("garbage", bigBlind: bb))
+        XCTAssertNil(SizingInput.parse("-100", bigBlind: bb))
+        XCTAssertNil(SizingInput.parse("0bb", bigBlind: bb))
+        XCTAssertNil(SizingInput.parse("xbb", bigBlind: bb))
+    }
+
+    /// The preflop preset chips ("2bb" / "2.5bb" / "3bb") resolve through this
+    /// same parser — the labels ARE the parser inputs in SizingRow — so this
+    /// pins the preset math: 2/2.5/3 x BB, and documents the view's disable
+    /// rule (a preset is grayed out when its total <= model.currentBet, e.g.
+    /// "2bb"/"2.5bb" while facing a raise to 3bb are illegal totals).
+    func testPreflopPresetMath() throws {
+        XCTAssertEqual(SizingInput.parse("2bb", bigBlind: bb), 50_000)
+        XCTAssertEqual(SizingInput.parse("2.5bb", bigBlind: bb), 62_500)
+        XCTAssertEqual(SizingInput.parse("3bb", bigBlind: bb), 75_000)
+        // Disable rule (view applies `toAmount <= currentBet`): facing a
+        // 3bb open (75K), the 2bb and 2.5bb totals are not legal raises.
+        let currentBet = 75_000
+        XCTAssertLessThanOrEqual(try XCTUnwrap(SizingInput.parse("2bb", bigBlind: bb)), currentBet)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(SizingInput.parse("2.5bb", bigBlind: bb)), currentBet)
+        XCTAssertGreaterThan(try XCTUnwrap(SizingInput.parse("4bb", bigBlind: bb)), currentBet)
+    }
+}
+
 // MARK: - HandCaptureModel result flow + save (Task 13)
 
 @MainActor
