@@ -60,6 +60,18 @@ final class DictationEngine {
     /// - `AsyncStream.Continuation` is itself Sendable/thread-safe, so the
     ///   MainActor calling `finish()` concurrently with a tap-thread `yield`
     ///   is fine.
+    /// - CLOSURE-ISOLATION RULE (device crash, iOS 26.6): the tap closure
+    ///   must capture only this bridge, be `@Sendable`, and be formed in a
+    ///   nonisolated context — which is why `installTap(on:)` lives on the
+    ///   bridge, not the engine. A closure created inside the engine's
+    ///   `@MainActor start()` inherits MainActor isolation from its context
+    ///   even when it captures nothing actor-isolated, and Swift 6's dynamic
+    ///   actor-isolation checking (enabled by the `@preconcurrency`
+    ///   AVFoundation import) then traps the instant AVFAudio invokes it on
+    ///   the realtime messenger queue (`EXC_BREAKPOINT` in
+    ///   `_swift_task_checkIsolatedSwift` → `dispatch_assert_queue_fail`).
+    ///   Capturing the MainActor engine — or forming the closure in its
+    ///   context — reinstates that executor-check trap.
     private final class AudioFeedBridge: @unchecked Sendable {
         var format: AVAudioFormat?
         var converter: AVAudioConverter?
@@ -69,6 +81,19 @@ final class DictationEngine {
         var isActive: Bool {
             get { activeFlag.withLock { $0 } }
             set { activeFlag.withLock { $0 = newValue } }
+        }
+
+        /// Installs the mic tap with a closure that is nonisolated by
+        /// construction: it is formed inside this (non-actor-isolated) bridge
+        /// method, is explicitly `@Sendable` (which structurally strips any
+        /// actor-isolation inference), and captures only the bridge itself.
+        /// See the CLOSURE-ISOLATION RULE in the class doc-comment.
+        func installTap(on node: AVAudioInputNode) {
+            let micFormat = node.outputFormat(forBus: 0)
+            isActive = true
+            node.installTap(onBus: 0, bufferSize: 4096, format: micFormat) { @Sendable [self] buffer, _ in
+                feed(buffer)
+            }
         }
 
         func feed(_ buffer: AVAudioPCMBuffer) {
@@ -165,13 +190,11 @@ final class DictationEngine {
             try session.setCategory(.record, mode: .measurement, options: .duckOthers)
             try session.setActive(true, options: .notifyOthersOnDeactivation)
 
-            let inputNode = audioEngine.inputNode
-            let micFormat = inputNode.outputFormat(forBus: 0)
-            let audioFeed = self.audioFeed
-            audioFeed.isActive = true
-            inputNode.installTap(onBus: 0, bufferSize: 4096, format: micFormat) { buffer, _ in
-                audioFeed.feed(buffer)
-            }
+            // The tap closure is created inside the bridge (nonisolated,
+            // @Sendable) — forming it here in @MainActor context makes the
+            // Swift runtime trap on the audio queue. See AudioFeedBridge's
+            // CLOSURE-ISOLATION RULE.
+            audioFeed.installTap(on: audioEngine.inputNode)
             audioEngine.prepare()
             try audioEngine.start()
             try await analyzer.start(inputSequence: stream)
