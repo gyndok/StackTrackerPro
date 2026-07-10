@@ -1,5 +1,7 @@
 # Verbatim Dictation (Parser Removal) — Design
 
+> **STATUS: EXECUTED 2026-07-10.**
+
 **Approved:** 2026-07-09 with user (device field-testing verdict: structured parsing of dictation is too unreliable to be load-bearing; transcript-as-reference is the product). Option B chosen: no result UI for transcript-only hands.
 
 ## Purpose

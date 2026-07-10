@@ -68,3 +68,17 @@ Steps: TDD where logic-level → implement → full suite green → both builds 
 - Spec coverage: removals ✓ (T1), new flow items 1–6 ✓ (T2 maps one-to-one), privacy note is doc-only ✓, out-of-scope respected ✓, testing list ✓ (T2 tests + T1 grep gate).
 - Placeholder scan: T1's staging note gives a concrete either/or, not a TBD.
 - Type consistency: `model.transcript`, `canSave`, `onResult: (String) -> Void` used consistently across tasks.
+
+---
+
+> **STATUS: EXECUTED 2026-07-10 (overnight)** (commits 4e7f28c..d61e9cd, 3 tasks, reviews clean after fix rounds; suite 156/156, both configs, grep gate zero).
+
+## Device Checklist Addendum (build 16)
+
+1. Mic (any entry point) → dictate → "Use Transcript" → transcript card appears under the narration bar, collapsible.
+2. Save WITHOUT entering structure → hand appears in list with "Dictated" label, no result badge.
+3. Hand detail shows the Transcript section; Result section absent for dictated-only.
+4. Share the dictated hand → text carries the `— Transcript —` block, no bogus result line.
+5. Dictate again on the same hand → replace-confirm appears; Cancel keeps the original.
+6. Structure a dictated hand by tap using the card as reference → save → normal result badge + transcript both present in detail/share.
+7. Recap export: dictated hand shows "Dictated hand — …see transcript below." + transcript; no "Result: Folded".
