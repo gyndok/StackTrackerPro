@@ -3030,6 +3030,18 @@ final class HandCaptureResultTests: XCTestCase {
     }
 }
 
+// MARK: - DictationEngine
+
+final class DictationEngineTests: XCTestCase {
+
+    @MainActor
+    func testDictationEngineInitialStateAndTranscriptComposition() {
+        let engine = DictationEngine()
+        XCTAssertEqual(engine.state, .idle)
+        XCTAssertEqual(engine.fullTranscript, "")
+    }
+}
+
 // MARK: - Hand History Formatter
 
 final class HandHistoryFormatterTests: XCTestCase {
