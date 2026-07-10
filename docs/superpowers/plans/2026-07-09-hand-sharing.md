@@ -1,5 +1,7 @@
 # Hand Sharing Implementation Plan
 
+> **STATUS: EXECUTED 2026-07-09** (commits 18df8ba..eb6aff6, 3 tasks, reviews clean; 159 tests)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Share any logged hand as a formatted text hand history (Unicode suit glyphs) via the iOS share sheet, from HandDetailView and immediately after saving on the Capture Screen, with an in-app color preview.
