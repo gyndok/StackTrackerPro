@@ -2299,6 +2299,48 @@ final class HandCaptureModelTests: XCTestCase {
         XCTAssertEqual(model.boardCardsNeeded, 1)
         XCTAssertFalse(model.lastInputWasBoardCard)
     }
+
+    // MARK: setLevel re-seeds blinds (F15)
+
+    /// Changing the level re-seeds the blind postings (dead-blind money and
+    /// blind-participant floors) while leaving the recorded ledger amounts —
+    /// which are the explicit bet-to totals — untouched.
+    func testSetLevelReseedsPotKeepsLedger() throws {
+        // Participant blind floors: hero SB + villain BB, no voluntary action.
+        // The pot is exactly the two posted blinds, and re-seeds on setLevel.
+        let floors = HandCaptureModel(levelNumber: 6, smallBlind: 400, bigBlind: 800,
+                                      ante: 0, heroCardCount: 2, heroStackBefore: 40_000)
+        floors.heroPosition = .sb
+        floors.addVillain(position: .bb, relative: .coversHero, approxStack: 0)
+        XCTAssertEqual(floors.pot, 400 + 800)              // SB + BB floors seeded
+        XCTAssertTrue(floors.ledger.isEmpty)
+        floors.setLevel(number: 5, smallBlind: 300, bigBlind: 600, ante: 0)
+        XCTAssertEqual(floors.pot, 300 + 600)              // floors re-seed → pot changes
+        XCTAssertTrue(floors.ledger.isEmpty)
+        XCTAssertEqual(floors.levelNumber, 5)
+
+        // Dead-blind money + a played-out street: hero BTN vs CO, BB seat empty
+        // (dead). Every recorded action is an explicit raise/call-to-raise, so
+        // the ledger amounts are blind-independent.
+        let model = HandCaptureModel(levelNumber: 6, smallBlind: 400, bigBlind: 800,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 40_000)
+        model.heroPosition = .sb
+        model.addVillain(position: .co, relative: .coversHero, approxStack: 0)
+        guard let co = model.villains.first?.id else { return XCTFail("no villain") }
+        // Preflop order: CO then SB. CO raises, hero (SB) calls to close.
+        XCTAssertEqual(model.participantToAct, .villain(co))
+        model.add(action: .raise, toAmount: 2400)          // CO opens 2400
+        model.add(action: .call, toAmount: 0)              // hero (SB) calls
+        // Pot: dead BB 800 + CO 2400 + hero 2400 = 5600.
+        XCTAssertEqual(model.pot, 5600)
+        let ledgerBefore = model.ledger.map(\.toAmount)
+        XCTAssertEqual(ledgerBefore, [2400, 2400])
+
+        model.setLevel(number: 5, smallBlind: 300, bigBlind: 600, ante: 0)
+        // Dead BB re-seeds 800 → 600; committed raise/call amounts unchanged.
+        XCTAssertEqual(model.pot, 5400)
+        XCTAssertEqual(model.ledger.map(\.toAmount), ledgerBefore, "ledger amounts unchanged")
+    }
 }
 
 // MARK: - SizingInput (F13: literal # pad + BB presets)
@@ -2733,6 +2775,133 @@ final class HandCaptureResultTests: XCTestCase {
         let flopNarration = model.narration
         XCTAssertTrue(flopNarration.contains("FLOP"), flopNarration)
         XCTAssertTrue(flopNarration.contains("J♥"), flopNarration)
+    }
+
+    // MARK: - init(editing:) round-trip (F16)
+
+    /// The KK-vs-9T reference hand, built through the normal capture API,
+    /// saved, then reconstructed via `init(editing:)`, reproduces the exact
+    /// ledger amounts / participant shape, board, pot, hand-over flag, and
+    /// computed winners. Engine determinism makes this an equality check.
+    func testEditRoundTripReconstructsIdentically() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        let utg = try XCTUnwrap(model.villains.first?.id)
+        model.add(action: .raise, toAmount: 75_000)    // UTG
+        model.add(action: .raise, toAmount: 200_000)   // Hero 3-bets
+        model.add(action: .allIn, toAmount: 390_000)   // UTG jams
+        model.add(action: .call, toAmount: 0)           // Hero calls
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        model.selectedTags = ["Cooler"]
+
+        let original = model.save(into: context, tournament: nil, cashSession: nil,
+                                  sourceStub: nil, tableSize: 9)
+
+        // Reconstruct from the persisted hand.
+        let rebuilt = HandCaptureModel(editing: original, heroCardCount: 2)
+
+        XCTAssertEqual(rebuilt.ledger.map(\.toAmount), model.ledger.map(\.toAmount))
+        XCTAssertEqual(rebuilt.ledger.map { $0.participant == .hero },
+                       model.ledger.map { $0.participant == .hero })
+        XCTAssertEqual(rebuilt.ledger.map(\.action), model.ledger.map(\.action))
+        XCTAssertEqual(rebuilt.board, model.board)
+        XCTAssertEqual(rebuilt.pot, model.pot)
+        XCTAssertEqual(rebuilt.isHandOver, model.isHandOver)
+        XCTAssertEqual(rebuilt.heroNet, model.heroNet)
+        XCTAssertEqual(Set(rebuilt.computedWinners), Set(model.computedWinners))
+        XCTAssertEqual(rebuilt.computedWinners, [.hero])
+        XCTAssertEqual(rebuilt.heroCards, model.heroCards)
+        XCTAssertEqual(rebuilt.selectedTags, ["Cooler"])
+    }
+
+    // MARK: - potOverride hygiene (F17)
+
+    /// A manual pot override auto-clears on every hand mutation, exactly like
+    /// winnerOverride (F14): replay mutations via rebuild(), and the showdown /
+    /// hero-card paths that bypass rebuild clear it explicitly.
+    func testPotOverrideAutoClearsOnHandMutation() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        let utg = try XCTUnwrap(model.villains.first?.id)
+
+        // addCard clears it explicitly.
+        model.potOverride = 999_999
+        XCTAssertTrue(model.addCard(PlayingCard("Kh")!))
+        XCTAssertNil(model.potOverride, "adding a hero card must clear the pot override")
+        _ = model.addCard(PlayingCard("Kd")!)
+
+        // Actions (via rebuild) clear it.
+        model.potOverride = 999_999
+        model.add(action: .allIn, toAmount: 390_000)          // UTG jams
+        XCTAssertNil(model.potOverride, "an action must clear the pot override")
+
+        model.potOverride = 999_999
+        model.add(action: .call, toAmount: 0)                 // hero calls
+        XCTAssertNil(model.potOverride)
+
+        // Board cards (via rebuild) clear it.
+        model.potOverride = 999_999
+        for c in PlayingCard.parseList("Jh 8h 4d 2c 3s") { _ = model.addBoardCard(c) }
+        XCTAssertNil(model.potOverride, "board cards must clear the pot override")
+
+        // Showdown evidence (bypasses rebuild) clears it explicitly.
+        model.potOverride = 999_999
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertNil(model.potOverride, "shown cards must clear the pot override")
+
+        model.potOverride = 999_999
+        model.setMucked(utg)
+        XCTAssertNil(model.potOverride, "a muck must clear the pot override")
+
+        // Undo is a replay mutation too.
+        model.potOverride = 999_999
+        model.undoLast()
+        XCTAssertNil(model.potOverride, "undo must clear the pot override")
+    }
+
+    /// Pure reads never touch an active pot override — it survives derived
+    /// reads (including `pot`, which returns it) until the next mutation.
+    func testPotOverrideSurvivesPureReads() throws {
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        model.potOverride = 1_234_000
+        _ = model.pot
+        _ = model.heroNet
+        _ = model.narration
+        _ = model.legalActions
+        XCTAssertEqual(model.potOverride, 1_234_000, "pure reads must not clear the override")
+        XCTAssertEqual(model.pot, 1_234_000, "the override still decides the pot")
+    }
+
+    // MARK: - Save-time result/net consistency guard (F17)
+
+    /// The sign guard flips an impossible result/net pairing (a sole win that
+    /// nets negative, a loss that nets positive) and leaves the legitimate
+    /// cases — including a net-negative chop from unequal contributions — alone.
+    func testConsistentResultClampsSignMismatch() {
+        XCTAssertEqual(HandCaptureModel.consistentResult(.won, net: -100), .lost)
+        XCTAssertEqual(HandCaptureModel.consistentResult(.lost, net: 100), .won)
+        XCTAssertEqual(HandCaptureModel.consistentResult(.won, net: 100), .won)
+        XCTAssertEqual(HandCaptureModel.consistentResult(.lost, net: -100), .lost)
+        XCTAssertEqual(HandCaptureModel.consistentResult(.won, net: 0), .won)
+        // A chop can legitimately net negative when the hero contributed more
+        // than an even split (a villain short all-in) — never treated as
+        // corruption.
+        XCTAssertEqual(HandCaptureModel.consistentResult(.chop, net: -100), .chop)
+        XCTAssertEqual(HandCaptureModel.consistentResult(.folded, net: -50), .folded)
     }
 }
 

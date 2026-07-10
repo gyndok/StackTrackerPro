@@ -12,8 +12,6 @@
 		1D4C768A8E499FA09FA5165F /* StackEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2246D3C7B55BD60A532FF48 /* StackEntry.swift */; };
 		24F970FE3E9D3F06AA59D946 /* BountyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8814B2F615CF0C184C7CC9 /* BountyEvent.swift */; };
 		345523E8161D38439C2C4948 /* AIPokerParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */; };
-		7E570000000000000000012C /* HandTranscriptParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012B /* HandTranscriptParser.swift */; };
-		7E570000000000000000012A /* DictationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000129 /* DictationEngine.swift */; };
 		44C9DCA32F5DCC8500C52F6B /* VideoComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44C9DCA22F5DCC8500C52F6B /* VideoComposer.swift */; };
 		44F697F82F3A5D1F008DDBFF /* AnalyticsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44F697F72F3A5D1F008DDBFF /* AnalyticsDashboardView.swift */; };
 		46AD5370A7D959B7B723909E /* Venue.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA16C5DA1A1C8A6A11CBC0C9 /* Venue.swift */; };
@@ -42,11 +40,13 @@
 		7E5700000000000000000122 /* HandVillain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000121 /* HandVillain.swift */; };
 		7E5700000000000000000124 /* PokerHandEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000123 /* PokerHandEvaluator.swift */; };
 		7E5700000000000000000126 /* HandCaptureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000125 /* HandCaptureModel.swift */; };
+		7E5700000000000000000128 /* HandCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000127 /* HandCaptureView.swift */; };
+		7E570000000000000000012A /* DictationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000129 /* DictationEngine.swift */; };
+		7E570000000000000000012C /* HandTranscriptParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012B /* HandTranscriptParser.swift */; };
 		7E570000000000000000012E /* VoiceHandMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012D /* VoiceHandMapper.swift */; };
 		7E5700000000000000000130 /* DictationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012F /* DictationSheet.swift */; };
 		7E5700000000000000000132 /* HandHistoryFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000131 /* HandHistoryFormatter.swift */; };
 		7E5700000000000000000134 /* HandSharePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000133 /* HandSharePreview.swift */; };
-		7E5700000000000000000128 /* HandCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000127 /* HandCaptureView.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -172,11 +172,13 @@
 		7E5700000000000000000121 /* HandVillain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandVillain.swift; sourceTree = "<group>"; };
 		7E5700000000000000000123 /* PokerHandEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerHandEvaluator.swift; sourceTree = "<group>"; };
 		7E5700000000000000000125 /* HandCaptureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureModel.swift; sourceTree = "<group>"; };
+		7E5700000000000000000127 /* HandCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureView.swift; sourceTree = "<group>"; };
+		7E5700000000000000000129 /* DictationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationEngine.swift; sourceTree = "<group>"; };
+		7E570000000000000000012B /* HandTranscriptParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTranscriptParser.swift; sourceTree = "<group>"; };
 		7E570000000000000000012D /* VoiceHandMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceHandMapper.swift; sourceTree = "<group>"; };
 		7E570000000000000000012F /* DictationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSheet.swift; sourceTree = "<group>"; };
 		7E5700000000000000000131 /* HandHistoryFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandHistoryFormatter.swift; sourceTree = "<group>"; };
 		7E5700000000000000000133 /* HandSharePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandSharePreview.swift; sourceTree = "<group>"; };
-		7E5700000000000000000127 /* HandCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureView.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -201,8 +203,6 @@
 		C0D1E2F3A4B5C6D7E8F9A0B1 /* StackTrackerPro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StackTrackerPro.entitlements; sourceTree = "<group>"; };
 		C122E458D953010331B7239C /* TournamentMetricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentMetricsView.swift; sourceTree = "<group>"; };
 		C23721629A38A3FFDC0ACC09 /* AIPokerParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPokerParser.swift; sourceTree = "<group>"; };
-		7E570000000000000000012B /* HandTranscriptParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTranscriptParser.swift; sourceTree = "<group>"; };
-		7E5700000000000000000129 /* DictationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationEngine.swift; sourceTree = "<group>"; };
 		C5B62E3D5EFC67A262E5F764 /* ChatThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadView.swift; sourceTree = "<group>"; };
 		C617320BBF7FC1F6F10A40FB /* ResponseEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseEngine.swift; sourceTree = "<group>"; };
 		CA5H000000000000000001 /* CashSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashSession.swift; sourceTree = "<group>"; };
@@ -886,15 +886,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StackTrackerPro uses the microphone to dictate poker hands for the hand logger.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StackTrackerPro uses the microphone to dictate poker hands for the hand logger.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -905,7 +905,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -921,15 +921,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "StackTrackerPro uses the camera to scan Poker Atlas screenshots for tournament setup.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StackTrackerPro uses the microphone to dictate poker hands for the hand logger.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "StackTrackerPro uses your location to find nearby poker tournaments.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StackTrackerPro uses the microphone to dictate poker hands for the hand logger.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StackTrackerPro accesses your photo library to scan Poker Atlas screenshots.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -940,7 +940,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

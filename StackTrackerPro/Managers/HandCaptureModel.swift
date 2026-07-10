@@ -39,12 +39,18 @@ final class HandCaptureModel {
         let toAmount: Int                 // committed total on that street after this action
     }
 
-    // MARK: - Context (immutable after init)
+    // MARK: - Context
 
-    let levelNumber: Int
-    let smallBlind: Int
-    let bigBlind: Int
-    let ante: Int
+    /// Blind-level context. Frozen at capture-open from the tournament header,
+    /// but mutable via `setLevel` so a hand enriched at break can be re-tagged
+    /// with the level it was actually PLAYED at (device finding 15). Changing
+    /// them re-seeds the blind postings on the next replay. `levelNumber` is
+    /// DISPLAY-facing (matches the stub convention: see `HandStub` / the
+    /// tournament's `currentDisplayLevel`), not the internal blind-level index.
+    private(set) var levelNumber: Int
+    private(set) var smallBlind: Int
+    private(set) var bigBlind: Int
+    private(set) var ante: Int
     let heroCardCount: Int                // 2 (NLHE) or 4 (PLO)
     var heroStackBefore: Int              // editable, prefilled
 
@@ -139,6 +145,70 @@ final class HandCaptureModel {
         if exact.count == 2 { heroCards = exact }
     }
 
+    /// Reconstructs a live capture from an already-saved `Hand` so it can be
+    /// re-opened for editing (device finding 16). Rebuilds the input log from
+    /// the persisted data and replays it: the engine is deterministic, so a
+    /// round-trip through this init reproduces the exact ledger, board, pot,
+    /// and computed winners (see `testEditRoundTripReconstructsIdentically`).
+    ///
+    /// Order matters. Hero seat/cards and villains are set up first; then the
+    /// betting log is replayed street-by-street with each street's board cards
+    /// inserted before its first action (or on their own for an all-in runout
+    /// where a street has cards but no betting). Shown holdings are applied
+    /// LAST, after replay, because they are showdown annotations rather than
+    /// replay inputs. A manual `potOverride`/`winnerOverride` is not restored
+    /// here (those are re-derived); the view re-prefills a manual pot from the
+    /// saved `potSize` when it diverges from the recomputed pot.
+    convenience init(editing hand: Hand, heroCardCount: Int) {
+        self.init(levelNumber: hand.levelNumber, smallBlind: hand.smallBlind,
+                  bigBlind: hand.bigBlind, ante: hand.ante,
+                  heroCardCount: heroCardCount, heroStackBefore: hand.heroStackChips)
+
+        heroPosition = hand.heroPosition
+        for card in hand.heroCards { _ = addCard(card) }
+        for villain in hand.sortedVillains {
+            addVillain(position: villain.position, relative: villain.relativeStack,
+                       approxStack: villain.approxStack)
+        }
+
+        // Replay the betting log in the same order it was recorded. Actions are
+        // fed through the normal mutation surface; the engine (not the caller)
+        // decides whose turn it is, so a faithful order reproduces the same
+        // participant at each step. Board cards are inserted at the head of each
+        // post-preflop street.
+        for street in HandStreet.allCases {
+            if street != .preflop {
+                for card in Self.boardSlice(hand.board, for: street) { _ = addBoardCard(card) }
+            }
+            for action in hand.sortedActions where action.street == street {
+                add(action: action.actionType, toAmount: action.amount)
+            }
+        }
+
+        // Showdown evidence is applied after the replay, matching a villain by
+        // seat (positions are unique). Only full holdings are restorable; a
+        // mucked/unknown villain persists as empty and stays unresolved.
+        for villain in hand.sortedVillains where villain.shownCards.count == heroCardCount {
+            if let draft = villains.first(where: { $0.position == villain.position }) {
+                setShownHolding(villain.shownCards, for: draft.id)
+            }
+        }
+
+        selectedTags = Set(hand.tags)
+    }
+
+    /// The board cards belonging to `street`, sliced from a full board by the
+    /// same flop-3 / turn-1 / river-1 layout the engine deals. Used only by
+    /// `init(editing:)` to re-interleave the board with the betting log.
+    private static func boardSlice(_ board: [PlayingCard], for street: HandStreet) -> [PlayingCard] {
+        switch street {
+        case .preflop: return []
+        case .flop: return board.count >= 3 ? Array(board[0..<3]) : []
+        case .turn: return board.count >= 4 ? [board[3]] : []
+        case .river: return board.count >= 5 ? [board[4]] : []
+        }
+    }
+
     // MARK: - Participants
 
     /// Ordered participants: hero (once a position is chosen) plus every villain.
@@ -169,6 +239,20 @@ final class HandCaptureModel {
 
     // MARK: - Setup mutations
 
+    /// Re-tags the hand with a different blind level (device finding 15). The
+    /// header context is frozen at capture-open, but enriching a hand at break
+    /// needs the level it was actually played at. `number` is the DISPLAY level
+    /// number (stub convention). Re-seeds the blind postings via `rebuild()`,
+    /// which also auto-clears any `winnerOverride`/`potOverride` (the level
+    /// change is a hand mutation like any other) — that is intended.
+    func setLevel(number: Int, smallBlind: Int, bigBlind: Int, ante: Int) {
+        self.levelNumber = number
+        self.smallBlind = smallBlind
+        self.bigBlind = bigBlind
+        self.ante = ante
+        rebuild()
+    }
+
     func addVillain(position: HeroPosition, relative: RelativeStack, approxStack: Int) {
         villains.append(VillainDraft(id: UUID(), position: position, relative: relative,
                                      approxStack: approxStack, shownHolding: [], mucked: false))
@@ -196,7 +280,9 @@ final class HandCaptureModel {
         heroCards.append(card)
         // Hero cards feed computedWinners just like shown holdings do; an
         // override predating them is stale (no rebuild here — clear explicitly).
+        // A manual pot is likewise stale once the hand's cards change (F17).
         winnerOverride = nil
+        potOverride = nil
         return true
     }
 
@@ -419,8 +505,10 @@ final class HandCaptureModel {
         villains[idx].shownHolding = cards
         villains[idx].mucked = false
         // New showdown evidence changes computedWinners; a pre-existing manual
-        // ruling is stale (doesn't go through rebuild — clear explicitly).
+        // ruling is stale (doesn't go through rebuild — clear explicitly). A
+        // manual pot is likewise stale once the showdown changes (F17).
         winnerOverride = nil
+        potOverride = nil
     }
 
     /// Marks a villain as having mucked: they showed nothing, so they cannot win
@@ -429,8 +517,10 @@ final class HandCaptureModel {
         guard let idx = villains.firstIndex(where: { $0.id == id }) else { return }
         villains[idx].shownHolding = []
         villains[idx].mucked = true
-        // Same as setShownHolding: mucking changes the showdown evidence.
+        // Same as setShownHolding: mucking changes the showdown evidence, so a
+        // stale winner ruling and manual pot both clear (F17).
         winnerOverride = nil
+        potOverride = nil
     }
 
     /// Participants who have not folded (the hero plus every villain still live).
@@ -571,6 +661,21 @@ final class HandCaptureModel {
 
     // MARK: - Persistence
 
+    /// Returns `result` clamped so its sign agrees with `net` (F17). A sole
+    /// win can never net negative and a loss can never net positive, so those
+    /// combinations indicate corruption and are flipped to the sign-consistent
+    /// result. `.chop` and `.folded` pass through untouched — a chop can be
+    /// net-negative with unequal contributions, and a fold's net is whatever
+    /// the hero already put in. Pure, so it is unit-testable without tripping
+    /// the DEBUG assertion in `save()`.
+    static func consistentResult(_ result: HandResult, net: Int) -> HandResult {
+        switch result {
+        case .won where net < 0: return .lost
+        case .lost where net > 0: return .won
+        default: return result
+        }
+    }
+
     /// Builds and inserts a `Hand` (with ordered `HandAction`s and `HandVillain`s)
     /// from the current draft, links it to the given context objects, and — when
     /// a `sourceStub` is supplied — marks that stub enriched. Does **not** push
@@ -591,6 +696,19 @@ final class HandCaptureModel {
             result = .lost
         }
 
+        // Save-time consistency guard (F17): the booked result and the booked
+        // net are both derived from `effectiveWinners`, so a sign mismatch —
+        // a sole-winner .won with a negative net, or a .lost with a positive
+        // net — means upstream state corruption. Assert loudly in DEBUG; in
+        // release, book the sign-consistent result rather than a contradiction.
+        // (A .chop with a negative net is deliberately NOT treated as
+        // corruption: with unequal contributions the hero can chop a pot and
+        // still be down on the hand — e.g. a villain short all-in — so a
+        // negative-net chop is legitimate and passes through untouched.)
+        let bookedResult = Self.consistentResult(result, net: net)
+        assert(bookedResult == result,
+               "HandCaptureModel.save: \(result) booked with net \(net); clamped to \(bookedResult)")
+
         let hand = Hand(
             heroPosition: heroPosition ?? .btn,
             heroCardsRaw: PlayingCard.joinList(heroCards),
@@ -600,7 +718,7 @@ final class HandCaptureModel {
         hand.potSize = pot
         hand.amountWon = net
         hand.heroStackAfter = heroStackAfter
-        hand.resultRaw = result.rawValue
+        hand.resultRaw = bookedResult.rawValue
         hand.tagsRaw = selectedTags.sorted().joined(separator: ", ")
         hand.wasAutoDetected = (sourceStub?.origin == .swingDetected)
         if let winnerOverride {
@@ -855,8 +973,10 @@ final class HandCaptureModel {
         // The hand just changed, so any manual winner ruling no longer
         // describes it — drop the override (see the winnerOverride docs).
         // Setting the override itself never calls rebuild, so a fresh ruling
-        // sticks until the next mutation.
+        // sticks until the next mutation. A manual pot correction is stale for
+        // the same reason (F17): the recomputed pot supersedes it.
         winnerOverride = nil
+        potOverride = nil
 
         // Snapshot the (value-typed) turn-order context, then hand the replay
         // to the isolation-free engine.

@@ -19,6 +19,11 @@ struct HandCaptureView: View {
     /// When true and the ledger is still empty on appear, opens the dictation
     /// sheet immediately — the voice-first entry points (Task 5) route here.
     let autoStartDictation: Bool
+    /// Non-nil when re-opening a saved hand to edit it (device finding 16).
+    /// Drives reconstruction (the model is seeded via `init(editing:)`) and the
+    /// save path: the original is deleted, its timestamp / source-stub link are
+    /// carried onto the new hand, and no tracker stack update is pushed.
+    let editingHand: Hand?
 
     @State private var model: HandCaptureModel
     @AppStorage(SettingsKeys.defaultSeatsPerTable) private var seatsDefault = 9
@@ -41,23 +46,36 @@ struct HandCaptureView: View {
     @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
     @State private var showDictation = false
+    @State private var showLevelPicker = false
     @State private var mappingIssues: [MappingIssue] = []
     @State private var showSavedDialog = false
     @State private var showSavedShare = false
     @State private var savedHand: Hand?
 
     init(tournament: Tournament?, cashSession: CashSession?, stub: HandStub?,
-         autoStartDictation: Bool = false, onSaved: @escaping (Hand) -> Void) {
+         autoStartDictation: Bool = false, editingHand: Hand? = nil,
+         onSaved: @escaping (Hand) -> Void) {
         self.tournament = tournament
         self.cashSession = cashSession
         self.stub = stub
         self.autoStartDictation = autoStartDictation
+        self.editingHand = editingHand
         self.onSaved = onSaved
 
         let gameType = tournament?.gameType ?? cashSession?.gameType
         let cardCount = gameType == .plo ? 4 : 2
 
-        if let stub {
+        if let editingHand {
+            // Rebuild the whole capture from the saved hand (see
+            // HandCaptureModel.init(editing:)). A manual pot correction is
+            // re-prefilled only when the saved potSize diverges from the
+            // recomputed pot — a computed pot is not re-frozen as an override.
+            let m = HandCaptureModel(editing: editingHand, heroCardCount: cardCount)
+            if editingHand.potSize > 0, editingHand.potSize != m.pot {
+                m.potOverride = editingHand.potSize
+            }
+            _model = State(initialValue: m)
+        } else if let stub {
             // Capture the tracker stack now so the model can tell a just-happened
             // enrichment (stack unchanged) from a stale one (stack moved on) —
             // see HandCaptureModel.shouldPushStackUpdate.
@@ -67,7 +85,9 @@ struct HandCaptureView: View {
         } else if let tournament {
             let blinds = tournament.currentBlinds
             _model = State(initialValue: HandCaptureModel(
-                levelNumber: tournament.currentBlindLevelNumber,
+                // Display-facing level number (matches the stub convention and
+                // the manual level picker), not the internal blind-level index.
+                levelNumber: tournament.currentDisplayLevel ?? tournament.currentBlindLevelNumber,
                 smallBlind: blinds?.smallBlind ?? 0,
                 bigBlind: blinds?.bigBlind ?? 0,
                 ante: blinds?.ante ?? 0,
@@ -87,7 +107,9 @@ struct HandCaptureView: View {
                 Color.backgroundPrimary.ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        NarrationBar(model: model, showPotPad: $showPotPad, potPadText: $potPadText)
+                        NarrationBar(model: model, showPotPad: $showPotPad, potPadText: $potPadText,
+                                     canPickLevel: !levelOptions.isEmpty,
+                                     onPickLevel: { showLevelPicker = true })
                         HeroStrip(model: model, stubHint: stubHint,
                                  showStackPad: $showStackPad, stackPadText: $stackPadText)
                         villainSection
@@ -175,6 +197,13 @@ struct HandCaptureView: View {
         }
         .sheet(isPresented: $showDictation) {
             DictationSheet(context: handContext, onResult: applyDraft)
+        }
+        .sheet(isPresented: $showLevelPicker) {
+            LevelPickerSheet(options: levelOptions, currentLevel: model.levelNumber) { option in
+                model.setLevel(number: option.displayNumber, smallBlind: option.smallBlind,
+                               bigBlind: option.bigBlind, ante: option.ante)
+                showLevelPicker = false
+            }
         }
         .preferredColorScheme(.dark)
         .confirmationDialog("Discard this hand?", isPresented: $showCloseConfirm, titleVisibility: .visible) {
@@ -339,6 +368,23 @@ struct HandCaptureView: View {
         return text
     }
 
+    // MARK: - Manual level selection (F15)
+
+    /// The tournament's non-break structure levels, labeled with DISPLAY level
+    /// numbers, offered in the level picker. Empty for cash sessions (no
+    /// structure) — the narration header is then not tappable.
+    private var levelOptions: [LevelPickerOption] {
+        guard let tournament else { return [] }
+        let displayNumbers = tournament.displayLevelNumbers
+        return tournament.sortedBlindLevels
+            .filter { !$0.isBreak }
+            .map { level in
+                LevelPickerOption(
+                    displayNumber: displayNumbers[level.levelNumber] ?? level.levelNumber,
+                    smallBlind: level.smallBlind, bigBlind: level.bigBlind, ante: level.ante)
+            }
+    }
+
     // MARK: - Voice entry
 
     /// Table context handed to the parser so spoken numbers resolve against
@@ -427,11 +473,23 @@ struct HandCaptureView: View {
     }
 
     private func save() {
+        // On the edit path, re-link the ORIGINAL hand's source stub (so the
+        // stub keeps pointing at the current enriched hand) and carry its
+        // timestamp onto the replacement below.
+        let effectiveStub = editingHand?.sourceStub ?? stub
         let hand = model.save(into: modelContext, tournament: tournament, cashSession: cashSession,
-                              sourceStub: stub, tableSize: seatsDefault)
-        // Only push the stack update for a current hand — a stale enrichment
-        // would regress latestStack (see HandCaptureModel.shouldPushStackUpdate).
-        if tournament != nil, model.heroStackAfter > 0, model.shouldPushStackUpdate {
+                              sourceStub: effectiveStub, tableSize: seatsDefault)
+
+        if let editingHand {
+            // Editing is a replace-in-place: preserve the original position in
+            // the timeline, then delete the original (its actions/villains
+            // cascade). Editing history must NOT touch the tracker, so no stack
+            // update is pushed regardless of shouldPushStackUpdate.
+            hand.timestamp = editingHand.timestamp
+            modelContext.delete(editingHand)
+        } else if tournament != nil, model.heroStackAfter > 0, model.shouldPushStackUpdate {
+            // Only push the stack update for a current, non-edit hand — a stale
+            // enrichment would regress latestStack (see shouldPushStackUpdate).
             tournamentManager.updateStack(chipCount: model.heroStackAfter)
         }
         HapticFeedback.success()
@@ -535,14 +593,28 @@ private struct NarrationBar: View {
     let model: HandCaptureModel
     @Binding var showPotPad: Bool
     @Binding var potPadText: String
+    /// True when a tournament structure is present: the narration header (which
+    /// leads with the level/blinds) becomes a tappable control that opens the
+    /// manual level picker (device finding 15). Hidden for cash sessions.
+    var canPickLevel = false
+    var onPickLevel: () -> Void = {}
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(model.narration)
-                .font(.system(.footnote, design: .monospaced))
-                .foregroundColor(.textPrimary)
-                .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
+            if canPickLevel {
+                Button(action: onPickLevel) {
+                    HStack(alignment: .top, spacing: 4) {
+                        narrationText
+                        Image(systemName: "chevron.down.circle")
+                            .font(.caption2)
+                            .foregroundColor(.goldAccent)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Change level for this hand")
+            } else {
+                narrationText
+            }
             Spacer(minLength: 8)
             Button {
                 potPadText = String(model.pot)
@@ -553,6 +625,78 @@ private struct NarrationBar: View {
             .quickChip()
         }
         .pokerCard()
+    }
+
+    private var narrationText: some View {
+        Text(model.narration)
+            .font(.system(.footnote, design: .monospaced))
+            .foregroundColor(.textPrimary)
+            .lineLimit(3)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+// MARK: - Level picker (F15)
+
+/// One selectable structure level in the manual level picker, carrying the
+/// DISPLAY level number (not the internal blind-level index) and its blinds.
+struct LevelPickerOption: Identifiable {
+    let displayNumber: Int
+    let smallBlind: Int
+    let bigBlind: Int
+    let ante: Int
+
+    var id: Int { displayNumber }
+
+    /// "L5 — 300/600 (600)" — display number, blinds, and ante when present.
+    var label: String {
+        var text = "L\(displayNumber) — \(smallBlind.formatted())/\(bigBlind.formatted())"
+        if ante > 0 { text += " (\(ante.formatted()))" }
+        return text
+    }
+}
+
+/// Scrolling list of the tournament's non-break levels for re-tagging the hand
+/// with the level it was actually played at. The current level is checkmarked.
+private struct LevelPickerSheet: View {
+    let options: [LevelPickerOption]
+    let currentLevel: Int
+    let onSelect: (LevelPickerOption) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.backgroundPrimary.ignoresSafeArea()
+                List(options) { option in
+                    Button {
+                        onSelect(option)
+                    } label: {
+                        HStack {
+                            Text(option.label)
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            if option.displayNumber == currentLevel {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.goldAccent)
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.cardSurface)
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Level Played")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(.textSecondary)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

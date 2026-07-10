@@ -13,6 +13,8 @@ struct HandsPane: View {
 
     @State private var showEntry = false
     @State private var capturePresentation: CapturePresentation?
+    @State private var pendingDeleteHand: Hand?
+    @State private var shareHand: Hand?
 
     private var hands: [Hand] {
         tournament?.sortedHands ?? cashSession?.sortedHands ?? []
@@ -95,6 +97,29 @@ struct HandsPane: View {
                             HandRow(hand: hand)
                         }
                         .listRowBackground(Color.cardSurface)
+                        .swipeActions(edge: .leading) {
+                            Button {
+                                shareHand = hand
+                            } label: {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                            .tint(.goldAccent)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if !isReadOnly {
+                                Button(role: .destructive) {
+                                    pendingDeleteHand = hand
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                Button {
+                                    capturePresentation = CapturePresentation(edit: hand)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                        }
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -120,7 +145,24 @@ struct HandsPane: View {
         }
         .fullScreenCover(item: $capturePresentation) { presentation in
             HandCaptureView(tournament: tournament, cashSession: cashSession, stub: presentation.stub,
-                            autoStartDictation: presentation.autoDictate) { _ in }
+                            autoStartDictation: presentation.autoDictate,
+                            editingHand: presentation.editHand) { _ in }
+        }
+        .sheet(item: $shareHand) { hand in
+            HandSharePreview(hand: hand)
+        }
+        .confirmationDialog(
+            "Delete this hand? This can't be undone.",
+            isPresented: Binding(get: { pendingDeleteHand != nil },
+                                 set: { if !$0 { pendingDeleteHand = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Hand", role: .destructive) {
+                // The Hand → actions / villains relationships cascade on delete.
+                if let hand = pendingDeleteHand { modelContext.delete(hand) }
+                pendingDeleteHand = nil
+            }
+            Button("Cancel", role: .cancel) { pendingDeleteHand = nil }
         }
     }
 
@@ -142,9 +184,26 @@ struct HandsPane: View {
 /// stub (rather than presenting it directly) lets the same `fullScreenCover`
 /// carry that flag without parallel presentation state.
 private struct CapturePresentation: Identifiable {
-    let stub: HandStub
+    let id: PersistentIdentifier
+    let stub: HandStub?
     let autoDictate: Bool
-    var id: PersistentIdentifier { stub.persistentModelID }
+    let editHand: Hand?
+
+    /// Enrich/dictate a pending stub.
+    init(stub: HandStub, autoDictate: Bool) {
+        self.id = stub.persistentModelID
+        self.stub = stub
+        self.autoDictate = autoDictate
+        self.editHand = nil
+    }
+
+    /// Re-open a saved hand for editing (device finding 16).
+    init(edit hand: Hand) {
+        self.id = hand.persistentModelID
+        self.stub = nil
+        self.autoDictate = false
+        self.editHand = hand
+    }
 }
 
 private struct PendingStubRow: View {
