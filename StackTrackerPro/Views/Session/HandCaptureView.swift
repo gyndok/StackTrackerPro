@@ -42,6 +42,9 @@ struct HandCaptureView: View {
     @State private var pendingActionType: HandActionType?
     @State private var showDictation = false
     @State private var mappingIssues: [MappingIssue] = []
+    @State private var showSavedDialog = false
+    @State private var showSavedShare = false
+    @State private var savedHand: Hand?
 
     init(tournament: Tournament?, cashSession: CashSession?, stub: HandStub?,
          autoStartDictation: Bool = false, onSaved: @escaping (Hand) -> Void) {
@@ -212,6 +215,13 @@ struct HandCaptureView: View {
                 if let value = ChipInput.parse(stackPadText) { model.heroStackBefore = value }
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Hand saved", isPresented: $showSavedDialog, titleVisibility: .visible) {
+            Button("Share…") { showSavedShare = true }
+            Button("Done", role: .cancel) { dismiss() }
+        } message: { Text("Share it or head back to the table.") }
+        .sheet(isPresented: $showSavedShare, onDismiss: { dismiss() }) {
+            if let savedHand { HandSharePreview(hand: savedHand) }
         }
     }
 
@@ -426,7 +436,8 @@ struct HandCaptureView: View {
         }
         HapticFeedback.success()
         onSaved(hand)
-        dismiss()
+        savedHand = hand
+        showSavedDialog = true
     }
 }
 

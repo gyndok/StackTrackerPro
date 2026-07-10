@@ -237,6 +237,8 @@ private struct HandRow: View {
 struct HandDetailView: View {
     let hand: Hand
 
+    @State private var showShare = false
+
     var body: some View {
         ZStack {
             Color.backgroundPrimary.ignoresSafeArea()
@@ -296,6 +298,18 @@ struct HandDetailView: View {
         }
         .navigationTitle("Hand")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showShare = true
+                } label: {
+                    Label("Share Hand", systemImage: "square.and.arrow.up")
+                }
+            }
+        }
+        .sheet(isPresented: $showShare) {
+            HandSharePreview(hand: hand)
+        }
         .preferredColorScheme(.dark)
     }
 
