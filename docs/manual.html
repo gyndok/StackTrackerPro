@@ -342,8 +342,17 @@
     <a href="#active-session" class="toc-link">Active Session</a>
     <a href="#ai-chat" class="toc-link">AI Chat Updates</a>
     <a href="#mzone" class="toc-link">M-Ratio & Stack Zones</a>
-    <a href="#hand-notes" class="toc-link">Hand Notes & Photos</a>
+    <a href="#hand-notes" class="toc-link">Notes & Photos</a>
     <a href="#ending" class="toc-link">Ending a Tournament</a>
+  </div>
+  <div class="toc-section">
+    <div class="toc-heading">Hand Logger</div>
+    <a href="#hand-logger" class="toc-link">Overview</a>
+    <a href="#quick-capture" class="toc-link">Quick Capture</a>
+    <a href="#hand-capture" class="toc-link">The Hand Capture Screen</a>
+    <a href="#voice-dictation" class="toc-link">Voice Dictation</a>
+    <a href="#swing-debrief" class="toc-link">Big Pots & Break Debrief</a>
+    <a href="#hand-sharing" class="toc-link">Sharing Hands</a>
   </div>
   <div class="toc-section">
     <div class="toc-heading">Cash Games</div>
@@ -381,7 +390,7 @@
   <div class="manual-section" id="overview">
     <div class="section-badge">User Manual</div>
     <h1>PokerStackTrackerPro</h1>
-    <p>PokerStackTrackerPro is a native iOS app for tracking poker tournaments and cash games in real time. Use AI chat to update your stack naturally, scan blind structures with your camera, and review deep analytics to improve your game.</p>
+    <p>PokerStackTrackerPro is a native iOS app for tracking poker tournaments and cash games in real time. Use AI chat to update your stack naturally, log full hands in seconds with the <a href="#hand-logger">Hand Logger</a> (with voice dictation), scan blind structures with your camera, and review deep analytics to improve your game.</p>
     <p>This manual covers every feature of the app. Use the sidebar to jump to any section.</p>
 
     <div class="callout callout-tip">
@@ -506,8 +515,8 @@
 
   <!-- ACTIVE SESSION -->
   <div class="manual-section" id="active-session">
-    <h2>Active Session — The 8 Panes</h2>
-    <p>During an active tournament, swipe left and right through 8 panes. The status bar at the top (showing current stack, level, and elapsed time) stays fixed on every pane.</p>
+    <h2>Active Session — The 9 Panes</h2>
+    <p>During an active tournament, swipe left and right through 9 panes. The status bar at the top (showing current stack, level, and elapsed time) stays fixed on every pane.</p>
 
     <div class="quick-ref">
       <div class="quick-card">
@@ -551,21 +560,29 @@
         </ul>
       </div>
       <div class="quick-card">
-        <div class="qc-title">📝 Pane 6 — Hand Notes</div>
+        <div class="qc-title">📝 Pane 6 — Notes</div>
         <ul>
-          <li>Log hand details with context</li>
+          <li>General session notes</li>
           <li>Stack count and blind level auto-attached</li>
         </ul>
       </div>
       <div class="quick-card">
-        <div class="qc-title">💬 Pane 7 — AI Chat</div>
+        <div class="qc-title">🃏 Pane 7 — Hands</div>
+        <ul>
+          <li>Full hand logger — see <a href="#hand-logger">Hand Logger</a></li>
+          <li>Pending quick captures</li>
+          <li>Swipe to share, edit, or delete</li>
+        </ul>
+      </div>
+      <div class="quick-card">
+        <div class="qc-title">💬 Pane 8 — AI Chat</div>
         <ul>
           <li>Full message history</li>
           <li>Update stack via natural language</li>
         </ul>
       </div>
       <div class="quick-card">
-        <div class="qc-title">🔍 Pane 8 — Scouting</div>
+        <div class="qc-title">🔍 Pane 9 — Scouting</div>
         <ul>
           <li>Pre-game strategy report</li>
           <li>Viewable anytime during play</li>
@@ -608,7 +625,8 @@
     </div>
 
     <h3>Quick Actions</h3>
-    <p>Tap the quick action buttons next to the chat input for one-tap updates: <strong>Rebuy</strong>, <strong>Add-On</strong>, <strong>Bounty</strong>, and <strong>Break</strong>.</p>
+    <p>Tap the quick action buttons next to the chat input for one-tap updates: <strong>Rebuy</strong>, <strong>Add-On</strong>, <strong>Bounty</strong>, and <strong>Break</strong>. The <strong>card button</strong> starts a hand <a href="#quick-capture">Quick Capture</a>.</p>
+    <p>Chat is also watching for big stack swings — after a large pot it offers to log the hand for you. See <a href="#swing-debrief">Big-Pot Detection &amp; Break Debrief</a>.</p>
   </div>
 
   <!-- M-RATIO -->
@@ -652,13 +670,13 @@
     <p>The zone badge in the status bar updates in real time as your stack and blind level change.</p>
   </div>
 
-  <!-- HAND NOTES -->
+  <!-- NOTES & PHOTOS -->
   <div class="manual-section" id="hand-notes">
-    <h2>Hand Notes &amp; Chip Stack Photos</h2>
+    <h2>Notes &amp; Chip Stack Photos</h2>
 
-    <h3>Hand Notes (Pane 6)</h3>
-    <p>Tap the <strong>+</strong> button on the Hand Notes pane to log a hand. Your current stack size and blind level are automatically recorded with the note — you just write what happened.</p>
-    <p>Use this for: key hands you want to review later, bad beats worth remembering, or strategic decisions you made.</p>
+    <h3>Session Notes (Pane 6)</h3>
+    <p>Tap the <strong>+</strong> button on the Notes pane — or type <code>note: table 14 is soft</code> in chat — to jot a general session note. Your current stack size and blind level are automatically recorded with it.</p>
+    <p>Use this for table observations, meal breaks, seat changes, or anything worth remembering. For specific hands, use the full <a href="#hand-logger">Hand Logger</a> instead — it captures cards, actions, and results.</p>
 
     <h3>Chip Stack Photos (Pane 4)</h3>
     <p>Tap <strong>+</strong> on the Chip Stack Photos pane to take a timestamped photo of your stack. Each photo is stored with the timestamp, your current stack count, and the blind level at the time.</p>
@@ -678,6 +696,113 @@
       <li><strong>Additional notes</strong></li>
     </ul>
     <p>After confirming, you'll be taken to the <strong>Session Recap</strong> screen showing a full summary, and prompted to create a share card or video recap.</p>
+  </div>
+
+  <hr>
+
+  <!-- HAND LOGGER OVERVIEW -->
+  <div class="manual-section" id="hand-logger">
+    <div class="section-badge">New in 1.2</div>
+    <h2>Hand Logger — Overview</h2>
+    <p>The Hands pane (pane 7) is a full poker hand logger built around one idea: <strong>capture now, enrich later</strong>. At the table you only need a few seconds to save what matters — your hole cards. Everything else (actions, board, villains, result) can be added on a break or after the session, while it's still fresh.</p>
+    <p>There are three ways to get a hand into the app:</p>
+    <ul>
+      <li><strong>Quick Capture</strong> — tap the card button, pick your hole cards, done. The hand waits in <strong>Pending Hands</strong> until you enrich it.</li>
+      <li><strong>Full entry</strong> — tap <strong>Log Hand</strong> and enter the whole hand with the tap-only Hand Capture Screen.</li>
+      <li><strong>Voice</strong> — dictate what you remember; the transcript attaches to the hand as your reference.</li>
+    </ul>
+    <p>Saved hands appear in the Hands list with their result and net amount. <strong>Swipe right to share</strong> a hand, <strong>swipe left to edit or delete</strong> it. Every logged hand also flows into your session recap.</p>
+  </div>
+
+  <!-- QUICK CAPTURE -->
+  <div class="manual-section" id="quick-capture">
+    <h2>Quick Capture</h2>
+    <p>When a big hand just happened and the next one is already being dealt, you don't have time for details:</p>
+    <ol class="steps">
+      <li>Tap the <strong>card button</strong> next to the chat input (or the <strong>+</strong> on the Hands pane).</li>
+      <li>Pick your two hole cards.</li>
+      <li>Done — the hand is saved to <strong>Pending Hands</strong> with the current level and your stack.</li>
+    </ol>
+    <p>You can also type shorthand straight into chat — e.g. <code>hand AKs</code> — and the app creates the pending capture for you.</p>
+    <p>Later, tap the pending hand to open the Hand Capture Screen with everything pre-filled, and add the actions, board, and result. Or tap its <strong>mic</strong> to dictate what you remember instead.</p>
+  </div>
+
+  <!-- HAND CAPTURE SCREEN -->
+  <div class="manual-section" id="hand-capture">
+    <h2>The Hand Capture Screen</h2>
+    <p>Tap <strong>Log Hand</strong> on the Hands pane to enter a complete hand — designed for fast, tap-only entry with no typing required.</p>
+
+    <h3>Setup</h3>
+    <ul>
+      <li><strong>Level</strong> — defaults to the current blind level; tap it to pick any level from your structure.</li>
+      <li><strong>Your stack</strong> — defaults to your tracked stack with a <strong>Use current</strong> shortcut; editable if the hand started from a different count.</li>
+      <li><strong>Position & hole cards</strong> — tap to select.</li>
+      <li><strong>Villains</strong> — tap <strong>Add Villain</strong> for each opponent: position, relative stack (covers you / you cover), and later their shown cards if they table a hand.</li>
+    </ul>
+
+    <h3>Actions</h3>
+    <p>Enter actions street by street — fold, check, call, bet, raise, all-in. The app tracks the pot live, advances streets automatically when action closes, and narrates the hand as you build it.</p>
+    <ul>
+      <li><strong>Preflop sizing</strong> — one-tap presets in big blinds (2bb, 2.5bb, 3bb…).</li>
+      <li><strong>Postflop sizing</strong> — pot-fraction presets (⅓, ½, ⅔ pot…).</li>
+      <li><strong>Custom amounts</strong> — type any number; it's taken as the total bet. Add <code>bb</code> (e.g. <code>4bb</code>) to enter big blinds instead of chips.</li>
+      <li><strong>Board cards</strong> — pick the flop, turn, and river as they're dealt; mis-taps can be deleted.</li>
+    </ul>
+
+    <h3>Showdown & result</h3>
+    <p>Enter shown cards at showdown and the app <strong>evaluates the hands and determines the winner automatically</strong> — pot size and your net win/loss are computed from the action. You can override the winner or pot if the hand played out unusually. Then tap <strong>Save</strong>.</p>
+
+    <div class="callout callout-tip">
+      <span class="label">💡 Tip</span> If your final stack from the hand matches the math, saving the hand also updates your tracked stack — no separate chat update needed.
+    </div>
+  </div>
+
+  <!-- VOICE DICTATION -->
+  <div class="manual-section" id="voice-dictation">
+    <h2>Voice Dictation</h2>
+    <p>Some hands are easier to say than to tap. Tap the <strong>mic button</strong> (on the Hand Capture Screen, the quick-capture sheet, or any pending hand) to open <strong>Voice Hand Entry</strong>:</p>
+    <ol class="steps">
+      <li>Speak the hand as you remember it — cards, action, the story, anything.</li>
+      <li>Watch the live transcript as you talk.</li>
+      <li>Tap <strong>Use Transcript</strong>. The transcript appears as a collapsible reference card on the Hand Capture Screen.</li>
+    </ol>
+    <p>From there it's your choice: <strong>enter the structured hand by tap</strong> using the transcript as your guide, or <strong>just save</strong> — the transcript alone is a perfectly good record. Transcript-only hands show a <strong>Dictated</strong> label in the hands list, and the full transcript appears in the hand's detail view, in shared hand histories, and in your session recap.</p>
+
+    <div class="callout callout-note">
+      <span class="label">📝 Note</span> Transcription runs <strong>entirely on your device</strong> — audio never leaves your iPhone and is not recorded or stored. The first use downloads Apple's on-device speech model (one time, network required). Requires a device with Apple Intelligence support.
+    </div>
+  </div>
+
+  <!-- SWING DETECTION + BREAK DEBRIEF -->
+  <div class="manual-section" id="swing-debrief">
+    <h2>Big-Pot Detection &amp; Break Debrief</h2>
+
+    <h3>Big-pot detection</h3>
+    <p>When you update your stack in chat and the change is a big swing, the app notices and offers to log the hand:</p>
+    <div class="ai-examples">
+      <div class="ai-bubble">"I have 82k"</div>
+      <div class="ai-bubble response">✅ Stack updated to 82,000.<br><br>Big pot — +34,000 at Level 12. Log it? Just tell me your cards.</div>
+    </div>
+    <p>Reply with your hole cards and a quick capture is created on the spot. Adjust what counts as a "big pot" (or turn detection off) in <strong>Settings → Big-pot detection</strong>.</p>
+
+    <h3>Break debrief</h3>
+    <p>When you go on break, the app reviews your stack timeline and asks about any swings it can't account for:</p>
+    <div class="ai-examples">
+      <div class="ai-bubble response">Break debrief — couldn't account for this: You lost 28,000 between 2:15 PM and 2:40 PM. One pot or a fade? (Reply with your cards, a description, "later", or "skip today".)</div>
+    </div>
+    <p>Reply with your cards to create a hand capture, describe what happened to record it as a note, say <code>later</code> to defer, or <code>skip today</code> to turn debriefs off for the session. Either way, your session story stays complete — every swing ends up explained in the recap.</p>
+  </div>
+
+  <!-- HAND SHARING -->
+  <div class="manual-section" id="hand-sharing">
+    <h2>Sharing Hands</h2>
+    <p>Share any logged hand as a clean, formatted text hand history — great for group chats, coaches, and study partners:</p>
+    <ul>
+      <li><strong>From the hands list</strong> — swipe right on a hand and tap Share.</li>
+      <li><strong>From a hand's detail view</strong> — tap <strong>Share Hand</strong>.</li>
+      <li><strong>Right after saving</strong> — share the hand you just entered without leaving the capture flow.</li>
+    </ul>
+    <p>The share text includes the level and blinds, your position, cards, and stack, the action street by street with board cards in suit symbols (K♠K♦ on J♥8♥4♦…), shown hands, and the result. You'll see an in-app color preview before sending; the shared text itself is plain text that pastes cleanly anywhere. If the hand has a dictated transcript, it's included as a <em>Transcript</em> block.</p>
   </div>
 
   <hr>
