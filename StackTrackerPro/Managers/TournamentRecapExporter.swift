@@ -79,7 +79,7 @@ enum TournamentRecapExporter {
         > remaining progression chart from the timeline data; (4) a financial
         > breakdown (buy-in, fees, add-ons, bounties, payout, net); (5) a
         > narrative of the session's key moments using the timeline, the
-        > notes, and the street-by-street Structured Hands, and FadeNotes
+        > notes, the street-by-street Structured Hands, and the FadeNotes
         > (player-confirmed gradual losses — treat them as authoritative, not
         > unknowns) — call out swings, the bubble, and any notable hands; (6) the
         > blind structure as an appendix table. Keep the tone knowledgeable and
@@ -174,7 +174,8 @@ enum TournamentRecapExporter {
             rows.append((breakEntry.timestamp, "Break started (\(breakEntry.breakDurationSeconds / 60)m) at \(breakEntry.blindsDisplay), stack \(breakEntry.chipCount.formatted())"))
         }
         for note in tournament.sortedHandNotes {
-            rows.append((note.timestamp, "Hand note: \(note.descriptionText)"))
+            // General session notes (F19) — label matches the "## Notes" section.
+            rows.append((note.timestamp, "Note: \(note.descriptionText)"))
         }
         for fade in tournament.sortedFadeNotes {
             let sign = fade.chipDelta >= 0 ? "+" : "−"

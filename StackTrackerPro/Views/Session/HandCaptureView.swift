@@ -893,10 +893,16 @@ private struct VillainInlineEditor: View {
                 .keyboardType(.numbersAndPunctuation)
                 .focused($approxFocused)
                 // Keyboard Done: no return key on this layout either (F18).
+                // Content is gated on THIS field's focus: this editor and
+                // SizingRow's "#" pad can be mounted simultaneously, and
+                // SwiftUI concatenates every mounted keyboard toolbar into
+                // one accessory bar — ungated, two Done buttons would appear.
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") { approxFocused = false }
+                        if approxFocused {
+                            Spacer()
+                            Button("Done") { approxFocused = false }
+                        }
                     }
                 }
 
@@ -1163,11 +1169,15 @@ private struct SizingRow: View {
                         .focused($numberPadFocused)
                         // Keyboard Done: numbers-and-punctuation has no return
                         // key to lean on, so give the keyboard an explicit
-                        // dismiss (F18).
+                        // dismiss (F18). Gated on focus for the same co-mount
+                        // reason as the villain editor's approx field — both
+                        // toolbars concatenate when both views are mounted.
                         .toolbar {
                             ToolbarItemGroup(placement: .keyboard) {
-                                Spacer()
-                                Button("Done") { numberPadFocused = false }
+                                if numberPadFocused {
+                                    Spacer()
+                                    Button("Done") { numberPadFocused = false }
+                                }
                             }
                         }
                     Button(confirmLabel) {
