@@ -2903,6 +2903,140 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertEqual(HandCaptureModel.consistentResult(.chop, net: -100), .chop)
         XCTAssertEqual(HandCaptureModel.consistentResult(.folded, net: -50), .folded)
     }
+
+    // MARK: - winnerOverride restore on edit (F16 follow-up)
+
+    /// An NLHE dealer-correction override survives an edit round-trip: the
+    /// persisted label string ("UTG (covers)") matches the reconstructed
+    /// villain's identical label, restoring the exact participant — without
+    /// this the override silently reverts to the computed winner on save.
+    func testEditRestoresWinnerOverrideByLabel() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        let utg = try XCTUnwrap(model.villains.first?.id)
+        model.add(action: .allIn, toAmount: 390_000)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("Jh 8h 4d 2c 3s") { _ = model.addBoardCard(c) }
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertEqual(model.computedWinners, [.hero])   // KK wins for real
+
+        model.winnerOverride = [.villain(utg)]           // dealer correction
+        let saved = model.save(into: context, tournament: nil, cashSession: nil,
+                               sourceStub: nil, tableSize: 9)
+        XCTAssertEqual(saved.winnerOverride, "UTG (covers)")
+
+        let rebuilt = HandCaptureModel(editing: saved, heroCardCount: 2)
+        XCTAssertNil(rebuilt.winnerOverride, "reconstruction alone must not invent an override")
+        rebuilt.restoreWinnerOverride(fromLabels: saved.winnerOverride)
+        let newUtg = try XCTUnwrap(rebuilt.villains.first?.id)
+        XCTAssertEqual(rebuilt.winnerOverride, [.villain(newUtg)])
+        XCTAssertTrue(rebuilt.isResolvable)
+        XCTAssertEqual(rebuilt.heroNet, -390_000, "the restored override decides the result")
+    }
+
+    /// PLO showdowns are only saveable via an override (`computedWinners` is
+    /// hold'em-only). Editing one must restore the override, or the reopened
+    /// hand comes back with Save permanently disabled.
+    func testEditRestoresOverrideForPLOShowdown() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+
+        let model = HandCaptureModel(levelNumber: 5, smallBlind: 300, bigBlind: 600,
+                                     ante: 600, heroCardCount: 4, heroStackBefore: 50_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Ah Kh Qd Jd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        model.add(action: .allIn, toAmount: 50_000)   // UTG jams
+        model.add(action: .call, toAmount: 0)          // hero calls
+        for c in PlayingCard.parseList("Th 9h 4c 2s 7d") { _ = model.addBoardCard(c) }
+        XCTAssertTrue(model.needsShowdown)
+        XCTAssertTrue(model.computedWinners.isEmpty, "PLO showdowns are unevaluable")
+        XCTAssertFalse(model.isResolvable, "PLO showdown needs an override to save")
+
+        model.winnerOverride = [.hero]
+        XCTAssertTrue(model.isResolvable)
+        let saved = model.save(into: context, tournament: nil, cashSession: nil,
+                               sourceStub: nil, tableSize: 9)
+
+        let rebuilt = HandCaptureModel(editing: saved, heroCardCount: 4)
+        XCTAssertFalse(rebuilt.isResolvable, "without restore, Save would be disabled")
+        rebuilt.restoreWinnerOverride(fromLabels: saved.winnerOverride)
+        XCTAssertEqual(rebuilt.winnerOverride, [.hero])
+        XCTAssertTrue(rebuilt.isResolvable, "restored override re-enables Save")
+    }
+
+    /// A stored override string that matches no participant restores nothing:
+    /// all-or-nothing matching, no partial sets, no crash.
+    func testRestoreWinnerOverrideIgnoresUnmatchableLabels() throws {
+        let (model, utg) = makeShowdownModel()
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+
+        model.restoreWinnerOverride(fromLabels: "HJ (short)")   // no such participant
+        XCTAssertNil(model.winnerOverride)
+
+        // One matching + one garbage token → all-or-nothing, still nothing.
+        model.restoreWinnerOverride(fromLabels: "Hero (BTN), Garbage Token")
+        XCTAssertNil(model.winnerOverride)
+
+        model.restoreWinnerOverride(fromLabels: "")             // empty = no override saved
+        XCTAssertNil(model.winnerOverride)
+
+        // Sanity: a fully-matching string does restore.
+        model.restoreWinnerOverride(fromLabels: "Hero (BTN)")
+        XCTAssertEqual(model.winnerOverride, [.hero])
+    }
+
+    /// Edit round-trip with betting on every street — board cards interleaved
+    /// with live action (flop cards then flop bets, etc.), not just an all-in
+    /// runout. The reconstructed ledger must be identical entry-for-entry.
+    func testEditRoundTripWithPostflopBetting() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+
+        let model = HandCaptureModel(levelNumber: 6, smallBlind: 400, bigBlind: 800,
+                                     ante: 800, heroCardCount: 2, heroStackBefore: 60_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .bb, relative: .coversHero, approxStack: 0)
+        let bb = try XCTUnwrap(model.villains.first?.id)
+
+        model.add(action: .raise, toAmount: 2000)      // hero (BTN) opens
+        model.add(action: .call, toAmount: 0)          // BB defends
+        for c in PlayingCard.parseList("Jh 8c 4d") { _ = model.addBoardCard(c) }
+        model.add(action: .check, toAmount: 0)         // BB
+        model.add(action: .bet, toAmount: 2500)        // hero
+        model.add(action: .call, toAmount: 0)          // BB
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        model.add(action: .check, toAmount: 0)         // BB
+        model.add(action: .check, toAmount: 0)         // hero
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        model.add(action: .bet, toAmount: 5000)        // BB leads river
+        model.add(action: .call, toAmount: 0)          // hero calls
+        XCTAssertTrue(model.isHandOver)
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: bb)
+        XCTAssertEqual(model.computedWinners, [.hero])
+
+        let saved = model.save(into: context, tournament: nil, cashSession: nil,
+                               sourceStub: nil, tableSize: 9)
+        let rebuilt = HandCaptureModel(editing: saved, heroCardCount: 2)
+
+        XCTAssertEqual(rebuilt.ledger.map(\.toAmount), model.ledger.map(\.toAmount))
+        XCTAssertEqual(rebuilt.ledger.map(\.action), model.ledger.map(\.action))
+        XCTAssertEqual(rebuilt.ledger.map(\.street), model.ledger.map(\.street))
+        XCTAssertEqual(rebuilt.ledger.map { $0.participant == .hero },
+                       model.ledger.map { $0.participant == .hero })
+        XCTAssertEqual(rebuilt.board, model.board)
+        XCTAssertEqual(rebuilt.pot, model.pot)
+        XCTAssertEqual(rebuilt.isHandOver, model.isHandOver)
+        XCTAssertEqual(Set(rebuilt.computedWinners), Set(model.computedWinners))
+        XCTAssertEqual(rebuilt.heroNet, model.heroNet)
+    }
 }
 
 // MARK: - HandTranscriptParser (Voice Task 1)

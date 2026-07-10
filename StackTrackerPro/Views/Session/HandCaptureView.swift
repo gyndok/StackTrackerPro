@@ -74,6 +74,12 @@ struct HandCaptureView: View {
             if editingHand.potSize > 0, editingHand.potSize != m.pot {
                 m.potOverride = editingHand.potSize
             }
+            // Restore a persisted manual winner ruling by label matching (see
+            // restoreWinnerOverride's contract) — placed after init so no
+            // reconstruction step clears it. Without this, a PLO showdown
+            // (saveable only via override) would reopen with Save disabled,
+            // and an NLHE dealer correction would silently revert on save.
+            m.restoreWinnerOverride(fromLabels: editingHand.winnerOverride)
             _model = State(initialValue: m)
         } else if let stub {
             // Capture the tracker stack now so the model can tell a just-happened

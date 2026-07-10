@@ -197,6 +197,38 @@ final class HandCaptureModel {
         selectedTags = Set(hand.tags)
     }
 
+    /// Restores a persisted manual winner ruling onto a reconstructed capture
+    /// (the Edit path — called by the view AFTER `init(editing:)` and the
+    /// potOverride prefill, so no reconstruction step clears it).
+    ///
+    /// Label-matching contract: `save()` persists the override as the sorted,
+    /// ", "-joined `label(for:)` strings ("Hero (BTN)", "UTG (covers)" — see
+    /// the `hand.winnerOverride` assignment in `save()` and the view's
+    /// matching `overrideDescription`). Reconstruction reproduces identical
+    /// participants with identical labels — hero position and each villain's
+    /// position/relative-stack round-trip — so matching each token against
+    /// `label(for:)` over hero + villains recovers the exact participant set.
+    /// Labels never contain ", " so the split is unambiguous. Restoring
+    /// matters because (1) PLO showdowns are only saveable via an override
+    /// (`computedWinners` is hold'em-only), so dropping it would disable Save
+    /// on edit, and (2) an NLHE dealer-correction override would silently
+    /// revert to the computed winner on the edited save. All-or-nothing: any
+    /// token that matches no participant restores nothing (override stays
+    /// nil, the computed result stands, and the user re-rules manually).
+    func restoreWinnerOverride(fromLabels stored: String) {
+        guard !stored.isEmpty else { return }
+        let candidates = participants
+        var matched: Set<Participant> = []
+        for token in stored.components(separatedBy: ", ") {
+            guard let participant = candidates.first(where: { label(for: $0) == token }) else {
+                return
+            }
+            matched.insert(participant)
+        }
+        guard !matched.isEmpty else { return }
+        winnerOverride = matched
+    }
+
     /// The board cards belonging to `street`, sliced from a full board by the
     /// same flop-3 / turn-1 / river-1 layout the engine deals. Used only by
     /// `init(editing:)` to re-interleave the board with the betting log.
