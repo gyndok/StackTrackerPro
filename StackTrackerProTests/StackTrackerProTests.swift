@@ -3392,3 +3392,45 @@ final class HandHistoryFormatterTests: XCTestCase {
         XCTAssertTrue(text.hasSuffix("Hero wins 3,000"), "got: \(text)")
     }
 }
+
+// Regression: user-reported device hand (straight vs trips) — engine verified correct;
+// pins evaluator + full-flow winner computation for this exact sequence.
+final class StraightVsTripsDiagTests: XCTestCase {
+    func testEvaluatorStraightBeatsTrips() throws {
+        let hero = UUID(), villain = UUID()
+        let winners = PokerHandEvaluator.holdemWinners(
+            board: PlayingCard.parseList("4h 3c Ad 5h 7h"),
+            holdings: [(hero, PlayingCard.parseList("6h 5d")),
+                       (villain, PlayingCard.parseList("Ah As"))])
+        XCTAssertEqual(winners, [hero], "6h5d makes 3-7 straight, must beat trip aces")
+    }
+
+    @MainActor
+    func testFullCaptureFlowStraightVsTrips() throws {
+        let model = HandCaptureModel(levelNumber: 6, smallBlind: 400, bigBlind: 800,
+                                     ante: 800, heroCardCount: 2, heroStackBefore: 425_000)
+        model.heroPosition = .sb
+        for c in PlayingCard.parseList("6h 5d") { XCTAssertTrue(model.addCard(c)) }
+        model.addVillain(position: .btn, relative: .shorter, approxStack: 0)
+        let btn = try XCTUnwrap(model.villains.first).id
+        // Preflop: BTN first (after BB, wrapping), then SB hero
+        model.add(action: .raise, toAmount: 2_600)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("4h 3c Ad") { XCTAssertTrue(model.addBoardCard(c)) }
+        model.add(action: .check, toAmount: 0)   // hero (SB first postflop)
+        model.add(action: .check, toAmount: 0)   // BTN
+        XCTAssertTrue(model.addBoardCard(PlayingCard("5h")!))
+        model.add(action: .bet, toAmount: 1_500) // hero
+        model.add(action: .call, toAmount: 0)    // BTN
+        XCTAssertTrue(model.addBoardCard(PlayingCard("7h")!))
+        model.add(action: .bet, toAmount: 500)    // hero
+        model.add(action: .raise, toAmount: 3_500) // BTN
+        model.add(action: .call, toAmount: 0)     // hero
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertTrue(model.needsShowdown)
+        model.setShownHolding(PlayingCard.parseList("Ah As"), for: btn)
+        XCTAssertEqual(model.computedWinners, [.hero],
+                       "straight beats trips — computedWinners returned \(model.computedWinners)")
+        XCTAssertGreaterThan(model.heroNet, 0, "heroNet was \(model.heroNet)")
+    }
+}
