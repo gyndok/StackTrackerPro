@@ -946,6 +946,47 @@ final class TournamentRecapExporterTests: XCTestCase {
         XCTAssertTrue(md.contains("(unenriched)"))
         XCTAssertTrue(md.contains("card dead, paid blinds"))
     }
+
+    /// A dictated-only hand (empty ledger, transcript in `notes`) must not
+    /// fabricate a result into the recap — `resultRaw` still holds the model
+    /// default ("Folded"), which the downstream recap AI would read as fact.
+    /// The section carries the transcript and a "Dictated hand" descriptor
+    /// instead; a structured hand in the same recap keeps its Result line.
+    @MainActor
+    func testRecapDictatedOnlyHandOmitsResultAndIncludesTranscript() throws {
+        let container = try makeInMemoryContainer()
+        defer { withExtendedLifetime(container) {} }
+        let context = container.mainContext
+        let t = Tournament(name: "Dictation Test", buyIn: 100)
+        context.insert(t)
+
+        // Dictated-only hand: no actions, transcript in notes.
+        let dictated = Hand(heroPosition: .btn, heroCardsRaw: "Ah Kd",
+                            levelNumber: 5, smallBlind: 100, bigBlind: 200,
+                            ante: 0, heroStackChips: 20_000)
+        dictated.notes = "Opened the button, big blind jammed, I folded ace-king face up like a coward."
+        dictated.tournament = t
+        context.insert(dictated)
+
+        // Structured hand alongside it keeps its Result line.
+        let structured = Hand(heroPosition: .co, heroCardsRaw: "Qs Qd",
+                              levelNumber: 5, smallBlind: 100, bigBlind: 200,
+                              ante: 0, heroStackChips: 25_000)
+        structured.resultRaw = HandResult.won.rawValue
+        structured.amountWon = 1_200
+        structured.tournament = t
+        context.insert(structured)
+        let act = HandAction(orderIndex: 0, street: .preflop, position: .co,
+                             actionType: .raise, amount: 500, isHero: true)
+        act.hand = structured
+        context.insert(act)
+
+        let md = TournamentRecapExporter.markdown(for: t)
+        XCTAssertTrue(md.contains("Transcript: \(dictated.notes)"), "transcript must reach the recap")
+        XCTAssertFalse(md.contains("Result: Folded"), "dictated-only hand must not fabricate a result")
+        XCTAssertTrue(md.contains("Dictated hand"), "descriptor explains the absent structure")
+        XCTAssertTrue(md.contains("Result: Won"), "structured hand keeps its result line")
+    }
 }
 
 // MARK: - Hand model

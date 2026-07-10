@@ -48,9 +48,11 @@ struct HandCaptureView: View {
     @State private var showDictation = false
     /// The just-recorded transcript, held while confirming a replace of an
     /// existing one (`onResult` never writes straight to `model.transcript`
-    /// when one is already present).
+    /// when one is already present). Non-nil presents the replace-confirm
+    /// dialog; the dialog's derived binding clears it on ANY dismissal —
+    /// Cancel or tap-outside — so a discarded transcript never lingers
+    /// (same pattern as `truncateIndex` / `pendingRemovalID`).
     @State private var pendingTranscript: String?
-    @State private var showReplaceTranscriptConfirm = false
     @State private var showLevelPicker = false
     @State private var showSavedDialog = false
     @State private var showSavedShare = false
@@ -225,9 +227,9 @@ struct HandCaptureView: View {
                     model.transcript = transcript
                 } else {
                     // Dictating again REPLACES the transcript — confirm first
-                    // rather than silently discarding what's already there.
+                    // rather than silently discarding what's already there
+                    // (setting this presents the replace-confirm dialog).
                     pendingTranscript = transcript
-                    showReplaceTranscriptConfirm = true
                 }
             }
         }
@@ -256,7 +258,8 @@ struct HandCaptureView: View {
         }
         .confirmationDialog(
             "Replace existing transcript?",
-            isPresented: $showReplaceTranscriptConfirm,
+            isPresented: Binding(get: { pendingTranscript != nil },
+                                 set: { if !$0 { pendingTranscript = nil } }),
             titleVisibility: .visible
         ) {
             Button("Replace", role: .destructive) {

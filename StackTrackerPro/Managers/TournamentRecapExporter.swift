@@ -255,10 +255,22 @@ enum TournamentRecapExporter {
                     lines.append("- \(street.label): " + actions.map(\.timelineDescription).joined(separator: " › "))
                 }
             }
-            var result = "Result: \(hand.result.rawValue)"
-            if hand.potSize > 0 { result += ", pot \(hand.potSize.formatted())" }
-            if hand.amountWon != 0 { result += ", net \(hand.amountWon.formatted())" }
-            lines.append(result)
+            // A dictated-only hand (no recorded ledger, transcript present)
+            // never booked a real result — `resultRaw` still holds the model
+            // default, so emitting it would fabricate an outcome the
+            // downstream recap AI must not see. Same suppression rule as the
+            // hands list / detail view / share formatter (Task 2): no
+            // Result/pot/net line; the descriptor explains why structure is
+            // absent and points at the transcript.
+            let isDictatedOnly = hand.sortedActions.isEmpty && !hand.notes.isEmpty
+            if isDictatedOnly {
+                lines.append("Dictated hand — no structured actions or result recorded; see transcript below.")
+            } else {
+                var result = "Result: \(hand.result.rawValue)"
+                if hand.potSize > 0 { result += ", pot \(hand.potSize.formatted())" }
+                if hand.amountWon != 0 { result += ", net \(hand.amountWon.formatted())" }
+                lines.append(result)
+            }
             if !hand.villainCards.isEmpty { lines.append("Villain: \(hand.villainCards.map(\.display).joined(separator: " "))") }
             if !hand.tags.isEmpty { lines.append("Tags: \(hand.tags.joined(separator: ", "))") }
             // The verbatim dictation transcript (Task 2 — `Hand.notes` is its
