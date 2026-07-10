@@ -46,6 +46,11 @@ struct HandCaptureView: View {
     @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
     @State private var showDictation = false
+    /// The just-recorded transcript, held while confirming a replace of an
+    /// existing one (`onResult` never writes straight to `model.transcript`
+    /// when one is already present).
+    @State private var pendingTranscript: String?
+    @State private var showReplaceTranscriptConfirm = false
     @State private var showLevelPicker = false
     @State private var showSavedDialog = false
     @State private var showSavedShare = false
@@ -115,6 +120,9 @@ struct HandCaptureView: View {
                         NarrationBar(model: model, showPotPad: $showPotPad, potPadText: $potPadText,
                                      canPickLevel: !levelOptions.isEmpty,
                                      onPickLevel: { showLevelPicker = true })
+                        if !model.transcript.isEmpty {
+                            TranscriptCard(transcript: model.transcript)
+                        }
                         HeroStrip(model: model, stubHint: stubHint,
                                  showStackPad: $showStackPad, stackPadText: $stackPadText)
                         villainSection
@@ -154,6 +162,16 @@ struct HandCaptureView: View {
                         }
                         if model.isHandOver {
                             ResultBlock(model: model)
+                            tagRow
+                            saveButton
+                        } else if !model.transcript.isEmpty {
+                            // Transcript-only capture: the ledger never
+                            // started (no showdown/result to show), but a
+                            // dictated transcript alone is savable —
+                            // `canSave` is true off `!transcript.isEmpty`
+                            // even though `isResolvable` requires
+                            // `isHandOver`. Surface tags + Save without the
+                            // (meaningless, pre-hand) Result block.
                             tagRow
                             saveButton
                         }
@@ -203,7 +221,14 @@ struct HandCaptureView: View {
         }
         .sheet(isPresented: $showDictation) {
             DictationSheet { transcript in
-                model.transcript = transcript
+                if model.transcript.isEmpty {
+                    model.transcript = transcript
+                } else {
+                    // Dictating again REPLACES the transcript — confirm first
+                    // rather than silently discarding what's already there.
+                    pendingTranscript = transcript
+                    showReplaceTranscriptConfirm = true
+                }
             }
         }
         .sheet(isPresented: $showLevelPicker) {
@@ -228,6 +253,17 @@ struct HandCaptureView: View {
                 truncateIndex = nil
             }
             Button("Cancel", role: .cancel) { truncateIndex = nil }
+        }
+        .confirmationDialog(
+            "Replace existing transcript?",
+            isPresented: $showReplaceTranscriptConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Replace", role: .destructive) {
+                if let pendingTranscript { model.transcript = pendingTranscript }
+                pendingTranscript = nil
+            }
+            Button("Cancel", role: .cancel) { pendingTranscript = nil }
         }
         .confirmationDialog(
             removalDialogTitle,
@@ -413,17 +449,18 @@ struct HandCaptureView: View {
         }
     }
 
-    /// Save gating lives on the engine (`HandCaptureModel.isResolvable`, unit
-    /// tested): hand over, and any showdown either overridden or fully
-    /// resolved with evaluable winners.
+    /// Save gating lives on the engine (`HandCaptureModel.canSave`, unit
+    /// tested): either the ledger resolves (hand over, and any showdown
+    /// either overridden or fully resolved with evaluable winners) OR a
+    /// verbatim transcript exists to persist on its own (Task 2).
     private var saveButton: some View {
         Button {
             save()
         } label: {
             Text("Save Hand")
         }
-        .buttonStyle(PokerButtonStyle(isEnabled: model.isResolvable))
-        .disabled(!model.isResolvable)
+        .buttonStyle(PokerButtonStyle(isEnabled: model.canSave))
+        .disabled(!model.canSave)
     }
 
     private func commitSizedAction(_ type: HandActionType, _ amount: Int) {
@@ -598,6 +635,49 @@ private struct NarrationBar: View {
             .foregroundColor(.textPrimary)
             .lineLimit(3)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+// MARK: - Transcript card
+
+/// Collapsible read-only display of the verbatim dictation transcript
+/// (Task 2 — the visual reference for tap-entry). Rendered directly under
+/// the narration bar whenever `model.transcript` is non-empty; monospaced,
+/// scrollable past a fixed max height, default expanded, theme-consistent
+/// with the other capture-screen cards (`.pokerCard()`).
+private struct TranscriptCard: View {
+    let transcript: String
+    @State private var isExpanded = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("Transcript")
+                        .font(PokerTypography.sectionHeader)
+                        .foregroundColor(.goldAccent)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.goldAccent)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isExpanded ? "Collapse transcript" : "Expand transcript")
+
+            if isExpanded {
+                ScrollView {
+                    Text(transcript)
+                        .font(.system(.footnote, design: .monospaced))
+                        .foregroundColor(.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 160)
+            }
+        }
+        .pokerCard()
     }
 }
 

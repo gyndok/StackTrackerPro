@@ -268,6 +268,13 @@ private struct PendingStubRow: View {
 private struct HandRow: View {
     let hand: Hand
 
+    /// A hand with no recorded ledger but a dictated transcript renders
+    /// without a result — there is nothing structured to book (Task 2's
+    /// "Dictated" rendering rule).
+    private var isDictatedOnly: Bool {
+        hand.sortedActions.isEmpty && !hand.notes.isEmpty
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
@@ -279,14 +286,20 @@ private struct HandRow: View {
                         .foregroundColor(card.isRed ? .red : .textPrimary)
                 }
                 Spacer()
-                Text(hand.result.rawValue)
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(hand.result == .won ? .green : (hand.result == .lost ? .red : .textSecondary))
+                if isDictatedOnly {
+                    Text("Dictated")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                } else {
+                    Text(hand.result.rawValue)
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(hand.result == .won ? .green : (hand.result == .lost ? .red : .textSecondary))
+                }
             }
             HStack {
                 Text(hand.timestamp.formatted(date: .omitted, time: .shortened))
                 if !hand.blindsDisplay.isEmpty { Text("· \(hand.blindsDisplay)") }
-                if hand.amountWon != 0 {
+                if !isDictatedOnly, hand.amountWon != 0 {
                     Text("· \(hand.amountWon > 0 ? "+" : "")\(hand.amountWon.formatted())")
                 }
             }
@@ -300,6 +313,12 @@ struct HandDetailView: View {
     let hand: Hand
 
     @State private var showShare = false
+
+    /// A hand with no recorded ledger but a dictated transcript has nothing
+    /// structured to report — the Result section is suppressed (Task 2).
+    private var isDictatedOnly: Bool {
+        hand.sortedActions.isEmpty && !hand.notes.isEmpty
+    }
 
     var body: some View {
         ZStack {
@@ -347,13 +366,22 @@ struct HandDetailView: View {
                         }
                     }
                 }
-                Section("Result") {
-                    row("Outcome", hand.result.rawValue)
-                    if hand.potSize > 0 { row("Pot", hand.potSize.formatted()) }
-                    if hand.amountWon != 0 { row("Net", hand.amountWon.formatted()) }
-                    if hand.heroStackAfter > 0 { row("Stack after", hand.heroStackAfter.formatted()) }
-                    if !hand.tags.isEmpty { row("Tags", hand.tags.joined(separator: ", ")) }
-                    if !hand.notes.isEmpty { row("Notes", hand.notes) }
+                if !isDictatedOnly {
+                    Section("Result") {
+                        row("Outcome", hand.result.rawValue)
+                        if hand.potSize > 0 { row("Pot", hand.potSize.formatted()) }
+                        if hand.amountWon != 0 { row("Net", hand.amountWon.formatted()) }
+                        if hand.heroStackAfter > 0 { row("Stack after", hand.heroStackAfter.formatted()) }
+                        if !hand.tags.isEmpty { row("Tags", hand.tags.joined(separator: ", ")) }
+                    }
+                }
+                if !hand.notes.isEmpty {
+                    Section("Transcript") {
+                        Text(hand.notes)
+                            .font(.system(.footnote, design: .monospaced))
+                            .foregroundColor(.textPrimary)
+                            .listRowBackground(Color.cardSurface)
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

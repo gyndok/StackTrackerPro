@@ -12,7 +12,23 @@ enum HandHistoryFormatter {
         var lines: [String] = []
         if let header = headerLine(for: hand) { lines.append(header) }
         lines.append(contentsOf: streetLines(for: hand))
-        lines.append(resultLine(for: hand))
+
+        // A hand with no recorded ledger but a dictated transcript never
+        // booked a real result — omit the (bogus, always-default) result
+        // line entirely (Task 2's "Dictated" rendering rule).
+        let isDictatedOnly = hand.sortedActions.isEmpty && !hand.notes.isEmpty
+        if !isDictatedOnly {
+            lines.append(resultLine(for: hand))
+        }
+
+        // Any hand carrying a transcript — dictated-only or a structured
+        // hand the user also dictated notes onto — gets it appended
+        // verbatim as a final block, after the result line when one exists.
+        if !hand.notes.isEmpty {
+            lines.append("— Transcript —")
+            lines.append(hand.notes)
+        }
+
         return lines.joined(separator: "\n")
     }
 

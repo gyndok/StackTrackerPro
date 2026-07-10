@@ -2165,25 +2165,44 @@ final class HandCaptureModelTests: XCTestCase {
         XCTAssertEqual(model.heroCards.count, 2)
     }
 
-    /// shouldPushStackUpdate: fresh captures and just-happened enrichments push;
-    /// stale enrichments (tracker stack already moved on) do not.
+    /// shouldPushStackUpdate: resolved fresh captures and just-happened
+    /// resolved enrichments push; stale enrichments (tracker stack already
+    /// moved on) do not, and — since Task 2 — an unresolved hand never
+    /// pushes regardless of freshness (there is no real booked result yet).
     func testShouldPushStackUpdate() throws {
-        // Fresh Log Hand capture (no stub) → always pushes.
+        // An unresolved fresh capture never pushes (Task 2: shouldPushStackUpdate
+        // additionally requires isResolvable).
+        let unresolved = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                          ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        XCTAssertFalse(unresolved.isResolvable)
+        XCTAssertFalse(unresolved.shouldPushStackUpdate)
+
+        // Fresh Log Hand capture (no stub), resolved (no villain — the hero's
+        // own action ends the hand with no showdown) → always pushes.
         let fresh = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
                                      ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        fresh.heroPosition = .btn
+        fresh.add(action: .raise, toAmount: 500)
+        XCTAssertTrue(fresh.isResolvable)
         XCTAssertTrue(fresh.shouldPushStackUpdate)
 
         let stub = HandStub(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000, ante: 25_000,
                             heroStackBefore: 390_000, holeCards: "Kh Kd")
 
         // Enrichment where the tracker stack still equals the stub's pre-hand
-        // snapshot (hand just happened, no update since) → pushes.
+        // snapshot (hand just happened, no update since) → pushes once resolved.
         let current = HandCaptureModel(stub: stub, heroCardCount: 2, trackerStackAtOpen: 390_000)
+        current.heroPosition = .btn
+        current.add(action: .raise, toAmount: 500)
         XCTAssertTrue(current.shouldPushStackUpdate)
 
         // Enrichment where later updates moved the tracker on → does not push
-        // (re-pushing would regress latestStack — a phantom cliff).
+        // (re-pushing would regress latestStack — a phantom cliff), even
+        // once resolved.
         let stale = HandCaptureModel(stub: stub, heroCardCount: 2, trackerStackAtOpen: 985_000)
+        stale.heroPosition = .btn
+        stale.add(action: .raise, toAmount: 500)
+        XCTAssertTrue(stale.isResolvable)
         XCTAssertFalse(stale.shouldPushStackUpdate)
     }
 
@@ -2726,6 +2745,49 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertTrue(model.isResolvable)
     }
 
+    // MARK: - Verbatim dictation transcript (Task 2)
+
+    /// `canSave` opens up a second path beyond `isResolvable`: a transcript
+    /// alone — with a completely untouched (empty) ledger — makes the hand
+    /// savable, even though it can never be `isResolvable` (that requires
+    /// `isHandOver`).
+    func testCanSaveWithTranscriptOnly() throws {
+        let model = HandCaptureModel(levelNumber: 5, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        XCTAssertFalse(model.isHandOver)
+        XCTAssertFalse(model.isResolvable)
+        XCTAssertFalse(model.canSave, "no transcript, no resolved ledger — nothing to save")
+
+        model.transcript = "Raised UTG, three-bet, folded to a jam."
+        XCTAssertFalse(model.isResolvable, "an empty ledger is never resolvable")
+        XCTAssertTrue(model.canSave, "a transcript alone must open the Save gate")
+    }
+
+    /// A transcript-only save (empty ledger) persists the transcript
+    /// verbatim to `hand.notes` and never pushes a tracker stack update —
+    /// there is no real booked result to trust (`shouldPushStackUpdate` now
+    /// additionally requires `isResolvable`).
+    @MainActor
+    func testTranscriptOnlySavePersistsNotesAndSkipsStackPush() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let t = Tournament(name: "Event 1", buyIn: 100)
+        context.insert(t)
+
+        let model = HandCaptureModel(levelNumber: 5, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.transcript = "Limped UTG with 7-2, saw a cheap flop, folded to a bet on the turn."
+        XCTAssertFalse(model.isResolvable)
+        XCTAssertTrue(model.canSave)
+        XCTAssertFalse(model.shouldPushStackUpdate, "transcript-only saves never push")
+
+        let hand = model.save(into: context, tournament: t, cashSession: nil,
+                              sourceStub: nil, tableSize: 9)
+        XCTAssertEqual(hand.notes, model.transcript)
+        XCTAssertTrue(hand.sortedActions.isEmpty)
+        XCTAssertFalse(model.shouldPushStackUpdate)
+    }
+
     func testHasActed() throws {
         let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
                                      ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
@@ -2812,6 +2874,26 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertEqual(rebuilt.computedWinners, [.hero])
         XCTAssertEqual(rebuilt.heroCards, model.heroCards)
         XCTAssertEqual(rebuilt.selectedTags, ["Cooler"])
+    }
+
+    /// A dictation transcript survives an edit round-trip: `save()` writes it
+    /// to `hand.notes`, and `init(editing:)` restores it back onto
+    /// `transcript` (Task 2).
+    @MainActor
+    func testEditRoundTripCarriesTranscript() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+
+        let model = HandCaptureModel(levelNumber: 5, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.transcript = "Opened UTG, got three-bet, folded — thought I was way behind."
+
+        let original = model.save(into: context, tournament: nil, cashSession: nil,
+                                  sourceStub: nil, tableSize: 9)
+        XCTAssertEqual(original.notes, model.transcript)
+
+        let rebuilt = HandCaptureModel(editing: original, heroCardCount: 2)
+        XCTAssertEqual(rebuilt.transcript, model.transcript)
     }
 
     // MARK: - potOverride hygiene (F17)
@@ -3182,6 +3264,50 @@ final class HandHistoryFormatterTests: XCTestCase {
         hand.amountWon = 0
         let text = HandHistoryFormatter.text(for: hand)
         XCTAssertTrue(text.hasSuffix("Hero wins 3,000"), "got: \(text)")
+    }
+
+    // MARK: - Verbatim dictation transcript (Task 2)
+
+    /// A dictated-only hand (no recorded ledger) never booked a real result —
+    /// the result line is omitted entirely, and the transcript is appended
+    /// as the final block.
+    func testFormatterDictatedOnlyHandOmitsResultAndAppendsTranscript() {
+        let hand = Hand(heroPosition: .btn, heroCardsRaw: "Ah Kd",
+                        levelNumber: 5, smallBlind: 100, bigBlind: 200,
+                        ante: 0, heroStackChips: 20_000)
+        hand.notes = "Raised UTG, got three-bet, folded — think I was way behind."
+        let text = HandHistoryFormatter.text(for: hand)
+        XCTAssertFalse(text.contains("Hero folds"), "got: \(text)")
+        XCTAssertTrue(text.contains("— Transcript —"), "got: \(text)")
+        XCTAssertTrue(text.contains(hand.notes), "got: \(text)")
+    }
+
+    /// A structured hand that ALSO carries a dictated note keeps its normal
+    /// result line, with the transcript block appended after it.
+    func testFormatterStructuredHandWithNotesAppendsTranscriptAfterResult() {
+        let hand = Hand(heroPosition: .co, heroCardsRaw: "Ah Jc",
+                        levelNumber: 3, smallBlind: 200, bigBlind: 400,
+                        ante: 400, heroStackChips: 55_000)
+        hand.resultRaw = HandResult.folded.rawValue
+        let acts: [(HeroPosition, HandActionType, Int, Bool)] = [
+            (.co, .raise, 1_000, true), (.bb, .raise, 3_500, false), (.co, .fold, 0, true),
+        ]
+        for (i, a) in acts.enumerated() {
+            let act = HandAction(orderIndex: i, street: .preflop, position: a.0,
+                                 actionType: a.1, amount: a.2, isHero: a.3)
+            act.hand = hand
+            hand.actions?.append(act)
+        }
+        hand.notes = "Villain had been three-betting light all night, should have called."
+        let text = HandHistoryFormatter.text(for: hand)
+        XCTAssertTrue(text.contains("Hero folds"), "got: \(text)")
+        guard let resultRange = text.range(of: "Hero folds"),
+              let transcriptRange = text.range(of: "— Transcript —") else {
+            return XCTFail("missing expected sections: \(text)")
+        }
+        XCTAssertTrue(resultRange.upperBound <= transcriptRange.lowerBound,
+                      "transcript block must follow the result line: \(text)")
+        XCTAssertTrue(text.contains(hand.notes), "got: \(text)")
     }
 }
 

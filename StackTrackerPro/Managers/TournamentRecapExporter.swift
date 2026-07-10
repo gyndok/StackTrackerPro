@@ -261,7 +261,10 @@ enum TournamentRecapExporter {
             lines.append(result)
             if !hand.villainCards.isEmpty { lines.append("Villain: \(hand.villainCards.map(\.display).joined(separator: " "))") }
             if !hand.tags.isEmpty { lines.append("Tags: \(hand.tags.joined(separator: ", "))") }
-            if !hand.notes.isEmpty { lines.append("Note: \(hand.notes)") }
+            // The verbatim dictation transcript (Task 2 — `Hand.notes` is its
+            // only persistence), included so the recap AI can use the user's
+            // own words for hands the structured parser never got to.
+            if !hand.notes.isEmpty { lines.append("Transcript: \(hand.notes)") }
             lines.append("")
         }
         return lines.joined(separator: "\n")

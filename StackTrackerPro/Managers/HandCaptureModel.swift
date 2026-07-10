@@ -201,6 +201,10 @@ final class HandCaptureModel {
         }
 
         selectedTags = Set(hand.tags)
+
+        // Verbatim dictation transcript, if the saved hand carried one
+        // (Task 2 — `Hand.notes` is the transcript's only persistence).
+        transcript = hand.notes
     }
 
     /// Restores a persisted manual winner ruling onto a reconstructed capture
@@ -646,6 +650,13 @@ final class HandCaptureModel {
         return villainsResolved && !computedWinners.isEmpty
     }
 
+    /// True when the hand can be saved at all: either the ledger resolves
+    /// cleanly (`isResolvable`) or a verbatim transcript exists to persist
+    /// even with an empty ledger (Task 2 — the transcript IS the content
+    /// worth keeping when the user never taps in any structure). Gates the
+    /// Save button in place of `isResolvable` alone.
+    var canSave: Bool { isResolvable || !transcript.isEmpty }
+
     /// True when `participant` has at least one recorded betting action.
     /// The UI uses this to lock a villain's seat/stack editing (edit is
     /// remove-and-re-add, which would silently drop their ledger entries)
@@ -693,8 +704,12 @@ final class HandCaptureModel {
     /// phantom cliff that re-triggers swing detection. (With the swing-stub fix,
     /// a swing stub's `latestStack` equals its `heroStackAfter`, not its
     /// `heroStackBefore`, so swing enrichments correctly land here as false.)
+    ///
+    /// Also requires `isResolvable` (Task 2): a transcript-only save (empty
+    /// ledger) never has a real booked result, so it must never push a stack
+    /// update — there is no resolved `heroStackAfter` to trust.
     var shouldPushStackUpdate: Bool {
-        !isStubEnrichment || trackerStackAtOpen == heroStackBefore
+        isResolvable && (!isStubEnrichment || trackerStackAtOpen == heroStackBefore)
     }
 
     // MARK: - Persistence
@@ -757,6 +772,7 @@ final class HandCaptureModel {
         hand.amountWon = net
         hand.heroStackAfter = heroStackAfter
         hand.resultRaw = bookedResult.rawValue
+        hand.notes = transcript
         hand.tagsRaw = selectedTags.sorted().joined(separator: ", ")
         hand.wasAutoDetected = (sourceStub?.origin == .swingDetected)
         if let winnerOverride {

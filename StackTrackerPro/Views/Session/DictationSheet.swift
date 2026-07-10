@@ -157,7 +157,11 @@ struct DictationSheet: View {
             let transcript = await engine.stop()
             guard !transcript.isEmpty else {
                 // Nothing captured — say so and resume listening rather than
-                // stranding the user on a dead-end screen.
+                // stranding the user on a dead-end screen. Cancel (or a
+                // swipe-dismiss) may have fired while stop() was in flight;
+                // guard the resume so a post-teardown restart doesn't kick
+                // the mic pipeline back on after the view is already gone.
+                guard !cancelled else { return }
                 showEmptyHint = true
                 await engine.start()
                 return
