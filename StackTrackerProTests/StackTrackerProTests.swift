@@ -3183,3 +3183,121 @@ final class HandTranscriptParserTests: XCTestCase {
         XCTAssertEqual(engine.fullTranscript, "")
     }
 }
+
+// MARK: - Hand History Formatter
+
+final class HandHistoryFormatterTests: XCTestCase {
+
+    private func referenceHand() -> Hand {
+        let hand = Hand(heroPosition: .btn, heroCardsRaw: "Ks Kd",
+                        levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                        ante: 25_000, heroStackChips: 390_000)
+        hand.boardRaw = "Jh 8h 4d 2c 3s"
+        hand.resultRaw = HandResult.won.rawValue
+        hand.potSize = 840_000
+        hand.amountWon = 450_000
+        let actions: [(HeroPosition, HandActionType, Int, Bool)] = [
+            (.utg, .raise, 75_000, false),
+            (.btn, .raise, 200_000, true),
+            (.utg, .allIn, 390_000, false),
+            (.btn, .call, 0, true),
+        ]
+        for (i, a) in actions.enumerated() {
+            let act = HandAction(orderIndex: i, street: .preflop, position: a.0,
+                                 actionType: a.1, amount: a.2, isHero: a.3)
+            act.hand = hand
+            hand.actions?.append(act)
+        }
+        let villain = HandVillain(orderIndex: 0, position: .utg, relativeStack: .coversHero)
+        villain.shownHolding = "9h Th"
+        villain.hand = hand
+        hand.villains?.append(villain)
+        return hand
+    }
+
+    func testFormatsReferenceHand() {
+        let expected = """
+        Level 21 — 10,000/25,000 (25,000) · Hero BTN K♠K♦ (390,000)
+        PRE: UTG raises to 75,000 · Hero raises to 200,000 · UTG all-in 390,000 · Hero calls
+        FLOP J♥8♥4♦
+        TURN 2♣
+        RIVER 3♠
+        UTG shows 9♥T♥ — Hero wins 840,000 (+450,000)
+        """
+        XCTAssertEqual(HandHistoryFormatter.text(for: referenceHand()), expected)
+    }
+
+    func testFormatsPreflopFoldWithoutBoard() {
+        let hand = Hand(heroPosition: .co, heroCardsRaw: "Ah Jc",
+                        levelNumber: 3, smallBlind: 200, bigBlind: 400,
+                        ante: 400, heroStackChips: 55_000)
+        hand.resultRaw = HandResult.folded.rawValue
+        let acts: [(HeroPosition, HandActionType, Int, Bool)] = [
+            (.co, .raise, 1_000, true), (.bb, .raise, 3_500, false), (.co, .fold, 0, true),
+        ]
+        for (i, a) in acts.enumerated() {
+            let act = HandAction(orderIndex: i, street: .preflop, position: a.0,
+                                 actionType: a.1, amount: a.2, isHero: a.3)
+            act.hand = hand
+            hand.actions?.append(act)
+        }
+        let expected = """
+        Level 3 — 200/400 (400) · Hero CO A♥J♣ (55,000)
+        PRE: Hero raises to 1,000 · BB raises to 3,500 · Hero folds
+        Hero folds
+        """
+        XCTAssertEqual(HandHistoryFormatter.text(for: hand), expected)
+    }
+
+    func testFormatsCashHeaderAndPostflopActions() {
+        let hand = Hand(heroPosition: .btn, heroCardsRaw: "Qs Qd", stakes: "$1/$3")
+        hand.boardRaw = "Jh 8h 4d"
+        hand.resultRaw = HandResult.won.rawValue
+        hand.amountWon = 120
+        let acts: [(HandStreet, HeroPosition, HandActionType, Int, Bool)] = [
+            (.preflop, .btn, .raise, 15, true), (.preflop, .bb, .call, 0, false),
+            (.flop, .bb, .check, 0, false), (.flop, .btn, .bet, 20, true),
+            (.flop, .bb, .fold, 0, false),
+        ]
+        for (i, a) in acts.enumerated() {
+            let act = HandAction(orderIndex: i, street: a.0, position: a.1,
+                                 actionType: a.2, amount: a.3, isHero: a.4)
+            act.hand = hand
+            hand.actions?.append(act)
+        }
+        let expected = """
+        $1/$3 · Hero BTN Q♠Q♦
+        PRE: Hero raises to 15 · BB calls
+        FLOP J♥8♥4♦: BB checks · Hero bets 20 · BB folds
+        Hero wins (+120)
+        """
+        XCTAssertEqual(HandHistoryFormatter.text(for: hand), expected)
+    }
+
+    func testFormatsChopAndMuckedVillainExcluded() {
+        let hand = Hand(heroPosition: .sb, heroCardsRaw: "Ah Kh",
+                        levelNumber: 0, smallBlind: 100, bigBlind: 200,
+                        ante: 0, heroStackChips: 0)
+        hand.resultRaw = HandResult.chop.rawValue
+        hand.potSize = 3_000
+        hand.amountWon = 0
+        let shown = HandVillain(orderIndex: 0, position: .bb, relativeStack: .similar)
+        shown.shownHolding = "Ad Kd"
+        shown.hand = hand
+        hand.villains?.append(shown)
+        let mucked = HandVillain(orderIndex: 1, position: .co, relativeStack: .shorter)
+        mucked.hand = hand
+        hand.villains?.append(mucked)
+        let expected = """
+        100/200 · Hero SB A♥K♥
+        BB shows A♦K♦ — Chop
+        """
+        XCTAssertEqual(HandHistoryFormatter.text(for: hand), expected)
+    }
+
+    func testPartialHandNeverCrashes() {
+        let hand = Hand()
+        let text = HandHistoryFormatter.text(for: hand)
+        XCTAssertFalse(text.isEmpty)   // at least the result line ("Hero folds" default)
+    }
+}
