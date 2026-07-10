@@ -2563,6 +2563,71 @@ final class HandCaptureResultTests: XCTestCase {
         XCTAssertFalse(hand.winnerOverride.isEmpty)
     }
 
+    /// F14: a winnerOverride describes one specific final hand state — any
+    /// input that changes the replay (actions, board cards, undo, truncate,
+    /// villain removal) or the showdown evidence (shown holdings, mucks, hero
+    /// cards) auto-clears it. A stale override that survives such edits
+    /// silently flips provably-won hands ("Hero loses" on a hand KK wins).
+    func testWinnerOverrideAutoClearsOnHandMutation() throws {
+        // Replay mutations: each of action / board card / undo clears it.
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        for c in PlayingCard.parseList("Kh Kd") { _ = model.addCard(c) }
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        let utg = try XCTUnwrap(model.villains.first?.id)
+
+        model.winnerOverride = [.hero]
+        model.add(action: .allIn, toAmount: 390_000)          // UTG jams
+        XCTAssertNil(model.winnerOverride, "an action must clear the override")
+
+        model.winnerOverride = [.hero]
+        model.add(action: .call, toAmount: 0)                 // hero calls
+        XCTAssertNil(model.winnerOverride)
+
+        model.winnerOverride = [.hero]
+        for c in PlayingCard.parseList("Jh 8h 4d 2c 3s") { _ = model.addBoardCard(c) }
+        XCTAssertNil(model.winnerOverride, "board cards must clear the override")
+
+        // Showdown-evidence mutations (bypass rebuild): shown holding / muck.
+        model.winnerOverride = [.villain(utg)]
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertNil(model.winnerOverride, "shown cards must clear the override")
+
+        model.winnerOverride = [.villain(utg)]
+        model.setMucked(utg)
+        XCTAssertNil(model.winnerOverride, "a muck must clear the override")
+
+        // Undo is a replay mutation too.
+        model.winnerOverride = [.villain(utg)]
+        model.undoLast()
+        XCTAssertNil(model.winnerOverride, "undo must clear the override")
+    }
+
+    /// F14: pure reads never touch an active override — it survives every
+    /// derived-state access and still decides the result until the next
+    /// mutation.
+    func testWinnerOverrideSurvivesPureReads() throws {
+        let (model, utg) = makeShowdownModel()
+        model.setShownHolding(PlayingCard.parseList("9h Th"), for: utg)
+        XCTAssertEqual(model.computedWinners, [.hero])        // KK wins for real
+
+        model.winnerOverride = [.villain(utg)]
+        // Exercise the derived reads the Result block and Save button use.
+        _ = model.heroNet
+        _ = model.pot
+        _ = model.effectiveWinners
+        _ = model.computedWinners
+        _ = model.isResolvable
+        _ = model.needsShowdown
+        _ = model.narration
+        _ = model.legalActions
+        _ = model.dealtCards
+        XCTAssertEqual(model.winnerOverride, [.villain(utg)],
+                       "pure reads must not clear the override")
+        XCTAssertEqual(model.heroNet, -390_000, "the override still decides the result")
+    }
+
     // MARK: - isResolvable / Save gating (Task 14)
 
     /// Builds an all-in-preflop heads-up hand (hero BTN vs UTG) run out to the

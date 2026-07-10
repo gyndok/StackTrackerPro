@@ -66,6 +66,16 @@ final class HandCaptureModel {
 
     /// Manual ruling that supersedes `computedWinners` everywhere (chops, odd
     /// rulings, dealer corrections). `nil` = trust the computed result.
+    ///
+    /// An override describes ONE specific final hand state — any later input
+    /// that changes the replay or the showdown evidence invalidates it, so it
+    /// auto-clears: `rebuild()` nils it (the single choke point every
+    /// replay-altering mutation funnels through — actions, board cards, undo,
+    /// truncate, villain add/remove, hero seat change), and the showdown
+    /// inputs that bypass rebuild (`setShownHolding`, `setMucked`, hero
+    /// `addCard`) clear it explicitly. Without this, a stale override set
+    /// early in a session silently flips provably-won hands to losses
+    /// (device finding 14). Pure reads never touch it.
     var winnerOverride: Set<Participant>?
 
     /// Free-form review tags: "Cooler", "Bluff", "Value", "Hero call", "Punt?".
@@ -197,6 +207,9 @@ final class HandCaptureModel {
     func addCard(_ card: PlayingCard) -> Bool {
         guard heroCards.count < heroCardCount, !dealtCards.contains(card) else { return false }
         heroCards.append(card)
+        // Hero cards feed computedWinners just like shown holdings do; an
+        // override predating them is stale (no rebuild here — clear explicitly).
+        winnerOverride = nil
         return true
     }
 
@@ -418,6 +431,9 @@ final class HandCaptureModel {
         guard let idx = villains.firstIndex(where: { $0.id == id }) else { return }
         villains[idx].shownHolding = cards
         villains[idx].mucked = false
+        // New showdown evidence changes computedWinners; a pre-existing manual
+        // ruling is stale (doesn't go through rebuild — clear explicitly).
+        winnerOverride = nil
     }
 
     /// Marks a villain as having mucked: they showed nothing, so they cannot win
@@ -426,6 +442,8 @@ final class HandCaptureModel {
         guard let idx = villains.firstIndex(where: { $0.id == id }) else { return }
         villains[idx].shownHolding = []
         villains[idx].mucked = true
+        // Same as setShownHolding: mucking changes the showdown evidence.
+        winnerOverride = nil
     }
 
     /// Participants who have not folded (the hero plus every villain still live).
@@ -653,6 +671,12 @@ final class HandCaptureModel {
 
     /// Rebuilds every derived property by replaying `inputs` from scratch.
     private func rebuild() {
+        // The hand just changed, so any manual winner ruling no longer
+        // describes it — drop the override (see the winnerOverride docs).
+        // Setting the override itself never calls rebuild, so a fresh ruling
+        // sticks until the next mutation.
+        winnerOverride = nil
+
         // Replay-local state.
         var street: HandStreet = .preflop
         var committed: [HandStreet: [Participant: Int]] = [:]

@@ -1118,6 +1118,23 @@ private struct ResultBlock: View {
                 .font(PokerTypography.statValue)
                 .foregroundColor(model.heroNet >= 0 ? .mZoneGreen : .chipRed)
 
+            // An active override must be loud: it silently flips the booked
+            // result away from the computed one, and an invisible stale
+            // override reads as an engine bug ("Hero loses" on a won hand —
+            // device finding 14). One tap clears it.
+            if let override = model.winnerOverride {
+                HStack(spacing: 8) {
+                    Label("Winner overridden: \(overrideDescription(override))",
+                          systemImage: "flag.fill")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.chipRed)
+                    Spacer()
+                    Button("Clear override") { model.winnerOverride = nil }
+                        .font(.caption)
+                        .foregroundColor(.goldAccent)
+                }
+            }
+
             Menu {
                 Button("Trust Computed Result") { model.winnerOverride = nil }
                 ForEach(overrideCandidates, id: \.self) { participant in
@@ -1129,12 +1146,19 @@ private struct ResultBlock: View {
                     }
                 }
             } label: {
-                Label("Override Winner", systemImage: "flag")
+                Label(model.winnerOverride == nil ? "Override Winner" : "Change override",
+                      systemImage: model.winnerOverride == nil ? "flag" : "flag.fill")
                     .font(PokerTypography.chipLabel)
                     .foregroundColor(.textSecondary)
             }
         }
         .pokerCard()
+    }
+
+    /// Human-readable override target(s), matching what `save` persists
+    /// (label(for:), sorted, comma-joined).
+    private func overrideDescription(_ override: Set<HandCaptureModel.Participant>) -> String {
+        override.map { model.label(for: $0) }.sorted().joined(separator: ", ")
     }
 
     private var overrideCandidates: [HandCaptureModel.Participant] {
