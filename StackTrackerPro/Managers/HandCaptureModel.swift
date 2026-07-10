@@ -87,6 +87,12 @@ final class HandCaptureModel {
     /// Free-form review tags: "Cooler", "Bluff", "Value", "Hero call", "Punt?".
     var selectedTags: Set<String> = []
 
+    /// Verbatim dictation transcript attached to this hand, if any (Task 2
+    /// renders it as the Capture Screen's transcript card and persists it to
+    /// `Hand.notes` on save). A bare stored property — not part of the input
+    /// log, so `rebuild()` never touches it.
+    var transcript: String = ""
+
     /// Stable id used to represent the hero inside `PokerHandEvaluator.holdemWinners`
     /// (which is keyed by UUID). Distinct from every villain's id.
     private let heroSentinel = UUID()

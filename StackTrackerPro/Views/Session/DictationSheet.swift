@@ -1,42 +1,28 @@
 import SwiftUI
 
-/// Full-screen voice capture: records with `DictationEngine`, then hands the
-/// finished transcript to `HandTranscriptParser` to produce a
-/// `ParsedHandDraft`. This view never touches `HandCaptureModel` directly —
-/// mapping the draft onto the engine is the caller's job via `onResult`
-/// (see `VoiceHandMapper`), keeping preview-before-commit intact.
+/// Full-screen voice capture: records with `DictationEngine` and hands the
+/// finished transcript straight back to the caller via `onResult` — no
+/// parsing, no structure inference. The transcript IS the product (verbatim
+/// dictation design); the caller decides what to do with the raw string
+/// (see `HandCaptureView`, which stores it on `HandCaptureModel.transcript`).
 struct DictationSheet: View {
-    let context: HandContext
-    let onResult: (ParsedHandDraft) -> Void
+    let onResult: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var engine = DictationEngine()
-    @State private var phase: Phase = .recording
-    /// Snapshot of the transcript taken the moment `stop()` returns it, so it
-    /// survives display through parsing/error phases even though the engine
-    /// itself resets `fullTranscript` on its next `start()`.
-    @State private var capturedTranscript = ""
     /// Transient hint shown in the transcript placeholder after Done was
     /// tapped with nothing captured; cleared as soon as new speech arrives.
     @State private var showEmptyHint = false
-    /// Set once Cancel is tapped so an in-flight parse that resolves after
-    /// dismissal doesn't still fire `onResult`.
+    /// Set once Cancel is tapped (or the sheet is torn down via swipe) so a
+    /// late-resolving stop() doesn't still fire `onResult` into a dismissed
+    /// flow.
     @State private var cancelled = false
-    /// The in-flight parse task, held so Cancel can cancel it.
-    @State private var parseTask: Task<Void, Never>?
-
-    private enum Phase: Equatable {
-        case recording
-        case parsing
-        case unavailable(String)
-        case parseError(String)
-    }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
                 Spacer(minLength: 4)
-                statusArea
+                recordingStatus
                 transcriptArea
                 actionButtons
             }
@@ -58,15 +44,14 @@ struct DictationSheet: View {
             // Swipe-to-dismiss bypasses the Cancel/Done paths, and the
             // engine's deinit backstop can only silence the tap — it can't
             // deactivate the shared AVAudioSession (leaving the system record
-            // indicator on) or cancel the results task. onDisappear is
+            // indicator on) or cancel any in-flight work. onDisappear is
             // synchronous and the view is already gone, so capture the engine
             // and run the full graceful stop detached. stop() is idempotent
             // for non-listening states via its guard, so the Cancel/Done
-            // paths hitting it a second time here is harmless.
-            // Swipe-to-dismiss during .parsing must also block a late
-            // onResult. Safe for the success path: there onResult fires
-            // BEFORE its programmatic dismiss, so this flag only ever blocks
-            // post-dismissal delivery.
+            // paths hitting it a second time here is harmless. Setting
+            // `cancelled` here is safe for the success path too: there
+            // `onResult` fires BEFORE the programmatic dismiss, so this flag
+            // only ever blocks post-dismissal delivery.
             cancelled = true
             let engine = self.engine
             Task { _ = await engine.stop() }
@@ -74,41 +59,6 @@ struct DictationSheet: View {
     }
 
     // MARK: - Status area
-
-    @ViewBuilder
-    private var statusArea: some View {
-        switch phase {
-        case .recording:
-            recordingStatus
-        case .parsing:
-            VStack(spacing: 12) {
-                ProgressView().tint(.goldAccent)
-                Text("Building your hand with on-device AI…")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
-        case .unavailable(let message):
-            VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title2)
-                    .foregroundColor(.mZoneOrange)
-                Text(message)
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textPrimary)
-                    .multilineTextAlignment(.center)
-            }
-        case .parseError(let message):
-            VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title2)
-                    .foregroundColor(.chipRed)
-                Text("Couldn't build the hand: \(message)")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textPrimary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-    }
 
     @ViewBuilder
     private var recordingStatus: some View {
@@ -158,10 +108,6 @@ struct DictationSheet: View {
 
     // MARK: - Transcript
 
-    private var displayedTranscript: String {
-        phase == .recording ? engine.fullTranscript : capturedTranscript
-    }
-
     private var transcriptPlaceholder: String {
         showEmptyHint
             ? "Didn't catch anything — try again."
@@ -170,9 +116,9 @@ struct DictationSheet: View {
 
     private var transcriptArea: some View {
         ScrollView {
-            Text(displayedTranscript.isEmpty ? transcriptPlaceholder : displayedTranscript)
+            Text(engine.fullTranscript.isEmpty ? transcriptPlaceholder : engine.fullTranscript)
                 .font(PokerTypography.chatBody)
-                .foregroundColor(displayedTranscript.isEmpty
+                .foregroundColor(engine.fullTranscript.isEmpty
                                  ? (showEmptyHint ? .mZoneOrange : .textSecondary)
                                  : .textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -190,39 +136,24 @@ struct DictationSheet: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        switch phase {
-        case .recording:
-            if case .error = engine.state {
-                Button("Retry") {
-                    Task { await engine.start() }
-                }
-                .buttonStyle(PokerButtonStyle(isEnabled: true))
-            } else {
-                Button("Done — Build Hand") {
-                    doneBuildHand()
-                }
-                .buttonStyle(PokerButtonStyle(isEnabled: engine.state == .listening))
-                .disabled(engine.state != .listening)
+        if case .error = engine.state {
+            Button("Retry") {
+                Task { await engine.start() }
             }
-        case .parsing:
-            EmptyView()
-        case .unavailable, .parseError:
-            VStack(spacing: 12) {
-                Button("Retry") {
-                    parseTask = Task { await runParse() }
-                }
-                .buttonStyle(PokerButtonStyle(isEnabled: true))
-                Button("Cancel") { cancel() }
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
+            .buttonStyle(PokerButtonStyle(isEnabled: true))
+        } else {
+            Button("Use Transcript") {
+                useTranscript()
             }
+            .buttonStyle(PokerButtonStyle(isEnabled: engine.state == .listening))
+            .disabled(engine.state != .listening)
         }
     }
 
     // MARK: - Actions
 
-    private func doneBuildHand() {
-        parseTask = Task {
+    private func useTranscript() {
+        Task {
             let transcript = await engine.stop()
             guard !transcript.isEmpty else {
                 // Nothing captured — say so and resume listening rather than
@@ -231,32 +162,16 @@ struct DictationSheet: View {
                 await engine.start()
                 return
             }
-            capturedTranscript = transcript
-            await runParse()
-        }
-    }
-
-    private func runParse() async {
-        guard HandTranscriptParser.shared.isAvailable else {
-            phase = .unavailable(HandTranscriptParser.shared.statusMessage)
-            return
-        }
-        phase = .parsing
-        do {
-            let draft = try await HandTranscriptParser.shared.parse(transcript: capturedTranscript, context: context)
-            // Cancel may have fired (and the sheet dismissed) while the parse was
-            // in flight; don't push a result into a torn-down flow.
+            // Cancel may have fired (and the sheet dismissed) while stop()
+            // was in flight; don't push a result into a torn-down flow.
             guard !cancelled else { return }
-            onResult(draft)
+            onResult(transcript)
             dismiss()
-        } catch {
-            phase = .parseError(error.localizedDescription)
         }
     }
 
     private func cancel() {
         cancelled = true
-        parseTask?.cancel()
         Task { await engine.stop() }
         dismiss()
     }

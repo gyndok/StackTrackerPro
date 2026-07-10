@@ -42,8 +42,6 @@
 		7E5700000000000000000126 /* HandCaptureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000125 /* HandCaptureModel.swift */; };
 		7E5700000000000000000128 /* HandCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000127 /* HandCaptureView.swift */; };
 		7E570000000000000000012A /* DictationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000129 /* DictationEngine.swift */; };
-		7E570000000000000000012C /* HandTranscriptParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012B /* HandTranscriptParser.swift */; };
-		7E570000000000000000012E /* VoiceHandMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012D /* VoiceHandMapper.swift */; };
 		7E5700000000000000000130 /* DictationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012F /* DictationSheet.swift */; };
 		7E5700000000000000000132 /* HandHistoryFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000131 /* HandHistoryFormatter.swift */; };
 		7E5700000000000000000134 /* HandSharePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000133 /* HandSharePreview.swift */; };
@@ -174,8 +172,6 @@
 		7E5700000000000000000125 /* HandCaptureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureModel.swift; sourceTree = "<group>"; };
 		7E5700000000000000000127 /* HandCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCaptureView.swift; sourceTree = "<group>"; };
 		7E5700000000000000000129 /* DictationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationEngine.swift; sourceTree = "<group>"; };
-		7E570000000000000000012B /* HandTranscriptParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTranscriptParser.swift; sourceTree = "<group>"; };
-		7E570000000000000000012D /* VoiceHandMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceHandMapper.swift; sourceTree = "<group>"; };
 		7E570000000000000000012F /* DictationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSheet.swift; sourceTree = "<group>"; };
 		7E5700000000000000000131 /* HandHistoryFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandHistoryFormatter.swift; sourceTree = "<group>"; };
 		7E5700000000000000000133 /* HandSharePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandSharePreview.swift; sourceTree = "<group>"; };
@@ -337,8 +333,6 @@
 				7E570000000000000000011F /* BreakDebriefEngine.swift */,
 				7E5700000000000000000123 /* PokerHandEvaluator.swift */,
 				7E5700000000000000000125 /* HandCaptureModel.swift */,
-				7E570000000000000000012B /* HandTranscriptParser.swift */,
-				7E570000000000000000012D /* VoiceHandMapper.swift */,
 				7E5700000000000000000129 /* DictationEngine.swift */,
 				7E5700000000000000000131 /* HandHistoryFormatter.swift */,
 			);
@@ -609,8 +603,6 @@
 				7E5700000000000000000128 /* HandCaptureView.swift in Sources */,
 				7E5700000000000000000134 /* HandSharePreview.swift in Sources */,
 				7E5700000000000000000130 /* DictationSheet.swift in Sources */,
-				7E570000000000000000012C /* HandTranscriptParser.swift in Sources */,
-				7E570000000000000000012E /* VoiceHandMapper.swift in Sources */,
 				7E570000000000000000012A /* DictationEngine.swift in Sources */,
 				7E5700000000000000000132 /* HandHistoryFormatter.swift in Sources */,
 				7E570000000000000000010A /* BlindStructureParsing.swift in Sources */,

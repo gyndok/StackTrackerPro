@@ -2,7 +2,7 @@ import Foundation
 
 /// Formats a persisted Hand as a shareable plain-text hand history with
 /// Unicode suit glyphs. Pure and deterministic: numbers are en_US-grouped
-/// regardless of device locale (same lesson as HandTranscriptParser).
+/// regardless of device locale.
 enum HandHistoryFormatter {
 
     private static let numberStyle = IntegerFormatStyle<Int>.number

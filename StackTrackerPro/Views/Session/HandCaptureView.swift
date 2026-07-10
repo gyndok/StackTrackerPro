@@ -47,7 +47,6 @@ struct HandCaptureView: View {
     @State private var pendingActionType: HandActionType?
     @State private var showDictation = false
     @State private var showLevelPicker = false
-    @State private var mappingIssues: [MappingIssue] = []
     @State private var showSavedDialog = false
     @State private var showSavedShare = false
     @State private var savedHand: Hand?
@@ -119,9 +118,6 @@ struct HandCaptureView: View {
                         HeroStrip(model: model, stubHint: stubHint,
                                  showStackPad: $showStackPad, stackPadText: $stackPadText)
                         villainSection
-                        if !mappingIssues.isEmpty {
-                            issuesChipRow
-                        }
                         LedgerList(model: model, truncateIndex: $truncateIndex)
 
                         if model.participantToAct != nil {
@@ -206,7 +202,9 @@ struct HandCaptureView: View {
             }
         }
         .sheet(isPresented: $showDictation) {
-            DictationSheet(context: handContext, onResult: applyDraft)
+            DictationSheet { transcript in
+                model.transcript = transcript
+            }
         }
         .sheet(isPresented: $showLevelPicker) {
             LevelPickerSheet(options: levelOptions, currentLevel: model.levelNumber) { option in
@@ -393,49 +391,6 @@ struct HandCaptureView: View {
                     displayNumber: displayNumbers[level.levelNumber] ?? level.levelNumber,
                     smallBlind: level.smallBlind, bigBlind: level.bigBlind, ante: level.ante)
             }
-    }
-
-    // MARK: - Voice entry
-
-    /// Table context handed to the parser so spoken numbers resolve against
-    /// this hand's actual stakes — rebuilt fresh each time the sheet opens so
-    /// mid-hand edits (e.g. a corrected hero stack) are reflected.
-    private var handContext: HandContext {
-        HandContext(levelNumber: model.levelNumber, smallBlind: model.smallBlind,
-                    bigBlind: model.bigBlind, ante: model.ante,
-                    heroStack: model.heroStackBefore, heroCardCount: model.heroCardCount)
-    }
-
-    /// Voice fills the SAME state taps do — the mapper only ever calls the
-    /// engine's own mutation surface, so the narration bar and ledger update
-    /// live. Never calls `model.save`; anything the mapper couldn't place
-    /// deterministically becomes a chip in `mappingIssues`.
-    private func applyDraft(_ draft: ParsedHandDraft) {
-        mappingIssues = VoiceHandMapper.apply(draft, to: model)
-    }
-
-    private var issuesChipRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(mappingIssues) { issue in
-                    HStack(spacing: 6) {
-                        Text(issue.label)
-                            .font(PokerTypography.chipLabel)
-                        Button {
-                            mappingIssues.removeAll { $0.id == issue.id }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.mZoneOrange.opacity(0.15))
-                    .foregroundColor(.mZoneOrange)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.mZoneOrange.opacity(0.3), lineWidth: 1))
-                }
-            }
-        }
     }
 
     // MARK: - Tags + Save
