@@ -1,5 +1,7 @@
 # Screenshot Demo Mode — Design
 
+> **STATUS: EXECUTED 2026-07-11** — all 3 plan tasks landed; `tools/screenshots/make-screenshots.sh` produced the 8-PNG marketing set at 1320x2868; suite 157/157 green, Debug + Release both clean. See plan doc for commit range and full verification notes.
+
 **Approved:** 2026-07-11 with user (approach A). Purpose: reproducible, App Store-ready raw screenshots (6.9"-class, portrait) with rich dummy data, reusable every release for the store listing and the website.
 
 ## Purpose
