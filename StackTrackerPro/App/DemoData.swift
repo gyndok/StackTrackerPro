@@ -394,23 +394,26 @@ enum DemoData {
     // MARK: - History
 
     private static func seedHistory(into context: ModelContext, now: Date) {
+        // Brief split: FIVE cashes (finishPosition + payout > 0, including the
+        // 1st-place $8,400 on the $600 buy-in) and THREE busts (payout 0, no
+        // finishPosition). Net across everything stays clearly positive.
         struct Historical {
             let name: String
             let venue: String
             let daysAgo: Double
             let buyIn: Int
-            let finishPosition: Int
+            let finishPosition: Int?
             let payout: Int
         }
         let historicalTournaments: [Historical] = [
-            Historical(name: "Deepstack Daily", venue: "Horseshoe Las Vegas", daysAgo: 90, buyIn: 250, finishPosition: 45, payout: 0),
+            Historical(name: "Deepstack Daily", venue: "Horseshoe Las Vegas", daysAgo: 90, buyIn: 250, finishPosition: nil, payout: 0),
             Historical(name: "Wynn Summer Classic", venue: "Wynn Las Vegas", daysAgo: 75, buyIn: 300, finishPosition: 12, payout: 950),
-            Historical(name: "Texas Hold'em Open", venue: "Champions Club Texas", daysAgo: 60, buyIn: 400, finishPosition: 60, payout: 0),
+            Historical(name: "Texas Hold'em Open", venue: "Champions Club Texas", daysAgo: 60, buyIn: 400, finishPosition: nil, payout: 0),
             Historical(name: "$600 Championship", venue: "Horseshoe Las Vegas", daysAgo: 50, buyIn: 600, finishPosition: 1, payout: 8_400),
-            Historical(name: "Sunday Special", venue: "Wynn Las Vegas", daysAgo: 40, buyIn: 250, finishPosition: 88, payout: 0),
+            Historical(name: "Sunday Special", venue: "Wynn Las Vegas", daysAgo: 40, buyIn: 250, finishPosition: nil, payout: 0),
             Historical(name: "High Roller", venue: "Champions Club Texas", daysAgo: 30, buyIn: 1_700, finishPosition: 25, payout: 3_200),
             Historical(name: "Mid-Week Grind", venue: "Horseshoe Las Vegas", daysAgo: 18, buyIn: 500, finishPosition: 8, payout: 1_450),
-            Historical(name: "Weekend Warm-Up", venue: "Wynn Las Vegas", daysAgo: 7, buyIn: 350, finishPosition: 33, payout: 0)
+            Historical(name: "Weekend Warm-Up", venue: "Wynn Las Vegas", daysAgo: 7, buyIn: 350, finishPosition: 18, payout: 600)
         ]
 
         for h in historicalTournaments {
