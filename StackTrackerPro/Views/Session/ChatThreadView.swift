@@ -29,6 +29,16 @@ struct ChatThreadView: View {
                     }
                 }
             }
+            #if DEBUG
+            // Demo mode seeds every message before first render, so the
+            // onChange(of: messages.count) path never fires — jump to the
+            // newest message on appear for screenshot captures.
+            .onAppear {
+                if DemoData.isActive, let last = messages.last {
+                    proxy.scrollTo(last.persistentModelID, anchor: .bottom)
+                }
+            }
+            #endif
         }
     }
 

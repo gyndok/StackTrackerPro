@@ -58,6 +58,9 @@ DEVICE_NAME_ACTUAL=$(xcrun simctl list devices available -j | jq -r --arg rt "$R
   .devices[$rt][] | select(.udid == $udid) | .name')
 echo "    using device: $DEVICE_NAME_ACTUAL ($UDID)"
 
+# Never leave the fake status bar applied, even if the script dies mid-loop.
+trap 'xcrun simctl status_bar "$UDID" clear 2>/dev/null || true' EXIT
+
 echo "==> Building Debug (derivedDataPath: $DERIVED_DATA)"
 xcodebuild build \
   -project "$PROJECT" \
