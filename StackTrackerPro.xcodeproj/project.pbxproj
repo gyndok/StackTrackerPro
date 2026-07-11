@@ -45,6 +45,7 @@
 		7E5700000000000000000130 /* DictationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000012F /* DictationSheet.swift */; };
 		7E5700000000000000000132 /* HandHistoryFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000131 /* HandHistoryFormatter.swift */; };
 		7E5700000000000000000134 /* HandSharePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000133 /* HandSharePreview.swift */; };
+		7E5700000000000000000136 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000135 /* DemoData.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -175,6 +176,7 @@
 		7E570000000000000000012F /* DictationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSheet.swift; sourceTree = "<group>"; };
 		7E5700000000000000000131 /* HandHistoryFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandHistoryFormatter.swift; sourceTree = "<group>"; };
 		7E5700000000000000000133 /* HandSharePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandSharePreview.swift; sourceTree = "<group>"; };
+		7E5700000000000000000135 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -488,6 +490,7 @@
 				B2FAD3C56832ABC0362A2A56 /* StackTrackerProApp.swift */,
 				01CF7122D121AD978C3265B6 /* ContentView.swift */,
 				FA7982009E333C484553515D /* Theme.swift */,
+				7E5700000000000000000135 /* DemoData.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -602,6 +605,7 @@
 				7E5700000000000000000126 /* HandCaptureModel.swift in Sources */,
 				7E5700000000000000000128 /* HandCaptureView.swift in Sources */,
 				7E5700000000000000000134 /* HandSharePreview.swift in Sources */,
+				7E5700000000000000000136 /* DemoData.swift in Sources */,
 				7E5700000000000000000130 /* DictationSheet.swift in Sources */,
 				7E570000000000000000012A /* DictationEngine.swift in Sources */,
 				7E5700000000000000000132 /* HandHistoryFormatter.swift in Sources */,

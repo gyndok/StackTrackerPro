@@ -3393,3 +3393,26 @@ final class StraightVsTripsDiagTests: XCTestCase {
         XCTAssertGreaterThan(model.heroNet, 0, "heroNet was \(model.heroNet)")
     }
 }
+
+// MARK: - DemoData (screenshot demo mode)
+
+final class DemoDataSeedTests: XCTestCase {
+    @MainActor func testDemoSeedPopulatesWorld() throws {
+        let container = try makeInMemoryContainer()
+        let ctx = container.mainContext
+        DemoData.seed(into: ctx)
+        let t = try XCTUnwrap(DemoData.activeTournament)
+        XCTAssertEqual(t.status, .active)
+        XCTAssertEqual((t.stackEntries ?? []).count, 13)
+        XCTAssertEqual((t.hands ?? []).count, 5)
+        XCTAssertEqual((t.handStubs ?? []).filter { $0.status == .pending }.count, 1)
+        XCTAssertNotNil(DemoData.bigWinHand)
+        let dictated = (t.hands ?? []).first { $0.sortedActions.isEmpty && !$0.notes.isEmpty }
+        XCTAssertNotNil(dictated)
+        let completed = try ctx.fetch(FetchDescriptor<Tournament>()).filter { $0.statusRaw == "completed" }
+        XCTAssertEqual(completed.count, 8)
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<CashSession>()).count, 3)
+        DemoData.seed(into: ctx)   // idempotent
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<Tournament>()).filter { $0.statusRaw == "completed" }.count, 8)
+    }
+}

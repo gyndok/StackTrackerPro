@@ -12,6 +12,9 @@ struct StackTrackerProApp: App {
         let tournamentManager = TournamentManager()
         _tournamentManager = State(initialValue: tournamentManager)
         _chatManager = State(initialValue: ChatManager(tournamentManager: tournamentManager))
+        #if DEBUG
+        _showSplash = State(initialValue: !DemoData.isActive)
+        #endif
     }
 
     var sharedModelContainer: ModelContainer = {
@@ -35,6 +38,15 @@ struct StackTrackerProApp: App {
             FadeNote.self,
             HandVillain.self,
         ])
+
+        #if DEBUG
+        if DemoData.isActive {
+            let demoConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            let container = try! ModelContainer(for: schema, configurations: [demoConfig])
+            DemoData.seed(into: container.mainContext)
+            return container
+        }
+        #endif
 
         let modelConfiguration = ModelConfiguration(
             schema: schema,
@@ -72,6 +84,11 @@ struct StackTrackerProApp: App {
                         tournamentManager.setContext(sharedModelContainer.mainContext)
                         cashSessionManager.setContext(sharedModelContainer.mainContext)
                         migrateNilPayouts(context: sharedModelContainer.mainContext)
+                        #if DEBUG
+                        if DemoData.isActive {
+                            tournamentManager.activeTournament = DemoData.activeTournament
+                        }
+                        #endif
                     }
                     .environment(tournamentManager)
                     .environment(chatManager)
