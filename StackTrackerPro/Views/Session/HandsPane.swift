@@ -17,6 +17,11 @@ struct HandsPane: View {
     @State private var shareHand: Hand?
     #if DEBUG
     @State private var demoShowDictation = false
+    /// Re-entrancy guard for the demo-route onAppear below: this pane sits
+    /// inside the session pager, so swiping away and back re-fires onAppear —
+    /// without the guard the dismissed sheet/cover would re-present (same
+    /// pattern as ScoutingReportView's `if report == nil`).
+    @State private var demoRouted = false
     #endif
 
     private var hands: [Hand] {
@@ -159,7 +164,8 @@ struct HandsPane: View {
         }
         #if DEBUG
         .onAppear {
-            guard DemoData.isActive else { return }
+            guard DemoData.isActive, !demoRouted else { return }
+            demoRouted = true
             switch DemoData.route {
             case "capture": showEntry = true
             case "share": shareHand = DemoData.bigWinHand
