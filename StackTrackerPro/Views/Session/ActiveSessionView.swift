@@ -226,6 +226,16 @@ struct ActiveSessionView: View {
             }
             // Paused tournaments stay paused — resuming requires the explicit
             // Resume action in the toolbar menu.
+            #if DEBUG
+            guard DemoData.isActive else { return }
+            switch DemoData.route {
+            case "metrics": selectedPage = 1
+            case "hands", "capture", "share": selectedPage = 6
+            case "chat": selectedPage = 7
+            default: break   // graph & dictation stay on 0/6 default handling below
+            }
+            if DemoData.route == "dictation" { selectedPage = 6 }
+            #endif
         }
         .sheet(item: Binding(
             get: { tournamentManager.showSessionRecap ? tournamentManager.completedTournamentForRecap : nil },

@@ -9,47 +9,66 @@ struct ContentView: View {
     }
 
     @State private var selectedPlayMode: PlayMode = .tournaments
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
-            Tab("Play", systemImage: "suit.spade.fill") {
+        TabView(selection: $selectedTab) {
+            Tab("Play", systemImage: "suit.spade.fill", value: 0) {
                 NavigationStack {
-                    VStack(spacing: 0) {
-                        // Segmented picker
-                        Picker("Mode", selection: $selectedPlayMode) {
-                            ForEach(PlayMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-
-                        // Content based on selection
-                        switch selectedPlayMode {
-                        case .tournaments:
-                            TournamentListView()
-                        case .cashGames:
-                            CashSessionListView()
-                        }
+                    #if DEBUG
+                    if DemoData.isActive, DemoData.route != "results", let demo = DemoData.activeTournament {
+                        ActiveSessionView(tournament: demo)
+                    } else {
+                        playRoot
                     }
-                    .background(Color.backgroundPrimary)
-                    .navigationTitle("Stack Tracker Pro")
+                    #else
+                    playRoot
+                    #endif
                 }
             }
 
-            Tab("Results", systemImage: "chart.line.uptrend.xyaxis") {
+            Tab("Results", systemImage: "chart.line.uptrend.xyaxis", value: 1) {
                 ResultsView()
             }
 
-            Tab("Settings", systemImage: "gearshape.fill") {
+            Tab("Settings", systemImage: "gearshape.fill", value: 2) {
                 SettingsView()
             }
         }
         .tint(.goldAccent)
         .preferredColorScheme(.dark)
+        .onAppear {
+            #if DEBUG
+            if DemoData.isActive && DemoData.route == "results" {
+                selectedTab = 1
+            }
+            #endif
+        }
     }
 
+    private var playRoot: some View {
+        VStack(spacing: 0) {
+            // Segmented picker
+            Picker("Mode", selection: $selectedPlayMode) {
+                ForEach(PlayMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+
+            // Content based on selection
+            switch selectedPlayMode {
+            case .tournaments:
+                TournamentListView()
+            case .cashGames:
+                CashSessionListView()
+            }
+        }
+        .background(Color.backgroundPrimary)
+        .navigationTitle("Stack Tracker Pro")
+    }
 }
 
 #Preview {

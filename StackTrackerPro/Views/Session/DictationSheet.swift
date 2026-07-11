@@ -6,6 +6,12 @@ import SwiftUI
 /// dictation design); the caller decides what to do with the raw string
 /// (see `HandCaptureView`, which stores it on `HandCaptureModel.transcript`).
 struct DictationSheet: View {
+    /// DEBUG screenshot-demo pose: when non-nil, renders the listening state
+    /// with this verbatim text in the transcript area WITHOUT ever starting
+    /// the engine (see `.task` below) — the mic and speech APIs are never
+    /// touched. Defaulted so every existing call site keeps compiling
+    /// unchanged.
+    var previewTranscript: String? = nil
     let onResult: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -38,6 +44,9 @@ struct DictationSheet: View {
         }
         .preferredColorScheme(.dark)
         .task {
+            // Screenshot-demo pose: never start the engine (no mic, no
+            // speech APIs) when a preview transcript is supplied.
+            if previewTranscript != nil { return }
             await engine.start()
         }
         .onDisappear {
@@ -62,46 +71,52 @@ struct DictationSheet: View {
 
     @ViewBuilder
     private var recordingStatus: some View {
-        switch engine.state {
-        case .idle:
-            VStack(spacing: 12) {
-                ProgressView().tint(.goldAccent)
-                Text("Getting ready…")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
-        case .requestingPermission:
-            VStack(spacing: 12) {
-                ProgressView().tint(.goldAccent)
-                Text("Requesting microphone access…")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
-        case .preparingModel:
-            VStack(spacing: 12) {
-                ProgressView().tint(.goldAccent)
-                Text("Downloading speech model…")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
-        case .listening:
+        if previewTranscript != nil {
+            // Screenshot-demo pose: render the listening UI without a live
+            // engine session.
             PulsingMicIndicator()
-        case .stopping:
-            VStack(spacing: 12) {
-                ProgressView().tint(.goldAccent)
-                Text("Finishing up…")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textSecondary)
-            }
-        case .error(let message):
-            VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title2)
-                    .foregroundColor(.chipRed)
-                Text(message)
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.textPrimary)
-                    .multilineTextAlignment(.center)
+        } else {
+            switch engine.state {
+            case .idle:
+                VStack(spacing: 12) {
+                    ProgressView().tint(.goldAccent)
+                    Text("Getting ready…")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
+            case .requestingPermission:
+                VStack(spacing: 12) {
+                    ProgressView().tint(.goldAccent)
+                    Text("Requesting microphone access…")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
+            case .preparingModel:
+                VStack(spacing: 12) {
+                    ProgressView().tint(.goldAccent)
+                    Text("Downloading speech model…")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
+            case .listening:
+                PulsingMicIndicator()
+            case .stopping:
+                VStack(spacing: 12) {
+                    ProgressView().tint(.goldAccent)
+                    Text("Finishing up…")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
+            case .error(let message):
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title2)
+                        .foregroundColor(.chipRed)
+                    Text(message)
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textPrimary)
+                        .multilineTextAlignment(.center)
+                }
             }
         }
     }
@@ -114,11 +129,17 @@ struct DictationSheet: View {
             : "Start speaking — describe the hand as it happened."
     }
 
+    /// The demo preview transcript (when posing) or the engine's live
+    /// transcript — same display path either way.
+    private var displayedTranscript: String {
+        previewTranscript ?? engine.fullTranscript
+    }
+
     private var transcriptArea: some View {
         ScrollView {
-            Text(engine.fullTranscript.isEmpty ? transcriptPlaceholder : engine.fullTranscript)
+            Text(displayedTranscript.isEmpty ? transcriptPlaceholder : displayedTranscript)
                 .font(PokerTypography.chatBody)
-                .foregroundColor(engine.fullTranscript.isEmpty
+                .foregroundColor(displayedTranscript.isEmpty
                                  ? (showEmptyHint ? .mZoneOrange : .textSecondary)
                                  : .textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -136,7 +157,12 @@ struct DictationSheet: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        if case .error = engine.state {
+        if previewTranscript != nil {
+            // Screenshot-demo pose: render the listening-state button without
+            // wiring it to a live engine.
+            Button("Use Transcript") {}
+                .buttonStyle(PokerButtonStyle(isEnabled: true))
+        } else if case .error = engine.state {
             Button("Retry") {
                 Task { await engine.start() }
             }

@@ -220,6 +220,11 @@ struct HandCaptureView: View {
             if autoStartDictation && model.ledger.isEmpty {
                 showDictation = true
             }
+            #if DEBUG
+            if DemoData.isActive && DemoData.route == "capture" && editingHand == nil && stub == nil {
+                DemoData.poseMidHand(model)
+            }
+            #endif
         }
         .sheet(isPresented: $showDictation) {
             DictationSheet { transcript in

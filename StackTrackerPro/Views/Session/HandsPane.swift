@@ -15,6 +15,9 @@ struct HandsPane: View {
     @State private var capturePresentation: CapturePresentation?
     @State private var pendingDeleteHand: Hand?
     @State private var shareHand: Hand?
+    #if DEBUG
+    @State private var demoShowDictation = false
+    #endif
 
     private var hands: [Hand] {
         tournament?.sortedHands ?? cashSession?.sortedHands ?? []
@@ -154,6 +157,20 @@ struct HandsPane: View {
         .sheet(item: $shareHand) { hand in
             HandSharePreview(hand: hand)
         }
+        #if DEBUG
+        .onAppear {
+            guard DemoData.isActive else { return }
+            switch DemoData.route {
+            case "capture": showEntry = true
+            case "share": shareHand = DemoData.bigWinHand
+            case "dictation": demoShowDictation = true
+            default: break
+            }
+        }
+        .sheet(isPresented: $demoShowDictation) {
+            DictationSheet(previewTranscript: DemoData.dictationPreviewTranscript) { _ in }
+        }
+        #endif
         .confirmationDialog(
             "Delete this hand? This can't be undone.",
             isPresented: Binding(get: { pendingDeleteHand != nil },
