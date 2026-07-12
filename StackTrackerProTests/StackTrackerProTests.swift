@@ -3350,6 +3350,17 @@ final class HandHistoryFormatterTests: XCTestCase {
                       "transcript block must follow the result line: \(text)")
         XCTAssertTrue(text.contains(hand.notes), "got: \(text)")
     }
+
+    // MARK: - Unknown suit (x) rendering
+
+    func testFormatterRendersUnknownSuitCards() {
+        let hand = Hand(heroPosition: .co, heroCardsRaw: "Ac Kx",
+                        levelNumber: 3, smallBlind: 200, bigBlind: 400,
+                        ante: 400, heroStackChips: 55_000)
+        hand.resultRaw = HandResult.folded.rawValue
+        let text = HandHistoryFormatter.text(for: hand)
+        XCTAssertTrue(text.contains("A♣Kx"))
+    }
 }
 
 // Regression: user-reported device hand (straight vs trips) — engine verified correct;
@@ -3526,11 +3537,16 @@ final class AllInConversionTests: XCTestCase {
     @MainActor func testMultiwaySidePotKeepsBetting() throws {
         // 3-handed: short villain jams, two big stacks call → flop betting continues.
         let model = makeThreeWayModel(heroStack: 100_000, v1Approx: 15_000, v2Approx: 90_000)
+        let v1id = try XCTUnwrap(model.villains.first { $0.position == .utg }?.id)
         model.add(action: .raise, toAmount: 15_000)         // v1 (converted: whole stack)
+        XCTAssertTrue(model.allInParticipants.contains(.villain(v1id)))
         model.add(action: .call, toAmount: 0)                // v2
         model.add(action: .call, toAmount: 0)                // hero
         for c in PlayingCard.parseList("Jh 8h 4d") { XCTAssertTrue(model.addBoardCard(c)) }
         XCTAssertNotNil(model.participantToAct)              // side-pot betting continues
+        // Postflop order here is UTG (v1) → CO (v2) → BTN (hero); the all-in
+        // v1 is excluded from further action, so participantToAct must not be them.
+        XCTAssertNotEqual(model.participantToAct, .villain(v1id))
     }
 }
 

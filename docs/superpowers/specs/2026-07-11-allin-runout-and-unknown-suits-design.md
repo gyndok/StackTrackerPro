@@ -63,3 +63,7 @@ Allow **`x` as an unknown suit** anywhere a card is entered: hero cards, villain
 - `PlayingCard` x parsing/round-trip/display; `Kx Kx` accepted by dedup rule; `x` in board.
 - Ambiguity gating: showdown with any x card → no auto winner, save requires override; fold-out hands with x cards save normally.
 - Formatter renders x hands correctly in text output.
+
+> **STATUS: EXECUTED 2026-07-11**
+>
+> All 3 plan tasks landed: `PlayingCard` x + dedup + ambiguity gate (`2149d7f`), all-in auto-conversion at input ingestion (`17c2451`), and the UI layer — action-row All-in button, `jamTotal(for:)` moved onto `HandCaptureModel` as the single source of truth for both the conversion math and the UI's jam affordances, and the `CardPickerGrid` fifth (`x`) suit button — landed in the commit that includes this doc update (`feat: all-in action button + unknown-suit picker and rendering`). Suite 167/167 green (`iPhone Air`, iOS 26.5), Debug + Release both clean. Visually confirmed the All-in button in the capture screen's action row via `-DemoData -DemoRoute capture`; the x-suit picker was verified by code inspection (structurally identical to the four real-suit buttons) plus the `UnknownSuitTests` suite. See plan doc for the full commit range and verification notes.

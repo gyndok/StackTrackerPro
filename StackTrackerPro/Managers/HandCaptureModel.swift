@@ -347,27 +347,47 @@ final class HandCaptureModel {
     /// triggered the board-only run-out. Conversion only happens when the
     /// actor's stack is known: hero always (`heroStackBefore`); a villain only
     /// when `approxStack > 0` (0 means "unset" and must never be guessed into
-    /// a phantom all-in, so their raw entry passes through unchanged).
+    /// a phantom all-in, so their raw entry passes through unchanged). Because
+    /// this runs on every `add(action:toAmount:)`, reopening a legacy hand for
+    /// edit — one whose shove was originally saved as a plain raise before this
+    /// conversion existed — retroactively re-tags that action `.allIn` on
+    /// replay; any filler actions recorded after the old-bug shove are simply
+    /// dropped when the ledger rebuilds, leaving the pot and winners unchanged.
     private func convertingToAllInIfNeeded(actor: Participant, action: HandActionType,
                                            toAmount: Int) -> (HandActionType, Int) {
         guard action == .call || action == .bet || action == .raise else { return (action, toAmount) }
+        guard let jam = jamTotal(for: actor) else { return (action, toAmount) }
+        let committedThisStreet = committedByStreet[currentStreet]?[actor] ?? 0
+        let remaining = jam - committedThisStreet
+        guard remaining > 0 else { return (action, toAmount) }
+        let chipsIn = (action == .call ? currentBet : toAmount) - committedThisStreet
+        guard chipsIn >= remaining else { return (action, toAmount) }
+        return (.allIn, jam)
+    }
+
+    /// The this-street raise-to total that would put `participant` fully
+    /// all-in: their known stack minus whatever they've already committed on
+    /// *prior* streets (this street's own commitment, e.g. blinds, is folded
+    /// back in by the caller so the result is a direct TO-amount). `nil` when
+    /// the actor's stack isn't known — a villain with `approxStack == 0` —
+    /// mirroring `convertingToAllInIfNeeded`'s refusal to guess. Single source
+    /// of truth for that conversion math and for the UI's All-in/Jam
+    /// affordances (`HandCaptureView`'s action row and `SizingRow`).
+    func jamTotal(for participant: Participant) -> Int? {
         let base: Int
-        switch actor {
+        switch participant {
         case .hero:
             base = heroStackBefore
         case .villain(let id):
             guard let villain = villains.first(where: { $0.id == id }), villain.approxStack > 0 else {
-                return (action, toAmount)
+                return nil
             }
             base = villain.approxStack
         }
-        let totalCommitted = committedByStreet.values.reduce(0) { $0 + ($1[actor] ?? 0) }
-        let remaining = base - totalCommitted
-        guard remaining > 0 else { return (action, toAmount) }
-        let committedThisStreet = committedByStreet[currentStreet]?[actor] ?? 0
-        let chipsIn = (action == .call ? currentBet : toAmount) - committedThisStreet
-        guard chipsIn >= remaining else { return (action, toAmount) }
-        return (.allIn, committedThisStreet + remaining)
+        let priorStreetsCommitted = committedByStreet.reduce(0) { partial, entry in
+            entry.key == currentStreet ? partial : partial + (entry.value[participant] ?? 0)
+        }
+        return base - priorStreetsCommitted
     }
 
     /// Adds a board card. Rejects duplicates and cards added when none are needed.

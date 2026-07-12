@@ -1098,7 +1098,7 @@ private struct ActionRow: View {
                     .font(PokerTypography.sectionHeader)
                     .foregroundColor(.goldAccent)
                 HStack(spacing: 8) {
-                    ForEach(model.legalActions.filter { $0 != .allIn }, id: \.self) { action in
+                    ForEach(model.legalActions, id: \.self) { action in
                         Button {
                             handle(action)
                         } label: {
@@ -1134,7 +1134,16 @@ private struct ActionRow: View {
         case .bet, .raise:
             pendingActionType = action
         case .allIn:
-            break
+            guard let actor = model.participantToAct else { return }
+            if let jam = model.jamTotal(for: actor) {
+                model.add(action: .allIn, toAmount: jam)
+                HapticFeedback.impact(.light)
+            } else {
+                // Stack unknown (unset villain approxStack) — fall back to the
+                // same number-pad flow bet/raise use, committing as `.allIn`
+                // with whatever total the user types.
+                pendingActionType = .allIn
+            }
         }
     }
 }
@@ -1245,7 +1254,12 @@ private struct SizingRow: View {
 
     /// Live preview of exactly what will be committed, e.g. "Raise to 2,300".
     private var confirmLabel: String {
-        let verb = actionType == .raise ? "Raise to" : "Bet"
+        let verb: String
+        switch actionType {
+        case .raise: verb = "Raise to"
+        case .allIn: verb = "All-in"
+        default: verb = "Bet"
+        }
         guard let amount = resolvedAmount else { return verb }
         return "\(verb) \(amount.formatted())"
     }
@@ -1275,14 +1289,10 @@ private struct SizingRow: View {
         }
     }
 
+    /// One source of truth with `HandCaptureModel.convertingToAllInIfNeeded`
+    /// and the action row's All-in button — see `jamTotal(for:)`.
     private func jamAmount(for participant: HandCaptureModel.Participant) -> Int? {
-        switch participant {
-        case .hero:
-            return model.heroStackBefore
-        case .villain(let id):
-            let approx = model.villains.first { $0.id == id }?.approxStack ?? 0
-            return approx > 0 ? approx : nil
-        }
+        model.jamTotal(for: participant)
     }
 }
 

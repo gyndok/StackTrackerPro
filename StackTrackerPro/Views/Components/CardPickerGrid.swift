@@ -27,18 +27,22 @@ struct CardPickerGrid: View {
                 }
             }
             HStack(spacing: 10) {
-                ForEach(Array("shdc"), id: \.self) { suit in
+                ForEach(Array("shdcx"), id: \.self) { suit in
                     let card = pendingRank.flatMap { PlayingCard(rank: $0, suit: suit) }
                     Button {
                         if let card { onPick(card); pendingRank = nil }
                     } label: {
                         Text(suitSymbol(suit))
                             .font(.title2)
-                            .foregroundColor(suit == "h" || suit == "d" ? .red : .primary)
+                            .foregroundColor(suitColor(suit))
                             .frame(width: 52, height: 40)
                     }
                     .buttonStyle(.bordered)
-                    .disabled(pendingRank == nil || card == nil || dealt.contains(card!))
+                    // Real suits stay deduped against already-dealt cards; the
+                    // unknown-suit card is never disabled by dedup (Kx and Kx
+                    // can both be "in play" — the whole point is nobody knows
+                    // the real suit, so there is nothing to collide on).
+                    .disabled(pendingRank == nil || card == nil || (!card!.hasUnknownSuit && dealt.contains(card!)))
                 }
             }
         }
@@ -49,7 +53,16 @@ struct CardPickerGrid: View {
         case "s": return "♠"
         case "h": return "♥"
         case "d": return "♦"
+        case "x": return "x"
         default: return "♣"
+        }
+    }
+
+    private func suitColor(_ s: Character) -> Color {
+        switch s {
+        case "h", "d": return .red
+        case "x": return .secondary
+        default: return .primary
         }
     }
 }
