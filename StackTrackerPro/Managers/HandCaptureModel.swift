@@ -318,7 +318,8 @@ final class HandCaptureModel {
     /// `heroCardCount` cap. Hero cards are setup state, not part of the input log.
     @discardableResult
     func addCard(_ card: PlayingCard) -> Bool {
-        guard heroCards.count < heroCardCount, !dealtCards.contains(card) else { return false }
+        guard heroCards.count < heroCardCount,
+              card.hasUnknownSuit || !dealtCards.contains(card) else { return false }
         heroCards.append(card)
         // Hero cards feed computedWinners just like shown holdings do; an
         // override predating them is stale (no rebuild here — clear explicitly).
@@ -341,7 +342,8 @@ final class HandCaptureModel {
     /// Adds a board card. Rejects duplicates and cards added when none are needed.
     @discardableResult
     func addBoardCard(_ card: PlayingCard) -> Bool {
-        guard boardCardsNeeded > 0, !dealtCards.contains(card) else { return false }
+        guard boardCardsNeeded > 0,
+              card.hasUnknownSuit || !dealtCards.contains(card) else { return false }
         inputs.append(.boardCard(card))
         rebuild()
         return true
@@ -613,6 +615,13 @@ final class HandCaptureModel {
 
         // Hold'em showdown only; PLO or missing/incomplete cards are unevaluable.
         guard heroCardCount == 2, heroCards.count == 2, board.count == 5 else { return [] }
+
+        // Unknown-suit cards make showdown evaluation ambiguous (flushes
+        // unprovable) — never guess; the empty result routes the UI to the
+        // manual winnerOverride, same as PLO/incomplete-card showdowns.
+        let showdownCards = board + heroCards + villains.flatMap(\.shownHolding)
+        guard !showdownCards.contains(where: \.hasUnknownSuit) else { return [] }
+
         var holdings: [(id: UUID, cards: [PlayingCard])] = [(heroSentinel, heroCards)]
         for villain in villains
         where !foldedParticipants.contains(.villain(villain.id)) && villain.shownHolding.count == 2 {

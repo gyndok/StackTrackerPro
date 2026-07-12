@@ -3394,6 +3394,70 @@ final class StraightVsTripsDiagTests: XCTestCase {
     }
 }
 
+// MARK: - Unknown-suit ("x") cards
+
+final class UnknownSuitTests: XCTestCase {
+
+    func testPlayingCardParsesUnknownSuit() throws {
+        let card = try XCTUnwrap(PlayingCard("Kx"))
+        XCTAssertEqual(card.rank, "K")
+        XCTAssertEqual(card.suit, "x")
+        XCTAssertTrue(card.hasUnknownSuit)
+        XCTAssertEqual(card.raw, "Kx")
+        XCTAssertEqual(card.display, "Kx")
+        XCTAssertFalse(card.isRed)
+        XCTAssertEqual(PlayingCard.parseList("Ac Kx").count, 2)
+        XCTAssertNil(PlayingCard("Xx"))          // rank still validated
+        XCTAssertNil(PlayingCard(rank: "K", suit: "y"))
+    }
+
+    @MainActor func testUnknownSuitCardsAreNeverDuplicates() throws {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        XCTAssertTrue(model.addCard(PlayingCard("Kx")!))
+        XCTAssertTrue(model.addCard(PlayingCard("Kx")!))              // Kx Kx legal
+        XCTAssertEqual(model.heroCards.count, 2)
+    }
+
+    @MainActor func testUnknownSuitAtShowdownRequiresManualWinner() throws {
+        // Heads-up to showdown with an x in hero's hand: computedWinners must be
+        // empty, isResolvable false until winnerOverride, then true.
+        let model = HandCaptureModel(levelNumber: 21, smallBlind: 10_000, bigBlind: 25_000,
+                                     ante: 25_000, heroCardCount: 2, heroStackBefore: 390_000)
+        model.heroPosition = .btn
+        XCTAssertTrue(model.addCard(PlayingCard("Ah")!))
+        XCTAssertTrue(model.addCard(PlayingCard("Kx")!))
+        model.addVillain(position: .utg, relative: .coversHero, approxStack: 0)
+        let utg = model.villains.first!.id
+        model.add(action: .allIn, toAmount: 390_000)  // UTG jams
+        model.add(action: .call, toAmount: 0)          // hero calls
+        for c in PlayingCard.parseList("Jh 8h 4d 2c 3s") { _ = model.addBoardCard(c) }
+        model.setShownHolding(PlayingCard.parseList("Qs Qd"), for: utg)
+
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertTrue(model.needsShowdown)
+        XCTAssertTrue(model.computedWinners.isEmpty,
+                      "x cards make the showdown unprovable — must never be guessed")
+        XCTAssertFalse(model.isResolvable)
+        model.winnerOverride = [.hero]
+        XCTAssertTrue(model.isResolvable)
+    }
+
+    @MainActor func testFoldOutWithUnknownSuitResolvesNormally() throws {
+        // Hero holds Kx, villain folds preflop: no showdown → resolvable as today.
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.heroPosition = .btn
+        XCTAssertTrue(model.addCard(PlayingCard("Kx")!))
+        XCTAssertTrue(model.addCard(PlayingCard("Kd")!))
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        model.add(action: .fold, toAmount: 0)   // UTG folds preflop (acts first heads-up)
+        XCTAssertTrue(model.isHandOver)
+        XCTAssertFalse(model.needsShowdown)
+        XCTAssertTrue(model.isResolvable)
+    }
+}
+
 // MARK: - DemoData (screenshot demo mode)
 
 final class DemoDataSeedTests: XCTestCase {

@@ -7,11 +7,18 @@ struct PlayingCard: Equatable, Hashable {
     static let ranks: [Character] = ["A","K","Q","J","T","9","8","7","6","5","4","3","2"]
     static let suits: [Character] = ["s","h","d","c"]
 
+    /// Sentinel suit for a card whose real suit is unknown/unspecified (e.g. a
+    /// villain who showed only a rank, or a hero card the user couldn't read).
+    /// Deliberately excluded from `suits` — it's not a real suit, it's an
+    /// "I don't know" marker that flows through the same raw string fields.
+    static let unknownSuit: Character = "x"
+
     let rank: Character
     let suit: Character
 
     init?(rank: Character, suit: Character) {
-        guard Self.ranks.contains(rank), Self.suits.contains(suit) else { return nil }
+        guard Self.ranks.contains(rank),
+              Self.suits.contains(suit) || suit == Self.unknownSuit else { return nil }
         self.rank = rank
         self.suit = suit
     }
@@ -25,18 +32,23 @@ struct PlayingCard: Equatable, Hashable {
 
     var raw: String { "\(rank)\(suit)" }
 
+    /// True when the suit is the `unknownSuit` sentinel rather than a real suit.
+    var hasUnknownSuit: Bool { suit == Self.unknownSuit }
+
     var suitSymbol: String {
         switch suit {
         case "s": return "♠"
         case "h": return "♥"
         case "d": return "♦"
+        case "x": return "x"
         default: return "♣"
         }
     }
 
     var display: String { "\(rank)\(suitSymbol)" }
 
-    /// True for hearts/diamonds (red suits) — used for display tinting.
+    /// True for hearts/diamonds (red suits) — used for display tinting. An
+    /// unknown suit is never red (it renders in the default text color).
     var isRed: Bool { suit == "h" || suit == "d" }
 
     static func parseList(_ raw: String) -> [PlayingCard] {
