@@ -3460,6 +3460,82 @@ final class UnknownSuitTests: XCTestCase {
 
 // MARK: - DemoData (screenshot demo mode)
 
+final class AllInConversionTests: XCTestCase {
+
+    /// Heads-up: hero BTN, one villain UTG (UTG acts first pre/postflop since
+    /// neither seat is SB/BB — see `testCaptureTurnOrderAndPot`).
+    @MainActor private func makeHeadsUpModel(heroStack: Int, villainApprox: Int = 0) -> HandCaptureModel {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: heroStack)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: villainApprox)
+        return model
+    }
+
+    /// Three-handed: hero BTN, v1 UTG, v2 CO — preflop/postflop order (no
+    /// SB/BB seated) is UTG, then CO, then BTN.
+    @MainActor private func makeThreeWayModel(heroStack: Int, v1Approx: Int, v2Approx: Int) -> HandCaptureModel {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: heroStack)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .shorter, approxStack: v1Approx)
+        model.addVillain(position: .co, relative: .coversHero, approxStack: v2Approx)
+        return model
+    }
+
+    // THE reported bug: shove entered via Raise, called → board-only run-out.
+    @MainActor func testShoveEnteredAsRaiseTriggersRunOut() throws {
+        let model = makeHeadsUpModel(heroStack: 50_000)     // hero BTN, villain UTG approxStack 0
+        model.add(action: .raise, toAmount: 6_000)          // villain (UTG acts first)
+        model.add(action: .raise, toAmount: 50_000)         // hero — full stack: must convert
+        XCTAssertTrue(model.allInParticipants.contains(.hero))
+        model.add(action: .call, toAmount: 0)               // villain calls
+        // Flop: cards owed, nobody to act
+        XCTAssertEqual(model.boardCardsNeeded, 3)
+        XCTAssertNil(model.participantToAct)
+        for c in PlayingCard.parseList("Jh 8h 4d") { XCTAssertTrue(model.addBoardCard(c)) }
+        XCTAssertNil(model.participantToAct)                // no turn betting
+        XCTAssertEqual(model.boardCardsNeeded, 1)
+        XCTAssertTrue(model.addBoardCard(try XCTUnwrap(PlayingCard("2c"))))
+        XCTAssertNil(model.participantToAct)                // no river betting
+        XCTAssertTrue(model.addBoardCard(try XCTUnwrap(PlayingCard("3s"))))
+        XCTAssertTrue(model.isHandOver)
+    }
+
+    @MainActor func testCallForYourWholeStackConvertsToAllIn() {
+        let model = makeHeadsUpModel(heroStack: 8_000)
+        model.add(action: .raise, toAmount: 12_000)         // villain bets more than hero has
+        model.add(action: .call, toAmount: 0)               // hero call = all-in for less
+        XCTAssertTrue(model.allInParticipants.contains(.hero))
+        // curBet must stay 12_000 (all-in for less does not reopen)
+        XCTAssertEqual(model.currentBet, 12_000)
+    }
+
+    @MainActor func testVillainWithKnownStackConverts() {
+        let model = makeHeadsUpModel(heroStack: 100_000, villainApprox: 30_000)
+        model.add(action: .raise, toAmount: 30_000)         // villain raises entire stack
+        XCTAssertEqual(model.allInParticipants.count, 1)    // villain converted
+    }
+
+    @MainActor func testVillainWithUnknownStackDoesNotConvert() {
+        let model = makeHeadsUpModel(heroStack: 100_000)    // approxStack 0
+        model.add(action: .raise, toAmount: 30_000)
+        XCTAssertTrue(model.allInParticipants.isEmpty)
+    }
+
+    @MainActor func testMultiwaySidePotKeepsBetting() throws {
+        // 3-handed: short villain jams, two big stacks call → flop betting continues.
+        let model = makeThreeWayModel(heroStack: 100_000, v1Approx: 15_000, v2Approx: 90_000)
+        model.add(action: .raise, toAmount: 15_000)         // v1 (converted: whole stack)
+        model.add(action: .call, toAmount: 0)                // v2
+        model.add(action: .call, toAmount: 0)                // hero
+        for c in PlayingCard.parseList("Jh 8h 4d") { XCTAssertTrue(model.addBoardCard(c)) }
+        XCTAssertNotNil(model.participantToAct)              // side-pot betting continues
+    }
+}
+
+// MARK: - DemoData (screenshot demo mode)
+
 final class DemoDataSeedTests: XCTestCase {
     @MainActor func testDemoSeedPopulatesWorld() throws {
         let container = try makeInMemoryContainer()

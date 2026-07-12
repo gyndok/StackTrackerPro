@@ -335,8 +335,39 @@ final class HandCaptureModel {
     /// for fold/check. No-op when it is nobody's turn (hand over / awaiting board).
     func add(action: HandActionType, toAmount: Int) {
         guard let actor = participantToAct else { return }
-        inputs.append(.action(id: UUID(), actor, action, toAmount))
+        let (type, amount) = convertingToAllInIfNeeded(actor: actor, action: action, toAmount: toAmount)
+        inputs.append(.action(id: UUID(), actor, type, amount))
         rebuild()
+    }
+
+    /// Spec 2026-07-11: a call/bet/raise that commits the actor's last chip is
+    /// recorded as `.allIn` so the existing run-out logic (`ReplayEngine`'s
+    /// `ableToAct().count <= 1` gate) sees the shove immediately — this is THE
+    /// fix for the reported bug where a shove entered via Raise never
+    /// triggered the board-only run-out. Conversion only happens when the
+    /// actor's stack is known: hero always (`heroStackBefore`); a villain only
+    /// when `approxStack > 0` (0 means "unset" and must never be guessed into
+    /// a phantom all-in, so their raw entry passes through unchanged).
+    private func convertingToAllInIfNeeded(actor: Participant, action: HandActionType,
+                                           toAmount: Int) -> (HandActionType, Int) {
+        guard action == .call || action == .bet || action == .raise else { return (action, toAmount) }
+        let base: Int
+        switch actor {
+        case .hero:
+            base = heroStackBefore
+        case .villain(let id):
+            guard let villain = villains.first(where: { $0.id == id }), villain.approxStack > 0 else {
+                return (action, toAmount)
+            }
+            base = villain.approxStack
+        }
+        let totalCommitted = committedByStreet.values.reduce(0) { $0 + ($1[actor] ?? 0) }
+        let remaining = base - totalCommitted
+        guard remaining > 0 else { return (action, toAmount) }
+        let committedThisStreet = committedByStreet[currentStreet]?[actor] ?? 0
+        let chipsIn = (action == .call ? currentBet : toAmount) - committedThisStreet
+        guard chipsIn >= remaining else { return (action, toAmount) }
+        return (.allIn, committedThisStreet + remaining)
     }
 
     /// Adds a board card. Rejects duplicates and cards added when none are needed.
