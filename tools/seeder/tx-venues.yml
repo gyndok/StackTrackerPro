@@ -1,0 +1,45 @@
+# tx-venues.yml — PokerAtlas Texas venue allowlist.
+#
+# Consumed by both `pokeratlas-fetch.py` (filters the PokerAtlas listing to
+# just these rooms) and `seeder import-scrape` (`--venues tx-venues.yml`,
+# via the same grep-grade YAML loader `import-scrape.swift` already has for
+# `override_per_event_url`-style files). Only venues listed here are ever
+# fetched or scraped — everything else on a PokerAtlas listing page is
+# ignored, on purpose (see the ToS posture note in README.md: low-volume,
+# allowlisted, rate-limited).
+#
+# To add a venue:
+#   1. Find one of its events on
+#      https://www.pokeratlas.com/poker-tournaments/texas/upcoming
+#   2. Copy the slug out of the tournament URL, e.g.
+#      .../poker-tournament/<slug>-<price>-<time>-...-poker-tournament-<uuid>?topid=...
+#      the slug is everything up to the price/time token.
+#   3. Add a block below with that slug, the room's display name AS IT
+#      APPEARS in bold on the listing page (matched case-insensitively —
+#      get this exact or the room's events will silently never match),
+#      city, state, and IANA timezone.
+#   4. `address` is optional but recommended — it flows through to
+#      `import-scrape`'s venue file for city/state parsing.
+
+venues:
+  - slug: champions-club-houston
+    display_name: Champions Club
+    city: Houston
+    state: TX
+    timezone: America/Chicago
+    address: "6440 W Sam Houston Pkwy S, Houston, TX 77072"
+  - slug: tch-social-austin
+    display_name: TCH Social Austin
+    city: Austin
+    state: TX
+    timezone: America/Chicago
+  - slug: lodge-card-club-austin-round-rock
+    display_name: Lodge Card Club Austin
+    city: Round Rock
+    state: TX
+    timezone: America/Chicago
+  - slug: texas-card-house-dallas
+    display_name: Texas Card House Dallas
+    city: Dallas
+    state: TX
+    timezone: America/Chicago

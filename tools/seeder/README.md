@@ -44,6 +44,15 @@ logic the app ships with.
    users is unchanged. Never commit `eckey.pem` — it's already gitignored
    (`tools/seeder/*.pem`).
 
+3. If you'll be running `pokeratlas-fetch.py` (the Texas source, below),
+   install and authenticate the Firecrawl CLI once:
+   ```
+   npm install -g firecrawl-cli
+   firecrawl login
+   ```
+   Everything else that tool needs it does through this CLI — no separate
+   API key handling in this repo.
+
    **Fallback (old path):** pass `--via-cktool` to `publish` to use the
    original `xcrun cktool create-record` flow with a short-lived
    **CloudKit user token** (management tokens cannot write data):
@@ -218,6 +227,77 @@ tools/seeder/import-scrape .out/tournaments.json --venues .out/venues.json \
 
 Review the emitted drafts (venue names/cities drive geocoding — the scraper's
 `display_name` is used as-is), then `publish` them like any other draft.
+
+## PokerAtlas Texas: year-round automated source
+
+The VegasPokerGuide scraper only covers Las Vegas. `pokeratlas-fetch.py`
+turns PokerAtlas's public Texas tournament listings into that same
+`tournaments.json` shape, so the rest of the pipeline (`import-scrape` →
+`publish`) doesn't know the difference:
+
+```
+tools/seeder/pokeratlas-fetch.py --area texas --venues tx-venues.yml \
+    --from 2026-07-20 --to 2026-07-26 --out .out/pokeratlas-tournaments.json
+```
+
+- `tx-venues.yml` is the allowlist — **only these rooms are ever fetched**;
+  everything else on the PokerAtlas listing page is ignored. It maps a
+  PokerAtlas venue slug to a display name (matched case-insensitively
+  against the bold venue text on the listing page), city, state, and IANA
+  timezone. See the comment header in the file for how to add a room.
+- The listing page (`/poker-tournaments/<area>/upcoming`) is scraped fresh
+  every run; each qualifying event's own detail page is then scraped
+  **sequentially, at most one request per second**, and cached indefinitely
+  by URL under `tools/seeder/.pagecache/` — a re-run days later only
+  re-fetches the listing, not pages it's already seen.
+- Blind structures come back **inline** (`structure_levels`, same shape as
+  `blindLevels`) straight from each detail page's structure table — no PDF
+  download, and `import-scrape` prefers this inline structure over any
+  `structure_pdf_url` when both are present.
+- The buy-in/rake split comes from the detail page's Buy-In tab (Entry Fee /
+  Total Buy-In) when PokerAtlas renders it; when it doesn't, `buy_in_usd`
+  falls back to the title's total and `rake_usd` is left `null` (metadata-
+  only on that split — `import-scrape` still emits the draft).
+- `--fixtures <dir>` reads canned listing/detail markdown instead of calling
+  `firecrawl` — that's what `test.sh` uses; there's no live network in tests.
+- A page that yields nothing usable is a **loud failure**: it prints to
+  stderr naming the page and the process exits nonzero. Default behavior
+  stops at the first such page; `--keep-going` collects every failure,
+  finishes the run with whatever did parse, prints all of them, and still
+  exits nonzero if any occurred.
+
+**ToS posture:** PokerAtlas's terms likely prohibit automated collection.
+This fetcher is deliberately low-volume — allowlisted venues only,
+date-windowed, rate-limited to ≤1 request/second, meant for a weekly
+cadence — and you run it under your own judgment, not as a fire-and-forget
+system. It is not "set and forget": PokerAtlas's page markup can change at
+any time, and when it does, `pokeratlas-fetch.py`'s parsing will need
+maintenance. Failures are designed to be loud (nonzero exit, the specific
+page named) rather than silently returning nothing.
+
+**Maintenance note:** if `pokeratlas-fetch.py` starts emitting zero events
+or erroring on pages that look fine in a browser, PokerAtlas's markup has
+probably drifted. Re-capture fresh fixtures with
+`firecrawl scrape <url> markdown -o tools/seeder/tests/fixtures/pokeratlas/<file>.md`
+and diff against the parsing regexes in `pokeratlas-fetch.py` before assuming
+anything else is wrong — see
+`tools/seeder/tests/fixtures/pokeratlas/README.md` for the current fixtures'
+provenance.
+
+## The three pipeline workflows
+
+Straight from the design spec
+(`docs/superpowers/specs/2026-07-17-seeder-bulk-upgrades-design.md`):
+
+- **Weekly bulk:** run the scraper → `seeder import-scrape .out/tournaments.json --venues .out/venues.json --from 2026-07-20 --to 2026-07-26 --with-structures` → skim the drafts → `seeder publish drafts/*.json --env production --execute --skip-existing`. No token, no Claude.
+- **Recurring single event:** `seeder clone champions-monster-2026-07-18.json --date 2026-07-25` → publish.
+- **Year-round Texas weekly:** `pokeratlas-fetch.py --area texas --venues tx-venues.yml --from … --to …` → `seeder import-scrape .out/pokeratlas-tournaments.json …` → publish. Same pipeline, structures arrive inline (no PDFs).
+
+For the recurring workflow specifically: seed no more than **~4 weeks out**.
+Structures and guarantees change without notice at a running club, so a
+clone (or a PokerAtlas pull) further out than that risks going stale before
+anyone ever sees it. Re-run the recurrence/fetch closer to the date instead
+of trying to seed a whole season at once.
 
 ## Verifying
 

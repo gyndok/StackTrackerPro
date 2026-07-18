@@ -123,4 +123,44 @@ echo "$warn_output" | grep -q "DRY RUN — would POST to CloudKit Web Services" 
 echo "$warn_output" | grep -qF "published 1, skipped 0, failed 0 (dry run)" \
     || { echo "FAIL: expected summary line 'published 1, skipped 0, failed 0 (dry run)'"; exit 1; }
 
+echo "--- pokeratlas-fetch: fixture-driven fetch (no network) ---"
+patmp="$(mktemp -d)"
+trap 'rm -rf "$tmpdir" "$clonetmp" "$recurtmp" "$pubtmp" "$patmp"' EXIT
+
+./pokeratlas-fetch.py --fixtures tests/fixtures/pokeratlas --venues tx-venues.yml \
+    --from 2026-07-17 --to 2026-07-18 --out "$patmp/pokeratlas-tournaments.json"
+
+python3 -c "
+import json
+d = json.load(open('$patmp/pokeratlas-tournaments.json'))
+t = d['tournaments']
+assert len(t) == 2, f'expected 2 events (Palace Poker unallowlisted + Lodge Austin out-of-window filtered out), got {len(t)}'
+by_id = {e['id']: e for e in t}
+monster = by_id['champions-club-houston-2026-07-18-278824']
+flashback = by_id['champions-club-houston-2026-07-17-287721']
+assert len(monster['structure_levels']) >= 8, f'expected >=8 structure_levels on the monster-stack event, got {len(monster[\"structure_levels\"])}'
+assert monster['rake_usd'] is None, f'expected rake_usd null for the no-Buy-In-tab detail fixture (detail-nobuyintab.md), got {monster[\"rake_usd\"]!r}'
+assert flashback['rake_usd'] == 20.0, f'expected rake_usd 20.0 (Total Buy-In 90 - Entry Fee 70) for the with-Buy-In fixture, got {flashback[\"rake_usd\"]!r}'
+"
+
+echo "--- pokeratlas-fetch output -> import-scrape (closing the loop: components 5 -> 2) ---"
+padraft="$(mktemp -d)"
+trap 'rm -rf "$tmpdir" "$clonetmp" "$recurtmp" "$pubtmp" "$patmp" "$padraft"' EXIT
+
+pa_scrape_output="$(./seeder import-scrape "$patmp/pokeratlas-tournaments.json" --venues tx-venues.yml \
+    --from 2026-07-01 --to 2026-07-31 --out "$padraft")"
+echo "$pa_scrape_output"
+echo "$pa_scrape_output" | grep -qF "emitted 2, skipped-day2 0, structures-attached 2, structure-warnings 0, venue-warnings 0" \
+    || { echo "FAIL: expected PokerAtlas import-scrape summary line"; exit 1; }
+
+python3 -c "
+import json, glob
+files = sorted(glob.glob('$padraft/*.json'))
+assert len(files) == 2, f'expected 2 drafts, got {len(files)}: {files}'
+for f in files:
+    d = json.load(open(f))
+    assert len(d['blindLevels']) > 0, f'{f} landed with no blindLevels'
+    assert d['timeZone'] == 'America/Chicago', f'{f} expected timeZone America/Chicago (from tx-venues.yml), got {d[\"timeZone\"]!r}'
+"
+
 echo "PASS"

@@ -53,6 +53,10 @@ struct ScrapeVenue: Codable {
     var series_name: String?
     var address: String?
     var override_per_event_url: Bool?
+    /// IANA timezone override (e.g. "America/Chicago" for PokerAtlas Texas
+    /// venues). Takes precedence over `venueTimeZones`/the Vegas-default
+    /// fallback below when present.
+    var timezone: String?
 }
 
 struct ScrapeVenuesFile: Codable {
@@ -89,7 +93,8 @@ func loadVenuesFromYAMLGrep(path: String) throws -> [ScrapeVenue] {
             display_name: current["display_name"] ?? slug,
             series_name: current["series_name"],
             address: current["address"],
-            override_per_event_url: current["override_per_event_url"] == "true"
+            override_per_event_url: current["override_per_event_url"] == "true",
+            timezone: current["timezone"]
         ))
         current = [:]
     }
@@ -168,12 +173,14 @@ func mappedStartTimeLocal(fromStartAtPT startAtPT: String) -> String? {
     return String(after.prefix(5))
 }
 
-/// Per-venue IANA timezone map; every venue this scraper currently covers is
-/// Las Vegas (Pacific), so the default covers all of them today. Extend when
-/// a non-Vegas source (e.g. PokerAtlas Texas) starts flowing through here.
+/// Per-venue IANA timezone map for sources that don't carry their own
+/// per-venue `timezone` (every VegasPokerGuide venue is Las Vegas/Pacific,
+/// so the default covers those). A non-Vegas source's venues file (e.g.
+/// PokerAtlas Texas's tx-venues.yml, component 5) carries its own
+/// `timezone` field per venue, which wins when present.
 let venueTimeZones: [String: String] = [:]
-func mappedTimeZone(forVenueSlug slug: String) -> String {
-    venueTimeZones[slug] ?? "America/Los_Angeles"
+func mappedTimeZone(forVenueSlug slug: String, venueTimeZone: String?) -> String {
+    venueTimeZone ?? venueTimeZones[slug] ?? "America/Los_Angeles"
 }
 
 func mappedBuyInAndFee(_ event: ScrapeEvent) -> (buyIn: Int, entryFee: Int) {
@@ -213,7 +220,7 @@ func makeDraft(event: ScrapeEvent, venue: ScrapeVenue?) -> EventDraft {
         startingBB: 0,
         dedupSuffix: mappedDedupSuffix(fromID: event.id),
         startTimeLocal: mappedStartTimeLocal(fromStartAtPT: event.start_at_pt),
-        timeZone: mappedTimeZone(forVenueSlug: event.venue),
+        timeZone: mappedTimeZone(forVenueSlug: event.venue, venueTimeZone: venue?.timezone),
         blindLevels: []
     )
 }
