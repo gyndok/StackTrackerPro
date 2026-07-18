@@ -144,3 +144,5 @@ Key loading: `P256.Signing.PrivateKey(pemRepresentation:)` from `~/.config/stack
 - Spec coverage: C1→T1, C2→T2, C3→T3(clone), C4→T3(publish), C5→T4, acceptance→T5; structure_levels-beats-PDF rule in T2 step 2; empty-structure reconciliation surfaced explicitly (T3, spec-consistent).
 - Placeholders: signing message format, WS body shapes, fixture inventories, and filename rules all concrete; the two implementation-time lookups (exact venue slug, PEM conversion note) are named as lookups with where-to-look, not TBDs.
 - Type consistency: `S2SKey`, `wsQueryByDedupKey(env:dedupKey:key:)`, `runImportScrape(args:)` used identically across tasks; LevelDraft field names reused for `structure_levels`.
+
+> **STATUS: EXECUTED 2026-07-18** (commits 75a743e..cdd5e10; test.sh green all sections; final whole-branch review READY; live acceptance complete per Task 5 — see spec STATUS for details).
