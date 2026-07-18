@@ -269,12 +269,22 @@ func publishOne(
         return .skipped
     }
 
-    print("Geocoding \(draft.venueName), \(draft.venueCity), \(draft.venueState)…")
-    guard let location = await geocode(name: draft.venueName, city: draft.venueCity, state: draft.venueState) else {
-        print("SKIP \(file): could not geocode venue")
-        return .skipped
+    // Geocoding needs the network; dry runs must stay fully offline (the
+    // test harness depends on it), so they use placeholder 0,0 coordinates
+    // in the printed fields file and defer the real lookup to --execute.
+    let location: CLLocation
+    if execute {
+        print("Geocoding \(draft.venueName), \(draft.venueCity), \(draft.venueState)…")
+        guard let found = await geocode(name: draft.venueName, city: draft.venueCity, state: draft.venueState) else {
+            print("SKIP \(file): could not geocode venue")
+            return .skipped
+        }
+        location = found
+        print("  → \(location.coordinate.latitude), \(location.coordinate.longitude)")
+    } else {
+        print("DRY RUN — geocode skipped (runs on --execute)")
+        location = CLLocation(latitude: 0, longitude: 0)
     }
-    print("  → \(location.coordinate.latitude), \(location.coordinate.longitude)")
 
     // Dedup key must match the app exactly: venue|yyyy-MM-dd(UTC)|buyIn|gameType
     var dedupKey = "\(draft.venueName)|\(utcDay.string(from: eventDate))|\(draft.buyIn)|\(draft.gameTypeRaw)"
