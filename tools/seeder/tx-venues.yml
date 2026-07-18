@@ -8,22 +8,45 @@
 # ignored, on purpose (see the ToS posture note in README.md: low-volume,
 # allowlisted, rate-limited).
 #
+# FIELD MEANINGS — read before editing:
+#   display_name  Becomes the draft's venueName, which is baked into every
+#                 published record's deduplicationKey
+#                 (`venueName|date|buyIn|gameType`). CHANGING A
+#                 display_name FORKS THE DEDUP SPACE: re-publishing the
+#                 same real-world event under a new display_name creates a
+#                 duplicate listing instead of collapsing with the old one.
+#                 Keep it byte-identical to what was previously published
+#                 for that venue (e.g. Champions Club has always been
+#                 published as "Champions Club Texas").
+#   listing_name  What PokerAtlas prints in bold on the listing page, when
+#                 it differs from display_name. pokeratlas-fetch.py matches
+#                 rows against listing_name (or display_name) case-
+#                 insensitively — get this exact or the room's events will
+#                 silently never match.
+#   city/state    Used directly by import-scrape for venueCity/venueState
+#                 (address parsing is only a fallback). Keep them on every
+#                 venue.
+#   timezone      IANA zone for start times (all Texas rooms:
+#                 America/Chicago).
+#   address       Optional, informational.
+#
 # To add a venue:
 #   1. Find one of its events on
 #      https://www.pokeratlas.com/poker-tournaments/texas/upcoming
 #   2. Copy the slug out of the tournament URL, e.g.
 #      .../poker-tournament/<slug>-<price>-<time>-...-poker-tournament-<uuid>?topid=...
 #      the slug is everything up to the price/time token.
-#   3. Add a block below with that slug, the room's display name AS IT
-#      APPEARS in bold on the listing page (matched case-insensitively —
-#      get this exact or the room's events will silently never match),
-#      city, state, and IANA timezone.
-#   4. `address` is optional but recommended — it flows through to
-#      `import-scrape`'s venue file for city/state parsing.
+#   3. Add a block below with that slug, display_name (see the dedup
+#      warning above), listing_name if PokerAtlas shows something
+#      different, city, state, and timezone.
 
 venues:
   - slug: champions-club-houston
-    display_name: Champions Club
+    # display_name is dedup-critical: every previously published Champions
+    # record's dedup key starts with "Champions Club Texas" — do not change.
+    display_name: Champions Club Texas
+    # PokerAtlas's listing shows just "Champions Club".
+    listing_name: Champions Club
     city: Houston
     state: TX
     timezone: America/Chicago

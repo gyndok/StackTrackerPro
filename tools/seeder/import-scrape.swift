@@ -57,6 +57,11 @@ struct ScrapeVenue: Codable {
     /// venues). Takes precedence over `venueTimeZones`/the Vegas-default
     /// fallback below when present.
     var timezone: String?
+    /// Explicit city/state (tx-venues.yml carries these directly). When
+    /// present they win over address parsing; the address's last two comma
+    /// segments remain the fallback for venues files without them.
+    var city: String?
+    var state: String?
 }
 
 struct ScrapeVenuesFile: Codable {
@@ -94,7 +99,9 @@ func loadVenuesFromYAMLGrep(path: String) throws -> [ScrapeVenue] {
             series_name: current["series_name"],
             address: current["address"],
             override_per_event_url: current["override_per_event_url"] == "true",
-            timezone: current["timezone"]
+            timezone: current["timezone"],
+            city: current["city"],
+            state: current["state"]
         ))
         current = [:]
     }
@@ -197,7 +204,11 @@ func outputFilename(forEvent event: ScrapeEvent) -> String {
 }
 
 func makeDraft(event: ScrapeEvent, venue: ScrapeVenue?) -> EventDraft {
-    let (city, state) = cityState(fromAddress: venue?.address)
+    // Explicit city/state from the venues file win; address parsing is the
+    // fallback for files (like the scraper's venues.json) without them.
+    let parsed = cityState(fromAddress: venue?.address)
+    let city = venue?.city.flatMap { $0.isEmpty ? nil : $0 } ?? parsed.city
+    let state = venue?.state.flatMap { $0.isEmpty ? nil : $0 } ?? parsed.state
     var name = event.event_name
     if let series = venue?.series_name, !series.isEmpty, !event.event_name.contains(series) {
         name = "\(series) — \(event.event_name)"
@@ -350,7 +361,7 @@ func runImportScrape(args: [String]) throws {
             venueWarnings += 1
         } else if draft.venueCity.isEmpty || draft.venueState.isEmpty {
             let address = venue?.address ?? "(missing)"
-            print("WARNING: \(event.id) — venue '\(event.venue)' address '\(address)' does not parse into city/state (need at least two comma-separated segments); venueCity/venueState are empty")
+            print("WARNING: \(event.id) — venue '\(event.venue)' address '\(address)' does not parse into city/state (need at least two comma-separated segments) and the venues file carries no explicit city/state fields; venueCity/venueState are empty")
             venueWarnings += 1
         }
 

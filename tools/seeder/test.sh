@@ -134,13 +134,20 @@ python3 -c "
 import json
 d = json.load(open('$patmp/pokeratlas-tournaments.json'))
 t = d['tournaments']
-assert len(t) == 2, f'expected 2 events (Palace Poker unallowlisted + Lodge Austin out-of-window filtered out), got {len(t)}'
+assert len(t) == 3, f'expected 3 events (Palace Poker unallowlisted + Lodge Austin out-of-window filtered out), got {len(t)}'
 by_id = {e['id']: e for e in t}
 monster = by_id['champions-club-houston-2026-07-18-278824']
 flashback = by_id['champions-club-houston-2026-07-17-287721']
+trap = by_id['tch-social-austin-2026-07-18-283101']
 assert len(monster['structure_levels']) >= 8, f'expected >=8 structure_levels on the monster-stack event, got {len(monster[\"structure_levels\"])}'
 assert monster['rake_usd'] is None, f'expected rake_usd null for the no-Buy-In-tab detail fixture (detail-nobuyintab.md), got {monster[\"rake_usd\"]!r}'
 assert flashback['rake_usd'] == 20.0, f'expected rake_usd 20.0 (Total Buy-In 90 - Entry Fee 70) for the with-Buy-In fixture, got {flashback[\"rake_usd\"]!r}'
+# The \$2K-GTD trap: title contains 'SS_Side \$2K GTD ... \$60 NLH' — the
+# guarantee must never be read as the buy-in; \$60 comes from the URL slug.
+assert trap['buy_in_usd'] == 60.0, f'expected buy_in_usd 60.0 from the slug (NOT 2.0 from the \$2K GTD guarantee), got {trap[\"buy_in_usd\"]!r}'
+# Markdown escapes stripped from the emitted event name.
+assert 'SS_Side' in trap['event_name'], f'expected unescaped SS_Side in event_name, got {trap[\"event_name\"]!r}'
+assert chr(92) not in trap['event_name'], f'event_name still carries a backslash escape: {trap[\"event_name\"]!r}'
 "
 
 echo "--- pokeratlas-fetch output -> import-scrape (closing the loop: components 5 -> 2) ---"
@@ -150,17 +157,28 @@ trap 'rm -rf "$tmpdir" "$clonetmp" "$recurtmp" "$pubtmp" "$patmp" "$padraft"' EX
 pa_scrape_output="$(./seeder import-scrape "$patmp/pokeratlas-tournaments.json" --venues tx-venues.yml \
     --from 2026-07-01 --to 2026-07-31 --out "$padraft")"
 echo "$pa_scrape_output"
-echo "$pa_scrape_output" | grep -qF "emitted 2, skipped-day2 0, structures-attached 2, structure-warnings 0, venue-warnings 0" \
-    || { echo "FAIL: expected PokerAtlas import-scrape summary line"; exit 1; }
+echo "$pa_scrape_output" | grep -qF "emitted 3, skipped-day2 0, structures-attached 3, structure-warnings 0, venue-warnings 0" \
+    || { echo "FAIL: expected PokerAtlas import-scrape summary line (incl. venue-warnings 0 — explicit city/state must suppress the address warning)"; exit 1; }
 
 python3 -c "
 import json, glob
 files = sorted(glob.glob('$padraft/*.json'))
-assert len(files) == 2, f'expected 2 drafts, got {len(files)}: {files}'
+assert len(files) == 3, f'expected 3 drafts, got {len(files)}: {files}'
 for f in files:
     d = json.load(open(f))
     assert len(d['blindLevels']) > 0, f'{f} landed with no blindLevels'
     assert d['timeZone'] == 'America/Chicago', f'{f} expected timeZone America/Chicago (from tx-venues.yml), got {d[\"timeZone\"]!r}'
+    assert d['venueCity'] and d['venueState'], f'{f} missing city/state (explicit tx-venues.yml city/state must be used)'
+champions = json.load(open('$padraft/champions-club-houston-2026-07-18-278824.json'))
+# Dedup continuity: every previously published Champions record's dedup key
+# uses this exact venueName — display_name changes fork the dedup space.
+assert champions['venueName'] == 'Champions Club Texas', f'expected venueName Champions Club Texas, got {champions[\"venueName\"]!r}'
+assert champions['venueCity'] == 'Houston' and champions['venueState'] == 'TX'
+tch = json.load(open('$padraft/tch-social-austin-2026-07-18-283101.json'))
+# TCH Austin has NO address in tx-venues.yml — city/state must come from
+# the explicit fields (the explicit-city path).
+assert tch['venueCity'] == 'Austin' and tch['venueState'] == 'TX', f'expected explicit Austin/TX, got {tch[\"venueCity\"]!r}/{tch[\"venueState\"]!r}'
+assert tch['buyIn'] == 60 and tch['entryFee'] == 0, f'expected 60/0 for the trap event, got {tch[\"buyIn\"]}/{tch[\"entryFee\"]}'
 "
 
 echo "--- pokeratlas-fetch: inverted --from/--to fails loud before fetching ---"

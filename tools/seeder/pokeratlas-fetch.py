@@ -104,6 +104,32 @@ DATE_ANNOT_RE = re.compile(r"^\s*\((\d{1,2})/(\d{1,2})\)\s*$", re.MULTILINE)
 
 _GAME_CODE_MAP = {"PLO5": "PLO", "PL5CD": "PLO", "PL5COM": "PLO"}
 
+# Buy-in price token inside a tournament URL slug: the number sandwiched
+# between dashes right before either the start-time token (`-400-1100am-`,
+# `-140-500pm-`) or the game token (`-300-nl-holdem`, `-40-pl-omaha`,
+# `-40-ml-m-`). Guarantees in slugs carry a k/m suffix (`-2k-gtd-`,
+# `-100k-gtd-`) so pure-digit matching never picks them up.
+SLUG_PRICE_RE = re.compile(r"-(\d+)-(?:\d{3,4}(?:am|pm)\b|(?:nl|pl|ml)-)", re.IGNORECASE)
+
+# Escaped markdown punctuation firecrawl emits inside titles/names
+# (SS\_Side, \#, \$, \*, ...): `\X` -> `X`.
+_MD_ESCAPE_RE = re.compile(r"\\(.)")
+
+
+def unescape_md(text):
+    if text is None:
+        return None
+    return _MD_ESCAPE_RE.sub(r"\1", text)
+
+
+def slug_price(href):
+    """Buy-in dollars from the URL slug, or None. The slug is the most
+    reliable price source on PokerAtlas — titles routinely contain
+    guarantee amounts ("$2K GTD") that look like prices."""
+    path = href.split("?", 1)[0]
+    m = SLUG_PRICE_RE.search(path)
+    return float(m.group(1)) if m else None
+
 
 def normalize_game_code(raw):
     code = raw.strip().upper()
@@ -195,7 +221,7 @@ def parse_listing_row(chunk, from_year):
         "time_hhmm": time_hhmm,
         "price": price,
         "game": game,
-        "description": description,
+        "description": unescape_md(description),
     }
 
 
@@ -208,7 +234,24 @@ DATE_LINE_RE = re.compile(
     r"^([A-Za-z]+),\s+([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\d{4})\s*$", re.MULTILINE
 )
 DETAIL_TIME_RE = re.compile(r"^(\d{1,2}:\d{2}\s*(?:am|pm))\s*$", re.IGNORECASE | re.MULTILINE)
-PRICE_RE = re.compile(r"\$([\d,]+)")
+# Dollar tokens in a title, with a guarantee-detector: `$2K` / `$1M`
+# (magnitude suffix) or `$N GTD` are guarantees, never buy-ins.
+PRICE_TOKEN_RE = re.compile(r"\$([\d,]+)([KkMm]?)")
+GTD_AFTER_RE = re.compile(r"^\s*gtd\b", re.IGNORECASE)
+
+
+def first_valid_price(text):
+    """First $N in `text` that is plausibly a buy-in: rejects $N followed
+    by a K/M magnitude suffix or (case-insensitively) the word GTD."""
+    for m in PRICE_TOKEN_RE.finditer(text):
+        if m.group(2):
+            continue  # $2K / $1.5M — a guarantee
+        if GTD_AFTER_RE.match(text[m.end():]):
+            continue  # "$500 GTD" — also a guarantee
+        return float(m.group(1).replace(",", ""))
+    return None
+
+
 # Any 5-column markdown table row — candidate structure rows. Header,
 # separator, and blank spacer rows are filtered out in parse_structure_table;
 # what remains either parses as a level/break or gets a loud WARNING.
@@ -312,10 +355,10 @@ def parse_detail_page(text, source="<unknown>"):
         else:
             prefix, rest = title, title
         game = detect_game(prefix) or detect_game(title)
-        price_m = PRICE_RE.search(prefix) or PRICE_RE.search(title)
-        if price_m:
-            buy_in_from_title = float(price_m.group(1).replace(",", ""))
-        event_name = re.sub(r"^\(\$[\d,.]+\)\s*", "", rest).strip()
+        buy_in_from_title = first_valid_price(prefix)
+        if buy_in_from_title is None:
+            buy_in_from_title = first_valid_price(title)
+        event_name = unescape_md(re.sub(r"^\(\$[\d,.]+\)\s*", "", rest).strip())
 
     event_date = None
     date_m = DATE_LINE_RE.search(text)
@@ -434,7 +477,16 @@ def main(argv=None):
     except OSError as exc:
         print(f"ERROR: cannot read venues file {args.venues}: {exc}", file=sys.stderr)
         sys.exit(1)
-    allow_by_name = {v["display_name"].strip().lower(): v for v in venues.values() if v.get("display_name")}
+    # Listing rows are matched on the room's bold text on the PokerAtlas
+    # page. That's `listing_name` when the venue defines one (used when the
+    # dedup-critical display_name differs from what PokerAtlas shows, e.g.
+    # "Champions Club Texas" vs the listing's "Champions Club"), with
+    # display_name accepted as well.
+    allow_by_name = {}
+    for v in venues.values():
+        for name in (v.get("listing_name"), v.get("display_name")):
+            if name:
+                allow_by_name[name.strip().lower()] = v
 
     if args.fixtures:
         with open(os.path.join(args.fixtures, "listing.md"), encoding="utf-8") as f:
@@ -513,6 +565,20 @@ def main(argv=None):
         game = detail["game"] or row["game"] or "OTHER"
         event_name = detail["event_name"] or row["description"] or "Unknown Event"
 
+        # Buy-in priority: an explicit Buy-In section total (the only source
+        # that also gives us the rake split) beats everything; otherwise the
+        # URL slug's price token beats the title's $N (titles routinely
+        # embed guarantees like "$2K GTD" that masquerade as prices); the
+        # listing row's own $-bullet is the last resort.
+        if detail["rake_usd"] is not None:
+            buy_in_usd = detail["buy_in_usd"]
+        else:
+            buy_in_usd = slug_price(row["href"])
+            if buy_in_usd is None:
+                buy_in_usd = detail["buy_in_usd"]
+            if buy_in_usd is None:
+                buy_in_usd = row["price"]
+
         events.append({
             "id": f"{venue['slug']}-{event_date}-{row['topid']}",
             "venue": venue["slug"],
@@ -521,7 +587,7 @@ def main(argv=None):
             "game": game,
             "game_category": game.lower(),
             "event_name": event_name,
-            "buy_in_usd": detail["buy_in_usd"] if detail["buy_in_usd"] is not None else row["price"],
+            "buy_in_usd": buy_in_usd,
             "rake_usd": detail["rake_usd"],
             "re_entry": {"type": "unknown"},
             "is_day2": False,

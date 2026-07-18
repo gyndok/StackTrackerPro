@@ -13,6 +13,9 @@ intentional test rigging (noted inline) rather than page drift:
   - the Lodge Card Club Austin row's topid date is moved out to 2026-08-15
     so it's exercised as an allowlisted-but-out-of-window row.
 Palace Poker is real, unmodified, and simply isn't in tx-venues.yml.
+The TCH Social Austin "Daily Bankroll Builder" row is the real 2026-07-17
+markup, unmodified — its "(7/18)" date annotation and $2K-GTD-in-title
+detail page (detail-trap-gtd.md) reproduce the live buy-in mis-parse trap.
 -->
 
 ## Upcoming Tournaments
@@ -63,7 +66,33 @@ Palace Poker is real, unmodified, and simply isn't in tx-venues.yml.
 
 ($90) FLASHBACK FRIDAYS 90S AT 9
 
-04. [![Palace Poker](https://pokeratlas-images-production.s3.amazonaws.com/venues/images/K9i5FTmCPq-_n4NexqtGqA)\\
+04. [![The Summer Series...](https://pokeratlas-images-production.s3.amazonaws.com/venues/images/a9TSRnBl1Nz9K2jH-U1RlA)\\
+    \\
+    **TCH Social Austin**](https://www.pokeratlas.com/poker-tournament/2026-the-summer-series-at-tch-austin-26-60-nl-holdem-ss_side-2k-gtd-daily-bankroll-builder-60-nlh-tch-social-austin-283101?topid=283101)
+
+
+
+    View Live Info
+    \+ Online Registration
+
+
+
+    - 12:00pm
+
+
+       (7/18)
+
+    - $60
+    - NLH
+
+    - 20,000 chips
+    - 15 min levels
+    - $2K Gtd
+    - [Register](https://www.pokeratlas.com/poker-tournament/2026-the-summer-series-at-tch-austin-26-60-nl-holdem-ss_side-2k-gtd-daily-bankroll-builder-60-nlh-tch-social-austin-283101/register?topid=283101)
+
+The Summer Series At TCH Austin 26' - Side Event - SS\_Side $2K GTD - Daily Bankroll Builder - $60 NLH
+
+05. [![Palace Poker](https://pokeratlas-images-production.s3.amazonaws.com/venues/images/K9i5FTmCPq-_n4NexqtGqA)\\
     \\
     **Palace Poker**](https://www.pokeratlas.com/poker-tournament/palace-poker-grand-prairie-150-600pm-nl-holdem-friday-night-re-entry-poker-tournament-6c2838f4-4eac-453e-bb05-16a08bfb7053?topid=284420-2026-07-17)
 
