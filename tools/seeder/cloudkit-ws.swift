@@ -173,6 +173,15 @@ private func wsQueryRecords(env: String, body: [String: Any], key: S2SKey) async
     return (json["records"] as? [[String: Any]]) ?? []
 }
 
+/// True only when a CloudKit Web Services error indicates the field genuinely
+/// isn't queryable/sortable/indexed — as opposed to some other malformed
+/// query, which should rethrow loudly rather than silently degrade to a
+/// full unfiltered scan.
+private func isFieldNotQueryableError(_ err: Err) -> Bool {
+    let description = err.description.lowercased()
+    return description.contains("queryable") || description.contains("not marked")
+}
+
 /// True when a `SharedTournament` with this exact `deduplicationKey` is
 /// already visible in `env`. Tries a server-side filtered query first; if
 /// the field isn't indexed as queryable, falls back to an unfiltered scan
@@ -195,7 +204,7 @@ func wsQueryByDedupKey(env: String, dedupKey: String, key: S2SKey) async throws 
     do {
         let records = try await wsQueryRecords(env: env, body: filteredBody, key: key)
         return !records.isEmpty
-    } catch let err as Err where err.description.contains("BAD_REQUEST") || err.description.lowercased().contains("not queryable") {
+    } catch let err as Err where isFieldNotQueryableError(err) {
         print("NOTICE: 'deduplicationKey' isn't indexed as queryable in \(env) — falling back to an unfiltered scan. Add a QUERYABLE index for deduplicationKey in CloudKit Console for faster --skip-existing checks.")
         let fallbackBody: [String: Any] = [
             "query": ["recordType": recordType] as [String: Any],

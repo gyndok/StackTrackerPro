@@ -216,7 +216,170 @@ func geocode(name: String, city: String, state: String) async -> CLLocation? {
     return CLLocation(latitude: coord.latitude, longitude: coord.longitude)
 }
 
-func runPublish(files: [String], environment: String, execute: Bool, viaCktool: Bool) async throws {
+enum PublishOutcome { case published, skipped }
+
+/// Publishes (or dry-runs) a single draft file. Returns whether it was
+/// published/dry-run-printed or skipped by validation/dedup; throws (never
+/// prints and swallows) on any hard failure so the caller can count it and
+/// report it loudly.
+func publishOne(
+    file: String, environment: String, execute: Bool, viaCktool: Bool,
+    skipExisting: Bool, allowEmptyStructure: Bool, utcDay: DateFormatter
+) async throws -> PublishOutcome {
+    let draft = try JSONDecoder().decode(EventDraft.self, from: Data(contentsOf: URL(fileURLWithPath: file)))
+
+    // Validation
+    var problems: [String] = []
+    for (label, value) in [("tournamentName", draft.tournamentName), ("venueName", draft.venueName),
+                           ("venueCity", draft.venueCity)] where value.isEmpty || value == "FILL ME IN" {
+        problems.append("\(label) not filled in")
+    }
+    var warnings: [String] = []
+    if draft.blindLevels.isEmpty {
+        if allowEmptyStructure {
+            warnings.append("no blind levels — publishing a metadata-only listing")
+        } else {
+            problems.append("no blind levels")
+        }
+    }
+    guard problems.isEmpty else {
+        print("SKIP \(file): \(problems.joined(separator: "; "))")
+        return .skipped
+    }
+    for warning in warnings {
+        print("WARNING \(file): \(warning)")
+    }
+
+    // Event date at the venue-local start time (the app windows the
+    // browser by the viewer's local day and displays this time).
+    let zone = TimeZone(identifier: draft.timeZone ?? "America/Los_Angeles") ?? TimeZone(identifier: "UTC")!
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    let dayParts = draft.eventDate.split(separator: "-").compactMap { Int($0) }
+    let timeParts = (draft.startTimeLocal ?? "12:00").split(separator: ":").compactMap { Int($0) }
+    guard dayParts.count == 3, timeParts.count == 2 else {
+        print("SKIP \(file): eventDate must be yyyy-MM-dd and startTimeLocal HH:mm")
+        return .skipped
+    }
+    var components = DateComponents()
+    components.year = dayParts[0]; components.month = dayParts[1]; components.day = dayParts[2]
+    components.hour = timeParts[0]; components.minute = timeParts[1]
+    guard let eventDate = calendar.date(from: components) else {
+        print("SKIP \(file): could not compose event date")
+        return .skipped
+    }
+
+    print("Geocoding \(draft.venueName), \(draft.venueCity), \(draft.venueState)…")
+    guard let location = await geocode(name: draft.venueName, city: draft.venueCity, state: draft.venueState) else {
+        print("SKIP \(file): could not geocode venue")
+        return .skipped
+    }
+    print("  → \(location.coordinate.latitude), \(location.coordinate.longitude)")
+
+    // Dedup key must match the app exactly: venue|yyyy-MM-dd(UTC)|buyIn|gameType
+    var dedupKey = "\(draft.venueName)|\(utcDay.string(from: eventDate))|\(draft.buyIn)|\(draft.gameTypeRaw)"
+    if let suffix = draft.dedupSuffix, !suffix.isEmpty { dedupKey += "|\(suffix)" }
+
+    // --skip-existing only works on the CloudKit Web Services path (the
+    // cktool fallback prints one global notice up front and is a no-op
+    // here — see runPublish).
+    var s2sKey: S2SKey?
+    if !viaCktool && execute {
+        s2sKey = try loadS2SKey()
+    }
+    if skipExisting && !viaCktool {
+        if execute, let key = s2sKey {
+            if try await wsQueryByDedupKey(env: environment, dedupKey: dedupKey, key: key) {
+                print("SKIP \(file): already published (\(dedupKey))")
+                return .skipped
+            }
+        } else if !execute {
+            print("DRY RUN — --skip-existing would check CloudKit Web Services for dedupKey \(dedupKey)")
+        }
+    }
+
+    let levelsJSON: String = {
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(draft.blindLevels),
+              let string = String(data: data, encoding: .utf8) else { return "[]" }
+        return string
+    }()
+
+    let iso = ISO8601DateFormatter()
+    func f(_ type: String, _ value: Any) -> [String: Any] { ["type": type, "value": value] }
+    let fields: [String: Any] = [
+        "tournamentName": f("stringType", draft.tournamentName),
+        "venueName": f("stringType", draft.venueName),
+        "venueCity": f("stringType", draft.venueCity),
+        "venueState": f("stringType", draft.venueState),
+        "gameTypeRaw": f("stringType", draft.gameTypeRaw),
+        "buyIn": f("int64Type", draft.buyIn),
+        "entryFee": f("int64Type", draft.entryFee),
+        "bountyAmount": f("int64Type", draft.bountyAmount),
+        "guarantee": f("int64Type", draft.guarantee),
+        "startingChips": f("int64Type", draft.startingChips),
+        "startingSB": f("int64Type", draft.startingSB),
+        "startingBB": f("int64Type", draft.startingBB),
+        "reentryPolicy": f("stringType", draft.reentryPolicy),
+        "eventDate": f("timestampType", iso.string(from: eventDate)),
+        "latitude": f("doubleType", location.coordinate.latitude),
+        "longitude": f("doubleType", location.coordinate.longitude),
+        "blindLevelsJSON": f("stringType", levelsJSON),
+        "deduplicationKey": f("stringType", dedupKey),
+        "contributedAt": f("timestampType", iso.string(from: Date()))
+    ]
+    let fieldsData = try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])
+    let fieldsPath = FileManager.default.temporaryDirectory
+        .appendingPathComponent("seeder-fields-\(UUID().uuidString).json")
+    try fieldsData.write(to: fieldsPath)
+
+    if viaCktool {
+        let args = ["cktool", "create-record",
+                    "--team-id", teamID,
+                    "--container-id", containerID,
+                    "--environment", environment,
+                    "--database-type", "public",
+                    "--record-type", recordType,
+                    "--fields-file", fieldsPath.path]
+
+        if execute {
+            print("Publishing to \(environment) via cktool…")
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+            process.arguments = args
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                throw Err("cktool create-record exited \(process.terminationStatus) — is a fresh USER token saved? (xcrun cktool save-token --type user)")
+            }
+            print("PUBLISHED \(draft.tournamentName)")
+        } else {
+            print("DRY RUN — would execute:")
+            print("  xcrun " + args.joined(separator: " "))
+            print("  fields: \(fieldsPath.path)")
+        }
+    } else {
+        // Default path: CloudKit Web Services, signed with the
+        // Server-to-Server key. No user token, no cktool shell-out.
+        let subpath = wsSubpath(env: environment, operation: "modify")
+        if execute, let key = s2sKey {
+            print("Publishing to \(environment) via CloudKit Web Services…")
+            try await wsModifyRecords(env: environment, recordType: recordType, fields: fields, key: key)
+            print("PUBLISHED \(draft.tournamentName)")
+        } else {
+            print("DRY RUN — would POST to CloudKit Web Services:")
+            print("  POST https://api.apple-cloudkit.com\(subpath)")
+            print("  headers: X-Apple-CloudKit-Request-KeyID, X-Apple-CloudKit-Request-ISO8601Date, X-Apple-CloudKit-Request-SignatureV1")
+            print("  fields: \(fieldsPath.path)")
+        }
+    }
+    return .published
+}
+
+func runPublish(
+    files: [String], environment: String, execute: Bool, viaCktool: Bool,
+    skipExisting: Bool, allowEmptyStructure: Bool
+) async throws {
     let utcDay: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
@@ -225,128 +388,152 @@ func runPublish(files: [String], environment: String, execute: Bool, viaCktool: 
         return f
     }()
 
+    if skipExisting && viaCktool {
+        print("NOTICE: --skip-existing requires the CloudKit Web Services path; it has no effect with --via-cktool — the duplicate check is skipped for this run.")
+    }
+
+    var publishedCount = 0
+    var skippedCount = 0
+    var failedCount = 0
+
     for file in files {
-        let draft = try JSONDecoder().decode(EventDraft.self, from: Data(contentsOf: URL(fileURLWithPath: file)))
-
-        // Validation
-        var problems: [String] = []
-        for (label, value) in [("tournamentName", draft.tournamentName), ("venueName", draft.venueName),
-                               ("venueCity", draft.venueCity)] where value.isEmpty || value == "FILL ME IN" {
-            problems.append("\(label) not filled in")
-        }
-        if draft.blindLevels.isEmpty { problems.append("no blind levels") }
-        guard problems.isEmpty else {
-            print("SKIP \(file): \(problems.joined(separator: "; "))")
-            continue
-        }
-
-        // Event date at the venue-local start time (the app windows the
-        // browser by the viewer's local day and displays this time).
-        let zone = TimeZone(identifier: draft.timeZone ?? "America/Los_Angeles") ?? TimeZone(identifier: "UTC")!
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = zone
-        let dayParts = draft.eventDate.split(separator: "-").compactMap { Int($0) }
-        let timeParts = (draft.startTimeLocal ?? "12:00").split(separator: ":").compactMap { Int($0) }
-        guard dayParts.count == 3, timeParts.count == 2 else {
-            print("SKIP \(file): eventDate must be yyyy-MM-dd and startTimeLocal HH:mm")
-            continue
-        }
-        var components = DateComponents()
-        components.year = dayParts[0]; components.month = dayParts[1]; components.day = dayParts[2]
-        components.hour = timeParts[0]; components.minute = timeParts[1]
-        guard let eventDate = calendar.date(from: components) else {
-            print("SKIP \(file): could not compose event date")
-            continue
-        }
-
-        print("Geocoding \(draft.venueName), \(draft.venueCity), \(draft.venueState)…")
-        guard let location = await geocode(name: draft.venueName, city: draft.venueCity, state: draft.venueState) else {
-            print("SKIP \(file): could not geocode venue")
-            continue
-        }
-        print("  → \(location.coordinate.latitude), \(location.coordinate.longitude)")
-
-        // Dedup key must match the app exactly: venue|yyyy-MM-dd(UTC)|buyIn|gameType
-        var dedupKey = "\(draft.venueName)|\(utcDay.string(from: eventDate))|\(draft.buyIn)|\(draft.gameTypeRaw)"
-        if let suffix = draft.dedupSuffix, !suffix.isEmpty { dedupKey += "|\(suffix)" }
-
-        let levelsJSON: String = {
-            let encoder = JSONEncoder()
-            guard let data = try? encoder.encode(draft.blindLevels),
-                  let string = String(data: data, encoding: .utf8) else { return "[]" }
-            return string
-        }()
-
-        let iso = ISO8601DateFormatter()
-        func f(_ type: String, _ value: Any) -> [String: Any] { ["type": type, "value": value] }
-        let fields: [String: Any] = [
-            "tournamentName": f("stringType", draft.tournamentName),
-            "venueName": f("stringType", draft.venueName),
-            "venueCity": f("stringType", draft.venueCity),
-            "venueState": f("stringType", draft.venueState),
-            "gameTypeRaw": f("stringType", draft.gameTypeRaw),
-            "buyIn": f("int64Type", draft.buyIn),
-            "entryFee": f("int64Type", draft.entryFee),
-            "bountyAmount": f("int64Type", draft.bountyAmount),
-            "guarantee": f("int64Type", draft.guarantee),
-            "startingChips": f("int64Type", draft.startingChips),
-            "startingSB": f("int64Type", draft.startingSB),
-            "startingBB": f("int64Type", draft.startingBB),
-            "reentryPolicy": f("stringType", draft.reentryPolicy),
-            "eventDate": f("timestampType", iso.string(from: eventDate)),
-            "latitude": f("doubleType", location.coordinate.latitude),
-            "longitude": f("doubleType", location.coordinate.longitude),
-            "blindLevelsJSON": f("stringType", levelsJSON),
-            "deduplicationKey": f("stringType", dedupKey),
-            "contributedAt": f("timestampType", iso.string(from: Date()))
-        ]
-        let fieldsData = try JSONSerialization.data(withJSONObject: fields, options: [.sortedKeys])
-        let fieldsPath = FileManager.default.temporaryDirectory
-            .appendingPathComponent("seeder-fields-\(UUID().uuidString).json")
-        try fieldsData.write(to: fieldsPath)
-
-        if viaCktool {
-            let args = ["cktool", "create-record",
-                        "--team-id", teamID,
-                        "--container-id", containerID,
-                        "--environment", environment,
-                        "--database-type", "public",
-                        "--record-type", recordType,
-                        "--fields-file", fieldsPath.path]
-
-            if execute {
-                print("Publishing to \(environment) via cktool…")
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-                process.arguments = args
-                try process.run()
-                process.waitUntilExit()
-                print(process.terminationStatus == 0 ? "PUBLISHED \(draft.tournamentName)"
-                                                     : "FAILED (exit \(process.terminationStatus)) — is a fresh USER token saved? (xcrun cktool save-token --type user)")
-            } else {
-                print("DRY RUN — would execute:")
-                print("  xcrun " + args.joined(separator: " "))
-                print("  fields: \(fieldsPath.path)")
+        do {
+            let outcome = try await publishOne(
+                file: file, environment: environment, execute: execute, viaCktool: viaCktool,
+                skipExisting: skipExisting, allowEmptyStructure: allowEmptyStructure, utcDay: utcDay
+            )
+            switch outcome {
+            case .published: publishedCount += 1
+            case .skipped: skippedCount += 1
             }
-        } else {
-            // Default path: CloudKit Web Services, signed with the
-            // Server-to-Server key. No user token, no cktool shell-out.
-            let subpath = wsSubpath(env: environment, operation: "modify")
-            if execute {
-                print("Publishing to \(environment) via CloudKit Web Services…")
-                do {
-                    let key = try loadS2SKey()
-                    try await wsModifyRecords(env: environment, recordType: recordType, fields: fields, key: key)
-                    print("PUBLISHED \(draft.tournamentName)")
-                } catch {
-                    print("FAILED: \(error)")
-                }
-            } else {
-                print("DRY RUN — would POST to CloudKit Web Services:")
-                print("  POST https://api.apple-cloudkit.com\(subpath)")
-                print("  headers: X-Apple-CloudKit-Request-KeyID, X-Apple-CloudKit-Request-ISO8601Date, X-Apple-CloudKit-Request-SignatureV1")
-                print("  fields: \(fieldsPath.path)")
-            }
+        } catch {
+            failedCount += 1
+            print("FAIL \(file): \(error)")
+        }
+    }
+
+    print("published \(publishedCount), skipped \(skippedCount), failed \(failedCount)")
+    if failedCount > 0 {
+        exit(1)
+    }
+}
+
+// MARK: - clone command
+
+/// Strips a trailing `-yyyy-MM-dd` from a file's basename (keeping its
+/// extension and directory) and appends `newDate` in its place.
+func cloneOutputPath(inputPath: String, newDate: String) -> String {
+    let url = URL(fileURLWithPath: inputPath)
+    let ext = url.pathExtension.isEmpty ? "json" : url.pathExtension
+    let base = url.deletingPathExtension().lastPathComponent
+    let strippedBase = base.replacingOccurrences(
+        of: #"-\d{4}-\d{2}-\d{2}$"#, with: "", options: .regularExpression
+    )
+    let newName = "\(strippedBase)-\(newDate).\(ext)"
+    return url.deletingLastPathComponent().appendingPathComponent(newName).path
+}
+
+func runClone(arguments: [String]) throws {
+    var inputFile: String?
+    var date: String?
+    var repeatInterval: String?
+    var until: String?
+    var suffix: String?
+    var time: String?
+    var name: String?
+
+    var i = 0
+    while i < arguments.count {
+        func value() throws -> String {
+            guard i + 1 < arguments.count else { throw Err("\(arguments[i]) requires a value") }
+            return arguments[i + 1]
+        }
+        switch arguments[i] {
+        case "--date": date = try value(); i += 2
+        case "--repeat": repeatInterval = try value(); i += 2
+        case "--until": until = try value(); i += 2
+        case "--suffix": suffix = try value(); i += 2
+        case "--time": time = try value(); i += 2
+        case "--name": name = try value(); i += 2
+        default:
+            guard inputFile == nil else { throw Err("unexpected argument: \(arguments[i])") }
+            inputFile = arguments[i]; i += 1
+        }
+    }
+
+    guard let inputFile else { throw Err("clone requires an input event.json file") }
+    guard date == nil || repeatInterval == nil else {
+        throw Err("--repeat and --date are mutually exclusive")
+    }
+    guard date != nil || repeatInterval != nil else {
+        throw Err("clone requires either --date or --repeat weekly --until")
+    }
+    if let repeatInterval {
+        guard repeatInterval == "weekly" else {
+            throw Err("only --repeat weekly is supported")
+        }
+        guard until != nil else {
+            throw Err("--repeat weekly requires --until YYYY-MM-DD")
+        }
+    }
+
+    let draft = try JSONDecoder().decode(EventDraft.self, from: Data(contentsOf: URL(fileURLWithPath: inputFile)))
+    let zone = TimeZone(identifier: draft.timeZone ?? "America/Los_Angeles") ?? TimeZone(identifier: "UTC")!
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+
+    func dateAtNoon(_ yyyyMMdd: String) throws -> Date {
+        let parts = yyyyMMdd.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { throw Err("date must be yyyy-MM-dd: \(yyyyMMdd)") }
+        var comps = DateComponents()
+        comps.year = parts[0]; comps.month = parts[1]; comps.day = parts[2]
+        comps.hour = 12; comps.minute = 0
+        guard let composed = calendar.date(from: comps) else {
+            throw Err("could not compose date: \(yyyyMMdd)")
+        }
+        return composed
+    }
+
+    func formatDate(_ d: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = zone
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: d)
+    }
+
+    func writeClone(eventDateString: String) throws {
+        var newDraft = draft
+        newDraft.eventDate = eventDateString
+        if let name { newDraft.tournamentName = name }
+        if let suffix { newDraft.dedupSuffix = suffix }
+        if let time { newDraft.startTimeLocal = time }
+
+        let outPath = cloneOutputPath(inputPath: inputFile, newDate: eventDateString)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(newDraft).write(to: URL(fileURLWithPath: outPath))
+        print(outPath)
+    }
+
+    if let date {
+        guard date.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil else {
+            throw Err("--date must be yyyy-MM-dd: \(date)")
+        }
+        try writeClone(eventDateString: date)
+    } else {
+        // Weekly recurrence: first occurrence strictly after the template's
+        // eventDate, through --until inclusive, on the template's weekday.
+        // Date math stays in the draft's own Calendar/TimeZone (adding
+        // whole days via the calendar, not raw 7*86400 seconds) so DST
+        // transitions never shift the emitted weekday.
+        let templateDate = try dateAtNoon(draft.eventDate)
+        let untilDate = try dateAtNoon(until!)
+        var current = calendar.date(byAdding: .day, value: 7, to: templateDate)!
+        while current <= untilDate {
+            try writeClone(eventDateString: formatDate(current))
+            current = calendar.date(byAdding: .day, value: 7, to: current)!
         }
     }
 }
@@ -359,9 +546,12 @@ guard let command = arguments.first else {
     usage:
       seeder parse <pdf-or-image>... --out <event.json>
       seeder publish <event.json>... [--env development|production] [--execute] [--via-cktool]
+                      [--skip-existing] [--allow-empty-structure]
       seeder auth-check [--env development|production]
       seeder import-scrape <tournaments.json> --venues <venues.json> --from YYYY-MM-DD --to YYYY-MM-DD
                             [--venue slug]... [--out drafts/] [--with-structures] [--include-day2]
+      seeder clone <event.json> (--date YYYY-MM-DD | --repeat weekly --until YYYY-MM-DD)
+                   [--suffix S] [--time HH:mm] [--name N]
     """)
     exit(1)
 }
@@ -386,17 +576,24 @@ do {
         var environment = "development"
         var execute = false
         var viaCktool = false
+        var skipExisting = false
+        var allowEmptyStructure = false
         var i = 1
         while i < arguments.count {
             switch arguments[i] {
             case "--env": environment = arguments[i + 1]; i += 2
             case "--execute": execute = true; i += 1
             case "--via-cktool": viaCktool = true; i += 1
+            case "--skip-existing": skipExisting = true; i += 1
+            case "--allow-empty-structure": allowEmptyStructure = true; i += 1
             default: files.append(arguments[i]); i += 1
             }
         }
         guard !files.isEmpty else { throw Err("no event files") }
-        try await runPublish(files: files, environment: environment, execute: execute, viaCktool: viaCktool)
+        try await runPublish(
+            files: files, environment: environment, execute: execute, viaCktool: viaCktool,
+            skipExisting: skipExisting, allowEmptyStructure: allowEmptyStructure
+        )
     case "auth-check":
         var environment = "development"
         var i = 1
@@ -409,6 +606,8 @@ do {
         try await runAuthCheck(environment: environment)
     case "import-scrape":
         try runImportScrape(args: Array(arguments.dropFirst()))
+    case "clone":
+        try runClone(arguments: Array(arguments.dropFirst()))
     default:
         throw Err("unknown command: \(command)")
     }

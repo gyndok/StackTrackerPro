@@ -105,6 +105,77 @@ prints the request that would be sent. `seeder auth-check --env
 development|production` does a lightweight signed query to confirm the key
 works before you publish anything for real.
 
+### Bulk publish
+
+`publish` takes multiple files/globs in one call and never aborts the whole
+batch on a single bad file — each file is decoded and processed
+independently, and a summary line always closes the run:
+
+```
+tools/seeder/seeder publish drafts/*.json --env production --execute --skip-existing
+...
+published 12, skipped 2, failed 1
+```
+
+- A validation problem (missing metadata, unparseable date, un-geocodable
+  venue) prints `SKIP <file>: <reason>` and counts as skipped.
+- Any other error (decode failure, network/CloudKit error, non-zero
+  `cktool` exit) prints `FAIL <file>: <error>`, counts as failed, and lets
+  the rest of the batch continue. The tool exits nonzero iff any file
+  failed — so a broken draft never silently vanishes.
+- `--allow-empty-structure` downgrades the "no blind levels" check from a
+  skip to a `WARNING <file>: ...` line and publishes a metadata-only
+  listing instead (structureless drafts from `import-scrape` without
+  `--with-structures`, or without a usable PDF). Every other validation
+  problem still skips, even with this flag set.
+- `--skip-existing` queries CloudKit for a record with the draft's
+  `deduplicationKey` before creating one, and prints
+  `SKIP <file>: already published (<dedupKey>)` on a match — useful for
+  re-running `publish drafts/*.json` after only some of a batch went
+  through. It only works on the default CloudKit Web Services path (it
+  needs the S2S key to sign the query): with `--via-cktool` it prints one
+  `NOTICE` up front and proceeds without the duplicate check. On a dry
+  run (no `--execute`) it prints what the check would do instead of
+  performing it, so dry runs never touch the S2S key.
+
+### Recurring events: `clone`
+
+Seed the same weekly game without re-parsing a structure sheet every time —
+`clone` copies an existing draft (blind levels included) onto a new date.
+
+```
+# One new date
+tools/seeder/seeder clone champions-club-monster-2026-07-18.json --date 2026-07-25
+
+# Every week through a date, starting the week after the template
+tools/seeder/seeder clone champions-club-monster-2026-07-18.json --repeat weekly --until 2026-08-15
+```
+
+- Single-date mode writes one file: the input's basename with any trailing
+  `-yyyy-MM-dd` stripped, then the new date appended
+  (`champions-club-monster-2026-07-25.json`), and prints its path.
+- `--repeat weekly --until YYYY-MM-DD` emits one draft per week, landing on
+  the template's own weekday (computed from the template's `eventDate` in
+  its own `timeZone`), starting from the first occurrence **strictly
+  after** the template date and continuing **through `--until` inclusive**.
+  Date math stays inside `Calendar`/`TimeZone` (adding whole days, never
+  raw 7×86400-second arithmetic), so a template that lands near a DST
+  transition still recurs on the correct weekday and local time. `--repeat`
+  and `--date` are mutually exclusive; weekly is the only interval
+  supported today (dailies at a venue differ by weekday template — clone
+  each weekday once, then recur it).
+- `--suffix`, `--time`, and `--name` override `dedupSuffix`,
+  `startTimeLocal`, and `tournamentName` on every emitted file; everything
+  else (venue, buy-in, blind structure) carries over unchanged.
+- Seed recurring club events no more than ~4 weeks out — structures and
+  guarantees change without notice, so a further-out clone can go stale
+  before it's ever seen.
+
+Review each cloned draft like any other (`eventDate` still drives which day
+it surfaces), then `publish` them — `--skip-existing` is handy here so
+re-running the recurrence command after the past week already published
+doesn't re-create it.
+
 ## Bulk import from the VegasPokerGuide scraper
 
 If you already have a scraped schedule (`~/Developer/VegasPokerGuide/pipeline`
