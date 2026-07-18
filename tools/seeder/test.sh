@@ -163,4 +163,38 @@ for f in files:
     assert d['timeZone'] == 'America/Chicago', f'{f} expected timeZone America/Chicago (from tx-venues.yml), got {d[\"timeZone\"]!r}'
 "
 
+echo "--- pokeratlas-fetch: inverted --from/--to fails loud before fetching ---"
+if inverted_out=$(./pokeratlas-fetch.py --fixtures tests/fixtures/pokeratlas --venues tx-venues.yml \
+    --from 2026-07-18 --to 2026-07-17 --out "$patmp/inverted.json" 2>&1); then
+    echo "FAIL: inverted date range should exit nonzero"
+    exit 1
+fi
+echo "$inverted_out"
+echo "$inverted_out" | grep -q "^ERROR: --to 2026-07-17 is before --from 2026-07-18" \
+    || { echo "FAIL: expected an inverted-range ERROR line, got: $inverted_out"; exit 1; }
+[ ! -f "$patmp/inverted.json" ] \
+    || { echo "FAIL: inverted range should not have written an output file"; exit 1; }
+
+echo "--- pokeratlas-fetch: zero-parse detail page fails loud (no --keep-going) ---"
+if broken_out=$(./pokeratlas-fetch.py --fixtures tests/fixtures/pokeratlas-broken --venues tx-venues.yml \
+    --from 2026-07-17 --to 2026-07-18 --out "$patmp/broken.json" 2>&1); then
+    echo "FAIL: a zero-parse detail page should exit nonzero"
+    exit 1
+fi
+echo "$broken_out"
+echo "$broken_out" | grep -q "^ERROR: zero parsed fields from https://www.pokeratlas.com/poker-tournament/" \
+    || { echo "FAIL: expected 'ERROR: zero parsed fields' naming the page URL, got: $broken_out"; exit 1; }
+
+echo "--- pokeratlas-fetch: zero-parse with --keep-going still exits nonzero and reports the count ---"
+if kg_out=$(./pokeratlas-fetch.py --fixtures tests/fixtures/pokeratlas-broken --venues tx-venues.yml \
+    --from 2026-07-17 --to 2026-07-18 --out "$patmp/broken-kg.json" --keep-going 2>&1); then
+    echo "FAIL: --keep-going must still exit nonzero when any page failed"
+    exit 1
+fi
+echo "$kg_out"
+echo "$kg_out" | grep -q "^ERROR: zero parsed fields from" \
+    || { echo "FAIL: expected the zero-parse ERROR even with --keep-going, got: $kg_out"; exit 1; }
+echo "$kg_out" | grep -qF "1 page failure(s)" \
+    || { echo "FAIL: expected the summary to report '1 page failure(s)', got: $kg_out"; exit 1; }
+
 echo "PASS"

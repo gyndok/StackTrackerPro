@@ -209,9 +209,13 @@ DATE_LINE_RE = re.compile(
 )
 DETAIL_TIME_RE = re.compile(r"^(\d{1,2}:\d{2}\s*(?:am|pm))\s*$", re.IGNORECASE | re.MULTILINE)
 PRICE_RE = re.compile(r"\$([\d,]+)")
-STRUCTURE_ROW_RE = re.compile(
-    r"^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|\s*(\d*)\s*\|\s*(\d*)\s*\|\s*(\d*)\s*\|\s*$", re.MULTILINE
+# Any 5-column markdown table row — candidate structure rows. Header,
+# separator, and blank spacer rows are filtered out in parse_structure_table;
+# what remains either parses as a level/break or gets a loud WARNING.
+TABLE_ROW_RE = re.compile(
+    r"^\|([^|\n]*)\|([^|\n]*)\|([^|\n]*)\|([^|\n]*)\|([^|\n]*)\|\s*$", re.MULTILINE
 )
+INT_RE = re.compile(r"^\d+$")
 BUYIN_ENTRY_RE = re.compile(r"Entry Fee:?\s*\$([\d,.]+)", re.IGNORECASE)
 BUYIN_TOTAL_RE = re.compile(r"Total Buy-?In:?\s*\$([\d,.]+)", re.IGNORECASE)
 LEVEL_NAME_RE = re.compile(r"^level\s+(\d+)$", re.IGNORECASE)
@@ -231,22 +235,43 @@ def detect_game(text):
     return None
 
 
-def parse_structure_table(text):
+def parse_structure_table(text, source="<unknown>"):
     """Level/break rows in table order, numbered sequentially INCLUDING
     breaks (LevelDraft field names) — any row whose name isn't "Level N"
     is treated as a break/pause row (covers literal "Break" rows and
     color-up markers like "Race off 100s", which are functionally the
-    same thing: the clock keeps running but blinds don't change)."""
+    same thing: the clock keeps running but blinds don't change).
+
+    Malformed rows inside the table (non-numeric minutes/blinds, a "Level"
+    row without a number) are DROPPED with a WARNING naming `source` and
+    the row text — never silently. The page-level zero-parse gate in main()
+    is unchanged: a page whose whole table fails still errors out loudly."""
     levels = []
     n = 0
-    for m in STRUCTURE_ROW_RE.finditer(text):
-        name, mins, sb, bb, ante = m.groups()
-        name = name.strip()
+    for m in TABLE_ROW_RE.finditer(text):
+        name, mins, sb, bb, ante = (cell.strip() for cell in m.groups())
+        if not name and not mins and not sb and not bb and not ante:
+            continue  # blank spacer row
+        if name and set(name) <= set("-: ") and (not mins or set(mins) <= set("-: ")):
+            continue  # markdown separator row (| --- | --- | ... |)
+        if name.lower() == "name" and mins.lower() == "length":
+            continue  # the structure table's header row
         if not name:
             continue
-        n += 1
+        row_text = m.group(0).strip()
+
+        if not INT_RE.match(mins):
+            print(f"WARNING: {source} — dropping unparseable structure row "
+                  f"(non-numeric minutes): {row_text}", file=sys.stderr)
+            continue
+
         level_m = LEVEL_NAME_RE.match(name)
         if level_m:
+            if not all(INT_RE.match(v) for v in (sb, bb, ante) if v):
+                print(f"WARNING: {source} — dropping unparseable structure row "
+                      f"(non-numeric blinds/ante): {row_text}", file=sys.stderr)
+                continue
+            n += 1
             levels.append({
                 "levelNumber": n,
                 "smallBlind": int(sb or 0),
@@ -255,7 +280,13 @@ def parse_structure_table(text):
                 "durationMinutes": int(mins),
                 "isBreak": False,
             })
+        elif name.lower().startswith("level"):
+            # Looks like a level row but isn't "Level <N>" — never guess.
+            print(f"WARNING: {source} — dropping unparseable structure row "
+                  f"(unnumbered Level): {row_text}", file=sys.stderr)
+            continue
         else:
+            n += 1
             levels.append({
                 "levelNumber": n,
                 "smallBlind": 0,
@@ -268,7 +299,7 @@ def parse_structure_table(text):
     return levels
 
 
-def parse_detail_page(text):
+def parse_detail_page(text, source="<unknown>"):
     title_m = TITLE_H1_RE.search(text)
     title = title_m.group(1).strip() if title_m else None
 
@@ -301,7 +332,7 @@ def parse_detail_page(text):
     if time_m:
         time_hhmm = parse_time_12h(time_m.group(1).replace(" ", ""))
 
-    levels = parse_structure_table(text)
+    levels = parse_structure_table(text, source=source)
 
     entry_m = BUYIN_ENTRY_RE.search(text)
     total_m = BUYIN_TOTAL_RE.search(text)
@@ -392,7 +423,17 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(argv if argv is not None else sys.argv[1:])
-    venues = load_venues(args.venues)
+
+    if args.to_date < args.from_date:
+        print(f"ERROR: --to {args.to_date} is before --from {args.from_date} — "
+              f"inverted date range, nothing would ever match", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        venues = load_venues(args.venues)
+    except OSError as exc:
+        print(f"ERROR: cannot read venues file {args.venues}: {exc}", file=sys.stderr)
+        sys.exit(1)
     allow_by_name = {v["display_name"].strip().lower(): v for v in venues.values() if v.get("display_name")}
 
     if args.fixtures:
@@ -431,13 +472,15 @@ def main(argv=None):
                 detail_path = detail_queue.pop(0)
                 with open(detail_path, encoding="utf-8") as f:
                     detail_text = f.read()
+                detail_source = detail_path
             else:
                 if made_first_call:
                     time.sleep(1)  # spec: <=1 request/second
                 made_first_call = True
                 detail_text = fetch_detail_cached(row["href"], DEFAULT_PAGECACHE_DIR)
+                detail_source = row["href"]
 
-            detail = parse_detail_page(detail_text)
+            detail = parse_detail_page(detail_text, source=detail_source)
         except Exception as exc:  # noqa: BLE001 - loud, deliberate catch-all
             print(f"ERROR: failed to fetch/parse detail page {row['href']}: {exc}", file=sys.stderr)
             errors.append(row["href"])

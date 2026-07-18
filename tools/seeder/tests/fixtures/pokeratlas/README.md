@@ -10,3 +10,9 @@ over time — when `pokeratlas-fetch.py`'s tests start failing against real
 pulls, re-capture these with `firecrawl scrape <url> markdown -o <file>`
 and re-diff against `pokeratlas-fetch.py`'s parsing regexes before assuming
 the parser itself is wrong.
+
+The sibling `../pokeratlas-broken/` directory holds fully synthetic
+fixtures for the loud-failure paths (a qualifying listing row whose detail
+page parses to nothing). It lives separately because detail fixtures in
+THIS directory are assigned to qualifying listing rows in sorted-filename
+order — a broken detail file here would hijack a working row's slot.
