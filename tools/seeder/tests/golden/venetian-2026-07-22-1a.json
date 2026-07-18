@@ -1,0 +1,22 @@
+{
+  "blindLevels" : [
+
+  ],
+  "bountyAmount" : 0,
+  "buyIn" : 505,
+  "dedupSuffix" : "1A",
+  "entryFee" : 95,
+  "eventDate" : "2026-07-22",
+  "gameTypeRaw" : "NLH",
+  "guarantee" : 150000,
+  "reentryPolicy" : "Unlimited",
+  "startTimeLocal" : "11:10",
+  "startingBB" : 0,
+  "startingChips" : 40000,
+  "startingSB" : 0,
+  "timeZone" : "America\/Los_Angeles",
+  "tournamentName" : "Venetian DeepStack Championship — NLH 1A",
+  "venueCity" : "Las Vegas",
+  "venueName" : "Venetian",
+  "venueState" : "NV"
+}

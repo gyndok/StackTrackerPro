@@ -360,6 +360,8 @@ guard let command = arguments.first else {
       seeder parse <pdf-or-image>... --out <event.json>
       seeder publish <event.json>... [--env development|production] [--execute] [--via-cktool]
       seeder auth-check [--env development|production]
+      seeder import-scrape <tournaments.json> --venues <venues.json> --from YYYY-MM-DD --to YYYY-MM-DD
+                            [--venue slug]... [--out drafts/] [--with-structures] [--include-day2]
     """)
     exit(1)
 }
@@ -405,6 +407,8 @@ do {
             }
         }
         try await runAuthCheck(environment: environment)
+    case "import-scrape":
+        try runImportScrape(args: Array(arguments.dropFirst()))
     default:
         throw Err("unknown command: \(command)")
     }

@@ -1,0 +1,49 @@
+{
+  "venues": [
+    {
+      "slug": "wynn",
+      "display_name": "Wynn",
+      "series_name": "Wynn Summer Classic",
+      "address": "3131 S Las Vegas Blvd, Las Vegas, NV 89109",
+      "maps_url": "https://maps.apple.com/?address=3131+S+Las+Vegas+Blvd%2C+Las+Vegas%2C+NV+89109",
+      "website": "https://wynnlasvegas.com/casino/poker"
+    },
+    {
+      "slug": "aria",
+      "display_name": "Aria",
+      "address": "3730 Las Vegas Blvd S, Las Vegas, NV 89109",
+      "maps_url": "https://maps.apple.com/?address=3730+Las+Vegas+Blvd+S%2C+Las+Vegas%2C+NV+89109",
+      "website": "https://aria.mgmresorts.com/en/casino/poker-room.html"
+    },
+    {
+      "slug": "planethollywood",
+      "display_name": "Planet Hollywood",
+      "address": "3667 Las Vegas Blvd S, Las Vegas, NV 89109",
+      "maps_url": "https://maps.apple.com/?address=3667+Las+Vegas+Blvd+S%2C+Las+Vegas%2C+NV+89109"
+    },
+    {
+      "slug": "venetian",
+      "display_name": "Venetian",
+      "series_name": "Venetian DeepStack Championship",
+      "address": "3355 S Las Vegas Blvd, Las Vegas, NV 89109",
+      "maps_url": "https://maps.apple.com/?address=3355+S+Las+Vegas+Blvd%2C+Las+Vegas%2C+NV+89109",
+      "website": "https://www.venetianlasvegas.com/casino/poker.html"
+    },
+    {
+      "slug": "orleans",
+      "display_name": "Orleans",
+      "address": "4500 W Tropicana Ave, Las Vegas, NV 89109",
+      "maps_url": "https://maps.apple.com/?address=4500+W+Tropicana+Ave%2C+Las+Vegas%2C+NV+89109"
+    },
+    {
+      "slug": "wsop-paris",
+      "display_name": "WSOP Paris / Horseshoe",
+      "series_name": "World Series of Poker",
+      "address": "3655 S Las Vegas Blvd, Las Vegas, NV 89109",
+      "maps_url": "https://maps.apple.com/?address=3655+S+Las+Vegas+Blvd%2C+Las+Vegas%2C+NV+89109",
+      "website": "https://www.wsop.com/",
+      "structure_pdf_url": "https://assets.wsopcdn.com/wsop/30f480dc-0ddb-4807-a4a4-8792b75e13fb.pdf",
+      "override_per_event_url": true
+    }
+  ]
+}

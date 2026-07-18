@@ -1,0 +1,21 @@
+{
+  "blindLevels" : [
+
+  ],
+  "bountyAmount" : 0,
+  "buyIn" : 260,
+  "entryFee" : 40,
+  "eventDate" : "2026-07-23",
+  "gameTypeRaw" : "NLH",
+  "guarantee" : 20000,
+  "reentryPolicy" : "2",
+  "startTimeLocal" : "18:00",
+  "startingBB" : 0,
+  "startingChips" : 15000,
+  "startingSB" : 0,
+  "timeZone" : "America\/Los_Angeles",
+  "tournamentName" : "NLH Re-Entry Special",
+  "venueCity" : "Las Vegas",
+  "venueName" : "Orleans",
+  "venueState" : "NV"
+}

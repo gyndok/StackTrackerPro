@@ -1,0 +1,21 @@
+{
+  "blindLevels" : [
+
+  ],
+  "bountyAmount" : 0,
+  "buyIn" : 340,
+  "entryFee" : 60,
+  "eventDate" : "2026-07-24",
+  "gameTypeRaw" : "NLH",
+  "guarantee" : 0,
+  "reentryPolicy" : "Unlimited",
+  "startTimeLocal" : "10:00",
+  "startingBB" : 0,
+  "startingChips" : 20000,
+  "startingSB" : 0,
+  "timeZone" : "America\/Los_Angeles",
+  "tournamentName" : "World Series of Poker — NLH Mini Mystery Millions 1B",
+  "venueCity" : "Las Vegas",
+  "venueName" : "WSOP Paris \/ Horseshoe",
+  "venueState" : "NV"
+}

@@ -105,6 +105,45 @@ prints the request that would be sent. `seeder auth-check --env
 development|production` does a lightweight signed query to confirm the key
 works before you publish anything for real.
 
+## Bulk import from the VegasPokerGuide scraper
+
+If you already have a scraped schedule (`~/Developer/VegasPokerGuide/pipeline`
+produces `.out/tournaments.json` + `.out/venues.json`), skip `parse` entirely
+and convert the whole batch to drafts in one shot:
+
+```
+tools/seeder/import-scrape .out/tournaments.json --venues .out/venues.json \
+    --from 2026-07-20 --to 2026-07-26 --out drafts/
+```
+
+- One draft per event, named `<venue-slug>-<date>-<last-id-token>.json`.
+- `--venue slug` (repeatable) restricts to specific venues.
+- Day 2 flights (`is_day2: true`) are **skipped by default**; pass
+  `--include-day2` to emit them too.
+- `--with-structures` downloads each event's `structure_pdf_url` (cached by
+  URL hash under `tools/seeder/.pdfcache/`, so re-runs don't re-fetch),
+  parses it through the same shared `BlindStructureParsing` pipeline `parse`
+  uses, and attaches `blindLevels` only when the parse yields **at least 8
+  non-break levels** — otherwise it prints a warning and leaves the draft
+  structureless. Venues flagged `override_per_event_url: true` in the venues
+  file (multi-event PDF bundles, e.g. an all-events WSOP sheet) are skipped
+  for structure attachment with a notice, since a single-event parse would
+  mis-read them.
+- `--venues` accepts either `venues.json` (preferred, full fidelity) or a
+  `.yml`/`.yaml` file — the YAML path is a minimal grep-grade line parser
+  that only understands flat `- slug: ...` / `key: value` blocks, good enough
+  to carry `override_per_event_url` overrides but not a general YAML parser.
+- Ends with a summary line: `emitted N, skipped-day2 N, structures-attached N,
+  structure-warnings N`.
+- Field mapping (buy-in/rake split, guarantee, re-entry policy, flight
+  dedup suffix, timezone) is documented in
+  `docs/superpowers/specs/2026-07-17-seeder-bulk-upgrades-design.md`
+  component 2 — that spec is the binding source if this README and the code
+  ever disagree.
+
+Review the emitted drafts (venue names/cities drive geocoding — the scraper's
+`display_name` is used as-is), then `publish` them like any other draft.
+
 ## Verifying
 
 CloudKit Console → Records → *environment* → Public Database →
