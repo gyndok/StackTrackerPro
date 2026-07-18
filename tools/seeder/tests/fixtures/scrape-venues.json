@@ -44,6 +44,11 @@
       "website": "https://www.wsop.com/",
       "structure_pdf_url": "https://assets.wsopcdn.com/wsop/30f480dc-0ddb-4807-a4a4-8792b75e13fb.pdf",
       "override_per_event_url": true
+    },
+    {
+      "slug": "goldcoast",
+      "display_name": "Gold Coast",
+      "address": "4000 W Flamingo Rd Las Vegas NV 89103"
     }
   ]
 }

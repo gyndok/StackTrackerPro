@@ -1,0 +1,21 @@
+{
+  "blindLevels" : [
+
+  ],
+  "bountyAmount" : 0,
+  "buyIn" : 120,
+  "entryFee" : 30,
+  "eventDate" : "2026-07-25",
+  "gameTypeRaw" : "NLH",
+  "guarantee" : 0,
+  "reentryPolicy" : "Unlimited",
+  "startTimeLocal" : "18:00",
+  "startingBB" : 0,
+  "startingChips" : 10000,
+  "startingSB" : 0,
+  "timeZone" : "America\/Los_Angeles",
+  "tournamentName" : "NLH Evening",
+  "venueCity" : "",
+  "venueName" : "mystery-room",
+  "venueState" : ""
+}

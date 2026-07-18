@@ -27,9 +27,14 @@ scrape_output="$(./seeder import-scrape tests/fixtures/scrape-tournaments.json \
     --out "$tmpdir")"
 echo "$scrape_output"
 
-expected_summary="emitted 5, skipped-day2 1, structures-attached 0, structure-warnings 0"
+expected_summary="emitted 7, skipped-day2 1, structures-attached 0, structure-warnings 0, venue-warnings 2"
 echo "$scrape_output" | grep -qF "$expected_summary" \
     || { echo "FAIL: expected summary line '$expected_summary'"; exit 1; }
+
+echo "$scrape_output" | grep -q "WARNING: mystery-room-2026-07-25-nlh-evening — venue slug 'mystery-room' not found" \
+    || { echo "FAIL: expected unknown-venue-slug WARNING for mystery-room event"; exit 1; }
+echo "$scrape_output" | grep -q "WARNING: goldcoast-2026-07-26-nlh-noon — venue 'goldcoast' address .* does not parse into city/state" \
+    || { echo "FAIL: expected unparseable-address WARNING for goldcoast event"; exit 1; }
 
 diff -ru tests/golden "$tmpdir" \
     || { echo "FAIL: import-scrape output does not match tests/golden"; exit 1; }

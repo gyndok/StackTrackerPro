@@ -134,7 +134,11 @@ tools/seeder/import-scrape .out/tournaments.json --venues .out/venues.json \
   that only understands flat `- slug: ...` / `key: value` blocks, good enough
   to carry `override_per_event_url` overrides but not a general YAML parser.
 - Ends with a summary line: `emitted N, skipped-day2 N, structures-attached N,
-  structure-warnings N`.
+  structure-warnings N, venue-warnings N`. A venue warning fires (and the
+  draft is still emitted, with empty city/state) when an event's venue slug
+  isn't in the venues file or the venue's address can't be split into
+  city/state — `publish`'s validation remains the gate, but the failure is
+  never silent.
 - Field mapping (buy-in/rake split, guarantee, re-entry policy, flight
   dedup suffix, timezone) is documented in
   `docs/superpowers/specs/2026-07-17-seeder-bulk-upgrades-design.md`

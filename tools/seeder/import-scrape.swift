@@ -317,6 +317,7 @@ func runImportScrape(args: [String]) throws {
     var skippedDay2 = 0
     var structuresAttached = 0
     var structureWarnings = 0
+    var venueWarnings = 0
 
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -333,6 +334,18 @@ func runImportScrape(args: [String]) throws {
 
         let venue = venuesBySlug[event.venue]
         var draft = makeDraft(event: event, venue: venue)
+
+        // "Failures loud, never silently empty": a draft with an empty
+        // city/state still gets emitted (publish's validation is the real
+        // gate), but never without saying why.
+        if venue == nil {
+            print("WARNING: \(event.id) — venue slug '\(event.venue)' not found in venues file; venueName falls back to the raw slug and venueCity/venueState are empty")
+            venueWarnings += 1
+        } else if draft.venueCity.isEmpty || draft.venueState.isEmpty {
+            let address = venue?.address ?? "(missing)"
+            print("WARNING: \(event.id) — venue '\(event.venue)' address '\(address)' does not parse into city/state (need at least two comma-separated segments); venueCity/venueState are empty")
+            venueWarnings += 1
+        }
 
         if let inline = event.structure_levels, !inline.isEmpty {
             // PokerAtlas-fetcher inline levels win over structure_pdf_url.
@@ -374,5 +387,5 @@ func runImportScrape(args: [String]) throws {
         emitted += 1
     }
 
-    print("emitted \(emitted), skipped-day2 \(skippedDay2), structures-attached \(structuresAttached), structure-warnings \(structureWarnings)")
+    print("emitted \(emitted), skipped-day2 \(skippedDay2), structures-attached \(structuresAttached), structure-warnings \(structureWarnings), venue-warnings \(venueWarnings)")
 }
