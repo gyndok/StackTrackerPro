@@ -12,3 +12,5 @@ tools/seeder/*.pem
 tools/seeder/.pdfcache/
 tools/seeder/.pagecache/
 tools/seeder/drafts/
+
+.weekly/

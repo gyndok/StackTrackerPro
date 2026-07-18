@@ -315,3 +315,18 @@ app's Browse Nearby Events within 50 miles of the venue on the event day.
   If you improve it there, rebuild the seeder and both stay in sync.
 - Bulk sources (e.g. a scraped schedule JSON) can skip `parse` entirely:
   generate the event-draft JSON directly and go straight to `publish`.
+
+## One-click weekly seeding
+
+`weekly-seed.sh` wraps the whole Texas week (fetch → drafts → confirm → publish)
+with auto-computed dates (today through +6 days). "Seed Tournaments.app" in
+/Applications (built with `osacompile`, see git history) launches it in
+Terminal — one click from Launchpad, review the draft table, press Enter to
+publish. Re-runs are duplicate-safe (`--skip-existing`). Recreate the app with:
+
+    osacompile -o "/Applications/Seed Tournaments.app" <<'EOS'
+    tell application "Terminal"
+        activate
+        do script "~/Developer/StackTrackerPro/tools/seeder/weekly-seed.sh"
+    end tell
+    EOS
