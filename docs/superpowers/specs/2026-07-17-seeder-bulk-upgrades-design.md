@@ -36,6 +36,8 @@ Today's flow (tools/seeder): screenshots → `seeder parse` or hand-built JSON �
 
 `seeder clone <existing.json> --date YYYY-MM-DD [--suffix 1B] [--time HH:mm] [--name "…"]` → writes `<basename>-<date>.json` with `eventDate` (and optional suffix/time/name) replaced, everything else — structure included — carried over. Prints the new path.
 
+**Recurrence (the post-summer workhorse):** `seeder clone <existing.json> --repeat weekly --until YYYY-MM-DD` emits one draft per week on the template's weekday, starting from the first occurrence strictly after the template's `eventDate`, through `--until` inclusive. Each draft gets its own `eventDate` (dedup keys stay per-day). `--repeat` and `--date` are mutually exclusive. Weekly is the only interval in v1 (dailies at a venue differ by weekday template — clone each weekday once, then recur). README guidance: seed recurring club events no more than ~4 weeks out, since structures and guarantees change without notice.
+
 ### 4. Bulk publish + duplicate guard
 
 - `seeder publish` accepts **multiple files/globs**; per-file result lines and an end summary (published / failed / skipped).
@@ -61,6 +63,6 @@ Today's flow (tools/seeder): screenshots → `seeder parse` or hand-built JSON �
 
 ## Testing / acceptance
 
-- Fixture-driven: `tools/seeder/tests/fixtures/` gets a trimmed tournaments.json (6 events covering: normal, null rake, day2, flight suffix, unlimited/count re-entry, WSOP-flagged venue) + venues.json; `tools/seeder/test.sh` runs `import-scrape` against them and diffs the emitted drafts against golden files, exercises `clone` (date+suffix), and runs a `publish --dry-run` over the drafts asserting the dedup keys and the Web Services request path/headers are printed (no network in tests).
+- Fixture-driven: `tools/seeder/tests/fixtures/` gets a trimmed tournaments.json (6 events covering: normal, null rake, day2, flight suffix, unlimited/count re-entry, WSOP-flagged venue) + venues.json; `tools/seeder/test.sh` runs `import-scrape` against them and diffs the emitted drafts against golden files, exercises `clone` (date+suffix, and `--repeat weekly --until` asserting the emitted dates land on the template's weekday and stop at the bound), and runs a `publish --dry-run` over the drafts asserting the dedup keys and the Web Services request path/headers are printed (no network in tests).
 - Signing self-check: `seeder auth-check --env development` performs one signed `records/query` and reports success/failure — the acceptance test for component 1 (run manually; requires the real key).
 - End-to-end acceptance (manual, once): import one real week with `--with-structures`, publish to development with `--skip-existing`, verify in the app's Browse Nearby Events, then production.
