@@ -216,7 +216,7 @@ func geocode(name: String, city: String, state: String) async -> CLLocation? {
     return CLLocation(latitude: coord.latitude, longitude: coord.longitude)
 }
 
-func runPublish(files: [String], environment: String, execute: Bool) async throws {
+func runPublish(files: [String], environment: String, execute: Bool, viaCktool: Bool) async throws {
     let utcDay: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
@@ -305,27 +305,48 @@ func runPublish(files: [String], environment: String, execute: Bool) async throw
             .appendingPathComponent("seeder-fields-\(UUID().uuidString).json")
         try fieldsData.write(to: fieldsPath)
 
-        let args = ["cktool", "create-record",
-                    "--team-id", teamID,
-                    "--container-id", containerID,
-                    "--environment", environment,
-                    "--database-type", "public",
-                    "--record-type", recordType,
-                    "--fields-file", fieldsPath.path]
+        if viaCktool {
+            let args = ["cktool", "create-record",
+                        "--team-id", teamID,
+                        "--container-id", containerID,
+                        "--environment", environment,
+                        "--database-type", "public",
+                        "--record-type", recordType,
+                        "--fields-file", fieldsPath.path]
 
-        if execute {
-            print("Publishing to \(environment)…")
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-            process.arguments = args
-            try process.run()
-            process.waitUntilExit()
-            print(process.terminationStatus == 0 ? "PUBLISHED \(draft.tournamentName)"
-                                                 : "FAILED (exit \(process.terminationStatus)) — is a fresh USER token saved? (xcrun cktool save-token --type user)")
+            if execute {
+                print("Publishing to \(environment) via cktool…")
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+                process.arguments = args
+                try process.run()
+                process.waitUntilExit()
+                print(process.terminationStatus == 0 ? "PUBLISHED \(draft.tournamentName)"
+                                                     : "FAILED (exit \(process.terminationStatus)) — is a fresh USER token saved? (xcrun cktool save-token --type user)")
+            } else {
+                print("DRY RUN — would execute:")
+                print("  xcrun " + args.joined(separator: " "))
+                print("  fields: \(fieldsPath.path)")
+            }
         } else {
-            print("DRY RUN — would execute:")
-            print("  xcrun " + args.joined(separator: " "))
-            print("  fields: \(fieldsPath.path)")
+            // Default path: CloudKit Web Services, signed with the
+            // Server-to-Server key. No user token, no cktool shell-out.
+            let subpath = wsSubpath(env: environment, operation: "modify")
+            if execute {
+                print("Publishing to \(environment) via CloudKit Web Services…")
+                do {
+                    let key = try loadS2SKey()
+                    try await wsModifyRecords(env: environment, recordType: recordType, fields: fields, key: key)
+                    print("PUBLISHED \(draft.tournamentName)")
+                } catch {
+                    print("FAILED: \(error)")
+                }
+            } else {
+                print("DRY RUN — would POST to CloudKit Web Services:")
+                print("  POST https://api.apple-cloudkit.com\(subpath)")
+                print("  headers: X-Apple-CloudKit-Request-KeyID, X-Apple-CloudKit-Request-ISO8601Date, X-Apple-CloudKit-Request-SignatureV1")
+                print("  fields: \(fieldsPath.path)")
+            }
         }
     }
 }
@@ -337,7 +358,8 @@ guard let command = arguments.first else {
     print("""
     usage:
       seeder parse <pdf-or-image>... --out <event.json>
-      seeder publish <event.json>... [--env development|production] [--execute]
+      seeder publish <event.json>... [--env development|production] [--execute] [--via-cktool]
+      seeder auth-check [--env development|production]
     """)
     exit(1)
 }
@@ -361,16 +383,28 @@ do {
         var files: [String] = []
         var environment = "development"
         var execute = false
+        var viaCktool = false
         var i = 1
         while i < arguments.count {
             switch arguments[i] {
             case "--env": environment = arguments[i + 1]; i += 2
             case "--execute": execute = true; i += 1
+            case "--via-cktool": viaCktool = true; i += 1
             default: files.append(arguments[i]); i += 1
             }
         }
         guard !files.isEmpty else { throw Err("no event files") }
-        try await runPublish(files: files, environment: environment, execute: execute)
+        try await runPublish(files: files, environment: environment, execute: execute, viaCktool: viaCktool)
+    case "auth-check":
+        var environment = "development"
+        var i = 1
+        while i < arguments.count {
+            switch arguments[i] {
+            case "--env": environment = arguments[i + 1]; i += 2
+            default: i += 1
+            }
+        }
+        try await runAuthCheck(environment: environment)
     default:
         throw Err("unknown command: \(command)")
     }

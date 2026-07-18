@@ -5,6 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 swiftc -O -enable-bare-slash-regex \
     ../../StackTrackerPro/Managers/BlindStructureParsing.swift \
+    cloudkit-ws.swift \
     main.swift \
     -o seeder
 echo "built: $(pwd)/seeder"

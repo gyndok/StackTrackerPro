@@ -6,3 +6,9 @@ xcuserdata/
 tools/seeder/event.json
 tools/screenshots/.build/
 .superpowers/
+
+# Seeder: CloudKit Server-to-Server key material + generated/cached data
+tools/seeder/*.pem
+tools/seeder/.pdfcache/
+tools/seeder/.pagecache/
+tools/seeder/drafts/
