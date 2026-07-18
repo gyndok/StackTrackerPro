@@ -82,6 +82,12 @@ for d in 2026-08-08 2026-08-15 2026-08-22; do
         || { echo "FAIL: $f expected Saturday, got $weekday"; exit 1; }
 done
 
+echo "--- clone: recurrence with --until before the first occurrence emits nothing, loudly ---"
+zero_out="$(./seeder clone "$recurtmp/champions-club-monster-2026-08-01.json" --repeat weekly --until 2026-08-07)"
+echo "$zero_out"
+echo "$zero_out" | grep -qF "no occurrences generated (--until is before the first weekly recurrence)" \
+    || { echo "FAIL: expected a zero-occurrence notice when --until precedes the first recurrence"; exit 1; }
+
 echo "--- clone: --repeat + --date is a usage error ---"
 if clone_conflict_output=$(./seeder clone "$recurtmp/champions-club-monster-2026-08-01.json" \
     --repeat weekly --date 2026-08-08 --until 2026-08-22 2>&1); then
@@ -104,8 +110,8 @@ skip_output="$(./seeder publish "$pubtmp/structureless.json" --env development)"
 echo "$skip_output"
 echo "$skip_output" | grep -q "^SKIP .*no blind levels" \
     || { echo "FAIL: expected SKIP mentioning 'no blind levels' for a structureless draft"; exit 1; }
-echo "$skip_output" | grep -qF "published 0, skipped 1, failed 0" \
-    || { echo "FAIL: expected summary line 'published 0, skipped 1, failed 0'"; exit 1; }
+echo "$skip_output" | grep -qF "published 0, skipped 1, failed 0 (dry run)" \
+    || { echo "FAIL: expected summary line 'published 0, skipped 1, failed 0 (dry run)'"; exit 1; }
 
 echo "--- publish: structureless draft dry run WITH --allow-empty-structure ---"
 warn_output="$(./seeder publish "$pubtmp/structureless.json" --env development --allow-empty-structure)"
@@ -114,7 +120,7 @@ echo "$warn_output" | grep -q "^WARNING .*no blind levels" \
     || { echo "FAIL: expected WARNING mentioning 'no blind levels' with --allow-empty-structure"; exit 1; }
 echo "$warn_output" | grep -q "DRY RUN — would POST to CloudKit Web Services" \
     || { echo "FAIL: expected the dry-run publish print to proceed with --allow-empty-structure"; exit 1; }
-echo "$warn_output" | grep -qF "published 1, skipped 0, failed 0" \
-    || { echo "FAIL: expected summary line 'published 1, skipped 0, failed 0'"; exit 1; }
+echo "$warn_output" | grep -qF "published 1, skipped 0, failed 0 (dry run)" \
+    || { echo "FAIL: expected summary line 'published 1, skipped 0, failed 0 (dry run)'"; exit 1; }
 
 echo "PASS"

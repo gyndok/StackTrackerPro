@@ -412,7 +412,8 @@ func runPublish(
         }
     }
 
-    print("published \(publishedCount), skipped \(skippedCount), failed \(failedCount)")
+    let dryRunSuffix = execute ? "" : " (dry run)"
+    print("published \(publishedCount), skipped \(skippedCount), failed \(failedCount)\(dryRunSuffix)")
     if failedCount > 0 {
         exit(1)
     }
@@ -531,9 +532,14 @@ func runClone(arguments: [String]) throws {
         let templateDate = try dateAtNoon(draft.eventDate)
         let untilDate = try dateAtNoon(until!)
         var current = calendar.date(byAdding: .day, value: 7, to: templateDate)!
+        var emitted = 0
         while current <= untilDate {
             try writeClone(eventDateString: formatDate(current))
+            emitted += 1
             current = calendar.date(byAdding: .day, value: 7, to: current)!
+        }
+        if emitted == 0 {
+            print("no occurrences generated (--until is before the first weekly recurrence)")
         }
     }
 }
