@@ -336,6 +336,7 @@ struct HandDetailView: View {
     let hand: Hand
 
     @State private var showShare = false
+    @State private var showTranscriptEditor = false
 
     /// A hand with no recorded ledger but a dictated transcript has nothing
     /// structured to report — the Result section is suppressed (Task 2).
@@ -399,15 +400,28 @@ struct HandDetailView: View {
                     }
                 }
                 if !hand.notes.isEmpty {
-                    Section("Transcript") {
+                    Section {
                         Text(hand.notes)
                             .font(.system(.footnote, design: .monospaced))
                             .foregroundColor(.textPrimary)
                             .listRowBackground(Color.cardSurface)
+                    } header: {
+                        HStack {
+                            Text("Transcript")
+                            Spacer()
+                            Button("Edit") { showTranscriptEditor = true }
+                                .font(PokerTypography.chipLabel)
+                        }
                     }
                 }
             }
             .scrollContentBackground(.hidden)
+        }
+        .sheet(isPresented: $showTranscriptEditor) {
+            TranscriptEditorSheet(initialText: hand.notes,
+                                 warnIfEmptiedWithoutStructure: hand.sortedActions.isEmpty) {
+                hand.notes = $0
+            }
         }
         .navigationTitle("Hand")
         .navigationBarTitleDisplayMode(.inline)

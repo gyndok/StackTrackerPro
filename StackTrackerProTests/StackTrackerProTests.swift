@@ -3572,3 +3572,32 @@ final class DemoDataSeedTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<Tournament>()).filter { $0.statusRaw == "completed" }.count, 8)
     }
 }
+
+// MARK: - Transcript editing (Task 1: TranscriptEditorSheet + entry points)
+
+final class TranscriptEditingTests: XCTestCase {
+    func testTranscriptMergeJoinsWithSingleSpace() {
+        XCTAssertEqual(TranscriptMerge.joined(base: "I had aces ", newSpeech: " he called"),
+                       "I had aces he called")
+        XCTAssertEqual(TranscriptMerge.joined(base: "", newSpeech: "he called"), "he called")
+        XCTAssertEqual(TranscriptMerge.joined(base: "I had aces", newSpeech: ""), "I had aces")
+    }
+
+    @MainActor func testEditedTranscriptPersistsThroughModel() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.transcript = "original"
+        model.transcript = "corrected text"
+        XCTAssertTrue(model.canSave)          // transcript-only save stays enabled
+        XCTAssertEqual(model.transcript, "corrected text")
+    }
+
+    @MainActor func testClearedTranscriptOnDictatedOnlyDisablesSave() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 20_000)
+        model.transcript = "spoken words"
+        XCTAssertTrue(model.canSave)
+        model.transcript = ""
+        XCTAssertFalse(model.canSave)         // no structure + no transcript
+    }
+}

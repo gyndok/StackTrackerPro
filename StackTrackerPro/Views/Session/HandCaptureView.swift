@@ -123,7 +123,10 @@ struct HandCaptureView: View {
                                      canPickLevel: !levelOptions.isEmpty,
                                      onPickLevel: { showLevelPicker = true })
                         if !model.transcript.isEmpty {
-                            TranscriptCard(transcript: model.transcript)
+                            TranscriptCard(transcript: model.transcript,
+                                          warnIfEmptiedWithoutStructure: !model.isResolvable) {
+                                model.transcript = $0
+                            }
                         }
                         HeroStrip(model: model, stubHint: stubHint,
                                  showStackPad: $showStackPad, stackPadText: $stackPadText)
@@ -655,25 +658,44 @@ private struct NarrationBar: View {
 /// with the other capture-screen cards (`.pokerCard()`).
 private struct TranscriptCard: View {
     let transcript: String
+    /// Drives the sheet's dictated-only warning copy (Task 1): true when the
+    /// hand has no resolvable structured result, so clearing the transcript
+    /// here would leave nothing worth saving.
+    let warnIfEmptiedWithoutStructure: Bool
+    let onSave: (String) -> Void
+
     @State private var isExpanded = true
+    @State private var showEditor = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
-            } label: {
-                HStack {
-                    Text("Transcript")
-                        .font(PokerTypography.sectionHeader)
-                        .foregroundColor(.goldAccent)
-                    Spacer()
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+            HStack {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+                } label: {
+                    HStack {
+                        Text("Transcript")
+                            .font(PokerTypography.sectionHeader)
+                            .foregroundColor(.goldAccent)
+                        Spacer()
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.goldAccent)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isExpanded ? "Collapse transcript" : "Expand transcript")
+
+                Button {
+                    showEditor = true
+                } label: {
+                    Image(systemName: "pencil")
                         .font(.caption)
                         .foregroundColor(.goldAccent)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Edit transcript")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isExpanded ? "Collapse transcript" : "Expand transcript")
 
             if isExpanded {
                 ScrollView {
@@ -686,6 +708,11 @@ private struct TranscriptCard: View {
             }
         }
         .pokerCard()
+        .sheet(isPresented: $showEditor) {
+            TranscriptEditorSheet(initialText: transcript,
+                                 warnIfEmptiedWithoutStructure: warnIfEmptiedWithoutStructure,
+                                 onSave: onSave)
+        }
     }
 }
 

@@ -24,6 +24,22 @@ struct DictationSheet: View {
     /// flow.
     @State private var cancelled = false
 
+    /// Manually-edited transcript text once the engine has left `.listening`
+    /// (Done/stop). `nil` while still listening (the live read-only display
+    /// is shown instead); seeded exactly once from the engine's transcript
+    /// the moment stop() resolves. Editing here never touches the engine —
+    /// it's a pure post-capture text override.
+    @State private var editedText: String? = nil
+    /// True once "Resume" is tapped after a manual edit, pending the
+    /// confirmation alert below.
+    @State private var resumeConfirm = false
+    /// The edited text stashed just before a confirmed resume restarts the
+    /// engine, so the next stop can stitch it back onto the fresh speech
+    /// (`DictationEngine.start()` always resets its transcript buffers —
+    /// see DictationEngine.swift — so nothing here can rely on the engine
+    /// accumulating across a restart).
+    @State private var resumeBase: String? = nil
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -41,6 +57,12 @@ struct DictationSheet: View {
                         .foregroundColor(.textSecondary)
                 }
             }
+        }
+        .alert("Resume dictation?", isPresented: $resumeConfirm) {
+            Button("Resume") { confirmResume() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("New speech will be appended to your edited text.")
         }
         .preferredColorScheme(.dark)
         .task {
@@ -135,7 +157,29 @@ struct DictationSheet: View {
         previewTranscript ?? engine.fullTranscript
     }
 
+    @ViewBuilder
     private var transcriptArea: some View {
+        if previewTranscript == nil, editedText != nil {
+            // Post-stop review/edit phase: the engine has already stopped
+            // (see `useTranscript()`) and handed over a plain-text buffer
+            // the user can correct before committing. Bound directly to
+            // `editedText` — never back to the engine, which is idle here.
+            TextEditor(text: Binding(get: { editedText ?? "" }, set: { editedText = $0 }))
+                .font(PokerTypography.chatBody)
+                .foregroundColor(.textPrimary)
+                .scrollContentBackground(.hidden)
+                .padding(12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.cardSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            liveTranscriptArea
+        }
+    }
+
+    /// The live, read-only transcript display shown while listening (or,
+    /// for the DEBUG pose, always). Unchanged from the pre-editing behavior.
+    private var liveTranscriptArea: some View {
         ScrollView {
             Text(displayedTranscript.isEmpty ? transcriptPlaceholder : displayedTranscript)
                 .font(PokerTypography.chatBody)
@@ -167,6 +211,20 @@ struct DictationSheet: View {
                 Task { await engine.start() }
             }
             .buttonStyle(PokerButtonStyle(isEnabled: true))
+        } else if editedText != nil {
+            // Post-stop review/edit phase: let the user either commit the
+            // (possibly corrected) text or resume dictating more, merging
+            // new speech onto what's already been edited.
+            VStack(spacing: 12) {
+                Button("Use Transcript") {
+                    commitEditedTranscript()
+                }
+                .buttonStyle(PokerButtonStyle(isEnabled: true))
+                Button("Resume") {
+                    resumeConfirm = true
+                }
+                .foregroundColor(.textSecondary)
+            }
         } else {
             Button("Use Transcript") {
                 useTranscript()
@@ -181,23 +239,55 @@ struct DictationSheet: View {
     private func useTranscript() {
         Task {
             let transcript = await engine.stop()
+            guard !cancelled else { return }
+            if let resumeBase {
+                // Resumed from a manual edit: the engine buffer is fresh
+                // (DictationEngine.start() resets it — see DictationEngine.
+                // swift), so stitch the pre-resume base back onto whatever
+                // new speech (if any) came in, and land back in the edit
+                // phase rather than the empty-hint auto-restart below —
+                // the base text is real content even if nothing new was
+                // captured this time.
+                self.resumeBase = nil
+                editedText = TranscriptMerge.joined(base: resumeBase, newSpeech: transcript)
+                return
+            }
             guard !transcript.isEmpty else {
                 // Nothing captured — say so and resume listening rather than
                 // stranding the user on a dead-end screen. Cancel (or a
                 // swipe-dismiss) may have fired while stop() was in flight;
                 // guard the resume so a post-teardown restart doesn't kick
                 // the mic pipeline back on after the view is already gone.
-                guard !cancelled else { return }
                 showEmptyHint = true
                 await engine.start()
                 return
             }
-            // Cancel may have fired (and the sheet dismissed) while stop()
-            // was in flight; don't push a result into a torn-down flow.
-            guard !cancelled else { return }
-            onResult(transcript)
-            dismiss()
+            // Move into the post-stop review/edit phase rather than
+            // committing immediately, so the user can correct
+            // speech-to-text mistakes before the transcript is handed back.
+            editedText = transcript
         }
+    }
+
+    /// Commits whatever is in `editedText` (the user's corrected text, or the
+    /// untouched engine transcript if they made no changes) and closes the
+    /// sheet. Only reachable from the post-stop edit phase, where the engine
+    /// is already idle — no `stop()` call here.
+    private func commitEditedTranscript() {
+        guard !cancelled else { return }
+        onResult(editedText ?? engine.fullTranscript)
+        dismiss()
+    }
+
+    /// Confirmed via the `resumeConfirm` alert: stash the current edit as the
+    /// merge base, drop back to the live listening view, and restart the
+    /// engine. The next `useTranscript()` stop stitches this base onto
+    /// whatever fresh speech comes in.
+    private func confirmResume() {
+        resumeBase = editedText
+        editedText = nil
+        showEmptyHint = false
+        Task { await engine.start() }
     }
 
     private func cancel() {
