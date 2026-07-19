@@ -18,6 +18,15 @@
 #                 Keep it byte-identical to what was previously published
 #                 for that venue (e.g. Champions Club has always been
 #                 published as "Champions Club Texas").
+#                 As of 2026-07-18, `buyIn` in that dedup key is always the
+#                 TOTAL per-entry cost (`round(buy_in_usd)`), matching every
+#                 PokerAtlas-fetched event going forward. Records manually
+#                 seeded before 2026-07-18 used the old prize-portion value
+#                 (total minus rake) for `buyIn` and therefore occupy
+#                 different dedup keys than a re-fetch of the same
+#                 real-world event would produce today — this is a known,
+#                 accepted gap; no migration/backfill of those older records
+#                 is planned.
 #   listing_name  What PokerAtlas prints in bold on the listing page, when
 #                 it differs from display_name. pokeratlas-fetch.py matches
 #                 rows against listing_name (or display_name) case-

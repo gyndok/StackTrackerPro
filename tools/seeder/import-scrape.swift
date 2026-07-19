@@ -190,11 +190,13 @@ func mappedTimeZone(forVenueSlug slug: String, venueTimeZone: String?) -> String
     venueTimeZone ?? venueTimeZones[slug] ?? "America/Los_Angeles"
 }
 
+/// `buyIn` is the TOTAL cost of one entry (matches the app's Tournament
+/// model, where `buyIn` is the full per-entry price and `entryFee` is the
+/// house-kept portion of it — NOT a value subtracted from `buyIn`).
 func mappedBuyInAndFee(_ event: ScrapeEvent) -> (buyIn: Int, entryFee: Int) {
     let total = Int((event.buy_in_usd ?? 0).rounded())
-    guard let rake = event.rake_usd else { return (total, 0) }
-    let roundedRake = Int(rake.rounded())
-    return (total - roundedRake, roundedRake)
+    let entryFee = Int((event.rake_usd ?? 0).rounded())
+    return (total, entryFee)
 }
 
 /// `<venue-slug>-<date_pt>-<last-id-token>.json`

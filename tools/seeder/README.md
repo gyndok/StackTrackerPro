@@ -219,11 +219,14 @@ tools/seeder/import-scrape .out/tournaments.json --venues .out/venues.json \
   isn't in the venues file or the venue's address can't be split into
   city/state — `publish`'s validation remains the gate, but the failure is
   never silent.
-- Field mapping (buy-in/rake split, guarantee, re-entry policy, flight
+- Field mapping (buy-in/entry-fee, guarantee, re-entry policy, flight
   dedup suffix, timezone) is documented in
   `docs/superpowers/specs/2026-07-17-seeder-bulk-upgrades-design.md`
   component 2 — that spec is the binding source if this README and the code
-  ever disagree.
+  ever disagree. `buyIn` is always the TOTAL per-entry cost
+  (`round(buy_in_usd)`) and `entryFee` is the house-kept portion of it
+  (`round(rake_usd ?? 0)`) — matching the app's Tournament model, where
+  `entryFee` is never subtracted out of `buyIn`.
 
 Review the emitted drafts (venue names/cities drive geocoding — the scraper's
 `display_name` is used as-is), then `publish` them like any other draft.
