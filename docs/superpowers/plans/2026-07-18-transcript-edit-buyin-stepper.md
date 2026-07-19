@@ -241,3 +241,5 @@ with `stepButton` = 44×44 tappable `Button` showing a 20pt SF symbol tinted `.t
 - Spec coverage: F1→T1 (three entry points, merge rule, empty-warning), F2→T2 (sheet, rebalance, doc comments) + T4 (sources), F3→T3 (stepper, clamps, debounce, gating); root-cause section→T2/T4; constraints mirrored above. Testing list maps to the three new test classes + seeder harness.
 - Placeholders: none — every step carries code or exact edits; the two read-first checks (engine buffer accumulation, snapshot association) state what to look for and both outcomes.
 - Type consistency: `TranscriptMerge.joined(base:newSpeech:)`, `BuyInSplit.setTotal/setPrizePool/setFee`, `stepPlayersRemaining(_:)`/`settlePlayersSnapshotNow()` used identically in interface blocks and steps.
+
+> **STATUS: EXECUTED 2026-07-19** (commits 21e23a2..005be01; seeder `test.sh` green all sections after the goldens-first fail→fix→pass TDD loop on `mappedBuyInAndFee`; app suite 181/181 green on iPhone Air OS 26.5 and Release build green, confirming zero drift from the Task 4 doc/seeder-only changes).
