@@ -2,7 +2,7 @@
 
 **Approved:** 2026-07-18 with user (live-play feedback from the Champions Club Monster Stack). Three table-tested improvements shipped together, plus a root-cause repair.
 
-> **STATUS: EXECUTED 2026-07-19** — all 4 tasks live (commits 21e23a2..005be01). Verification: seeder `test.sh` PASS all sections (goldens updated by hand first, watched the diff FAIL, then `mappedBuyInAndFee` fixed to `buyIn = round(buy_in_usd)` / `entryFee = round(rake_usd ?? 0)`, then PASS); app suite 181/181 green on iPhone Air OS 26.5 (no app-code changes in Task 4, confirming no drift); Release build (generic/platform=iOS Simulator) succeeded.
+> **STATUS: EXECUTED 2026-07-19** — all 4 tasks live (commits 4c5ad53..005be01). Verification: seeder `test.sh` PASS all sections (goldens updated by hand first, watched the diff FAIL, then `mappedBuyInAndFee` fixed to `buyIn = round(buy_in_usd)` / `entryFee = round(rake_usd ?? 0)`, then PASS); app suite 181/181 green on iPhone Air OS 26.5 (no app-code changes in Task 4, confirming no drift); Release build (generic/platform=iOS Simulator) succeeded.
 
 ## Root cause discovered during design
 

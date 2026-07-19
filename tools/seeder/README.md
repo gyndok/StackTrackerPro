@@ -222,11 +222,13 @@ tools/seeder/import-scrape .out/tournaments.json --venues .out/venues.json \
 - Field mapping (buy-in/entry-fee, guarantee, re-entry policy, flight
   dedup suffix, timezone) is documented in
   `docs/superpowers/specs/2026-07-17-seeder-bulk-upgrades-design.md`
-  component 2 — that spec is the binding source if this README and the code
-  ever disagree. `buyIn` is always the TOTAL per-entry cost
-  (`round(buy_in_usd)`) and `entryFee` is the house-kept portion of it
-  (`round(rake_usd ?? 0)`) — matching the app's Tournament model, where
-  `entryFee` is never subtracted out of `buyIn`.
+  component 2 — that spec is the binding source for anything not covered
+  by the buy-in/entry-fee rule below, which supersedes it (the 2026-07-18
+  transcript-edit/buy-in/stepper spec corrected that mapping). `buyIn` is
+  always the TOTAL per-entry cost (`round(buy_in_usd)`) and `entryFee` is
+  the house-kept portion of it (`round(rake_usd ?? 0)`) — matching the
+  app's Tournament model, where `entryFee` is never subtracted out of
+  `buyIn`.
 
 Review the emitted drafts (venue names/cities drive geocoding — the scraper's
 `display_name` is used as-is), then `publish` them like any other draft.

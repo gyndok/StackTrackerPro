@@ -242,4 +242,4 @@ with `stepButton` = 44×44 tappable `Button` showing a 20pt SF symbol tinted `.t
 - Placeholders: none — every step carries code or exact edits; the two read-first checks (engine buffer accumulation, snapshot association) state what to look for and both outcomes.
 - Type consistency: `TranscriptMerge.joined(base:newSpeech:)`, `BuyInSplit.setTotal/setPrizePool/setFee`, `stepPlayersRemaining(_:)`/`settlePlayersSnapshotNow()` used identically in interface blocks and steps.
 
-> **STATUS: EXECUTED 2026-07-19** (commits 21e23a2..005be01; seeder `test.sh` green all sections after the goldens-first fail→fix→pass TDD loop on `mappedBuyInAndFee`; app suite 181/181 green on iPhone Air OS 26.5 and Release build green, confirming zero drift from the Task 4 doc/seeder-only changes).
+> **STATUS: EXECUTED 2026-07-19** (commits 4c5ad53..005be01; seeder `test.sh` green all sections after the goldens-first fail→fix→pass TDD loop on `mappedBuyInAndFee`; app suite 181/181 green on iPhone Air OS 26.5 and Release build green, confirming zero drift from the Task 4 doc/seeder-only changes).

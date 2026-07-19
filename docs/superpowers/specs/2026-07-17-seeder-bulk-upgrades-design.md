@@ -82,3 +82,5 @@ A Python script (`tools/seeder/pokeratlas-fetch.py`) that turns PokerAtlas pages
 - End-to-end acceptance (manual, once): import one real week with `--with-structures`, publish to development with `--skip-existing`, verify in the app's Browse Nearby Events, then production.
 
 > **STATUS: EXECUTED 2026-07-18** — all 5 components live (commits 75a743e..cdd5e10). Live acceptance: S2S key minted+rotated (production AUTH OK; development 401s persistently across two keys — Apple-side quirk, documented, --via-cktool covers dev), first token-free bulk publish landed 5 real Texas events (structures inline, 29-45 rows each), --skip-existing guard proven live (re-run: published 0, skipped 5). Live run exposed and fixed: buy-in source priority (slug over title, GTD tokens rejected), markdown-escape stripping, explicit venue city/state, and display_name/listing_name split for dedup continuity.
+>
+> **ERRATA 2026-07-19:** component 2's buyIn/entryFee mapping was corrected to `buyIn` = TOTAL per-entry cost (`round(buy_in_usd)`), `entryFee` = `round(rake_usd ?? 0)` — see `2026-07-18-transcript-edit-buyin-stepper-design.md`, which supersedes this spec on that rule.
