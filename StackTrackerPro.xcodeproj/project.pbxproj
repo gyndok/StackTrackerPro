@@ -34,7 +34,6 @@
 		7E5700000000000000000116 /* FadeNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000115 /* FadeNote.swift */; };
 		7E5700000000000000000118 /* HoleCardShorthand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000117 /* HoleCardShorthand.swift */; };
 		7E570000000000000000011A /* CardPickerGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000119 /* CardPickerGrid.swift */; };
-		7E5700000000000000000138 /* TranscriptEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000137 /* TranscriptEditorSheet.swift */; };
 		7E570000000000000000011C /* HandStubSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000011B /* HandStubSheet.swift */; };
 		7E570000000000000000011E /* SwingDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000011D /* SwingDetector.swift */; };
 		7E5700000000000000000120 /* BreakDebriefEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000011F /* BreakDebriefEngine.swift */; };
@@ -47,6 +46,7 @@
 		7E5700000000000000000132 /* HandHistoryFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000131 /* HandHistoryFormatter.swift */; };
 		7E5700000000000000000134 /* HandSharePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000133 /* HandSharePreview.swift */; };
 		7E5700000000000000000136 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000135 /* DemoData.swift */; };
+		7E5700000000000000000138 /* TranscriptEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000137 /* TranscriptEditorSheet.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
 		9F8FD095E494A3BE1DBFCFEF /* HandNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435A573CAFB0847E59AB2869 /* HandNote.swift */; };
@@ -166,7 +166,6 @@
 		7E5700000000000000000115 /* FadeNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FadeNote.swift; sourceTree = "<group>"; };
 		7E5700000000000000000117 /* HoleCardShorthand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleCardShorthand.swift; sourceTree = "<group>"; };
 		7E5700000000000000000119 /* CardPickerGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardPickerGrid.swift; sourceTree = "<group>"; };
-		7E5700000000000000000137 /* TranscriptEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptEditorSheet.swift; sourceTree = "<group>"; };
 		7E570000000000000000011B /* HandStubSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandStubSheet.swift; sourceTree = "<group>"; };
 		7E570000000000000000011D /* SwingDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwingDetector.swift; sourceTree = "<group>"; };
 		7E570000000000000000011F /* BreakDebriefEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakDebriefEngine.swift; sourceTree = "<group>"; };
@@ -179,6 +178,7 @@
 		7E5700000000000000000131 /* HandHistoryFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandHistoryFormatter.swift; sourceTree = "<group>"; };
 		7E5700000000000000000133 /* HandSharePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandSharePreview.swift; sourceTree = "<group>"; };
 		7E5700000000000000000135 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		7E5700000000000000000137 /* TranscriptEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptEditorSheet.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* PokerAtlasScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAtlasScanner.swift; sourceTree = "<group>"; };
@@ -886,7 +886,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
@@ -905,7 +905,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.4;
+				MARKETING_VERSION = 1.2.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -921,7 +921,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = StackTrackerPro/StackTrackerPro.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StackTrackerPro/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StackTrackerPro;
@@ -940,7 +940,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.4;
+				MARKETING_VERSION = 1.2.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gyndok.stacktrackerpro;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
