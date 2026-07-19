@@ -79,9 +79,18 @@ struct TranscriptEditorSheet: View {
         }
     }
 
+    /// The warn-on-empty decision, extracted so it is unit-testable apart
+    /// from the view: saving an emptied transcript only warns when the hand
+    /// has no structured content to fall back on (`warnIfEmptiedWithoutStructure`).
+    /// `trimmedText` must already be whitespace-trimmed (as `attemptSave` does).
+    static func shouldWarnOnSave(trimmedText: String, warnIfEmptiedWithoutStructure: Bool) -> Bool {
+        warnIfEmptiedWithoutStructure && trimmedText.isEmpty
+    }
+
     private func attemptSave() {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if warnIfEmptiedWithoutStructure && trimmed.isEmpty {
+        if Self.shouldWarnOnSave(trimmedText: trimmed,
+                                 warnIfEmptiedWithoutStructure: warnIfEmptiedWithoutStructure) {
             showEmptyConfirm = true
             return
         }

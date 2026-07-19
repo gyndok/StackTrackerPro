@@ -282,12 +282,21 @@ struct DictationSheet: View {
     /// Confirmed via the `resumeConfirm` alert: stash the current edit as the
     /// merge base, drop back to the live listening view, and restart the
     /// engine. The next `useTranscript()` stop stitches this base onto
-    /// whatever fresh speech comes in.
+    /// whatever fresh speech comes in. The restart Task is guarded on
+    /// `cancelled` both before and after the await (mirroring the stop-path
+    /// Tasks): a swipe-dismiss can land mid-restart, and onDisappear's
+    /// detached stop() no-ops via its `.listening` guard while start() is
+    /// still in flight — without the post-await stop here, that race would
+    /// leave the mic session running after the sheet is gone.
     private func confirmResume() {
         resumeBase = editedText
         editedText = nil
         showEmptyHint = false
-        Task { await engine.start() }
+        Task {
+            guard !cancelled else { return }
+            await engine.start()
+            if cancelled { _ = await engine.stop() }
+        }
     }
 
     private func cancel() {

@@ -3600,4 +3600,19 @@ final class TranscriptEditingTests: XCTestCase {
         model.transcript = ""
         XCTAssertFalse(model.canSave)         // no structure + no transcript
     }
+
+    func testShouldWarnOnSaveEmptyWithWarnFlag() {
+        XCTAssertTrue(TranscriptEditorSheet.shouldWarnOnSave(
+            trimmedText: "", warnIfEmptiedWithoutStructure: true))
+    }
+
+    func testShouldWarnOnSaveEmptyWithoutWarnFlag() {
+        XCTAssertFalse(TranscriptEditorSheet.shouldWarnOnSave(
+            trimmedText: "", warnIfEmptiedWithoutStructure: false))
+    }
+
+    func testShouldWarnOnSaveNonEmptyWithWarnFlag() {
+        XCTAssertFalse(TranscriptEditorSheet.shouldWarnOnSave(
+            trimmedText: "I had aces", warnIfEmptiedWithoutStructure: true))
+    }
 }
