@@ -477,6 +477,10 @@
     <h3>Blind Structure Editor</h3>
     <p>Tap <strong>Edit Full Blind Structure</strong> to enter the complete blind schedule. Each level includes: level number, small blind, big blind, ante, and duration (minutes). You can add break entries. If you scanned, the levels are pre-populated — review and edit as needed.</p>
 
+    <div class="callout callout-note">
+      <span class="label">📝 Note</span> Got a number wrong — or imported an event with a different fee split? During or after the tournament, tap the <strong>Investment</strong> metric on the Metrics pane to adjust <strong>total buy-in, prize-pool portion, and house fee</strong> with live rebalancing. All profit and ROI figures recompute instantly, even on finished tournaments.
+    </div>
+
     <div class="callout callout-tip">
       <span class="label">💡 Tip</span> Set default values (starting chips, game type, payout %) in <strong>Settings → Defaults</strong> to speed up future setups.
     </div>
@@ -534,6 +538,7 @@
           <li>Zone badge + coaching tip</li>
           <li>Field size, players remaining</li>
           <li>Rebuys, bounties, add-ons</li>
+          <li>Tap Investment to correct buy-in and fees</li>
         </ul>
       </div>
       <div class="quick-card">
@@ -591,7 +596,7 @@
     </div>
 
     <h3>Status Bar (always visible)</h3>
-    <p>The fixed bar at the top shows: <strong>current stack</strong>, <strong>blind level</strong>, <strong>M-ratio zone badge</strong>, <strong>players remaining</strong>, and <strong>elapsed time</strong>. Tap the break timer icon to start a break countdown.</p>
+    <p>The fixed bar at the top shows the tournament name, the <strong>current blind level</strong> (or the break countdown while on break), your <strong>big-blind count badge</strong>, and — once you've set a field size — a <strong>players-remaining counter with − and + buttons</strong>. Tap <strong>−</strong> each time someone busts (or <strong>+</strong> to undo); no need to leave whatever pane you're on. Bulk corrections still live in the Metrics pane's Players editor.</p>
   </div>
 
   <!-- AI CHAT -->
@@ -746,11 +751,17 @@
       <li><strong>Preflop sizing</strong> — one-tap presets in big blinds (2bb, 2.5bb, 3bb…).</li>
       <li><strong>Postflop sizing</strong> — pot-fraction presets (⅓, ½, ⅔ pot…).</li>
       <li><strong>Custom amounts</strong> — type any number; it's taken as the total bet. Add <code>bb</code> (e.g. <code>4bb</code>) to enter big blinds instead of chips.</li>
+      <li><strong>All-In</strong> — a dedicated button that fills the player's remaining stack in one tap. Shoves are also detected automatically: any bet, raise, or call that commits a player's last chip is recorded as all-in, even if you entered it as a raise.</li>
       <li><strong>Board cards</strong> — pick the flop, turn, and river as they're dealt; mis-taps can be deleted.</li>
     </ul>
+    <p>Once an all-in is called and at most one player has chips behind, the betting prompts stop — the app collects just the remaining board cards straight through to showdown. In multiway pots, betting continues normally while two or more players still have chips (side pots).</p>
+
+    <h3>Unknown suits</h3>
+    <p>Didn't catch a suit? The card picker includes a fifth option — <strong>x</strong> — for any card whose suit you don't know. <code>A♣Kx</code> is a legal holding, and it works for your cards, villain hands, and the board.</p>
 
     <h3>Showdown & result</h3>
     <p>Enter shown cards at showdown and the app <strong>evaluates the hands and determines the winner automatically</strong> — pot size and your net win/loss are computed from the action. You can override the winner or pot if the hand played out unusually. Then tap <strong>Save</strong>.</p>
+    <p>One honest exception: if any card at showdown has an unknown suit, the app won't guess (a possible flush can't be proven) — you pick the winner with the override control before saving.</p>
 
     <div class="callout callout-tip">
       <span class="label">💡 Tip</span> If your final stack from the hand matches the math, saving the hand also updates your tracked stack — no separate chat update needed.
@@ -763,10 +774,12 @@
     <p>Some hands are easier to say than to tap. Tap the <strong>mic button</strong> (on the Hand Capture Screen, the quick-capture sheet, or any pending hand) to open <strong>Voice Hand Entry</strong>:</p>
     <ol class="steps">
       <li>Speak the hand as you remember it — cards, action, the story, anything.</li>
-      <li>Watch the live transcript as you talk.</li>
-      <li>Tap <strong>Use Transcript</strong>. The transcript appears as a collapsible reference card on the Hand Capture Screen.</li>
+      <li>Watch the live transcript as you talk, then tap <strong>Done</strong>.</li>
+      <li><strong>Edit the text</strong> — after you stop, the transcript becomes editable, so you can fix any mis-heard words right there. Need to add more? Tap <strong>Resume</strong> and new speech is appended after your edits.</li>
+      <li>Tap <strong>Use Transcript</strong>. It appears as a collapsible reference card on the Hand Capture Screen.</li>
     </ol>
     <p>From there it's your choice: <strong>enter the structured hand by tap</strong> using the transcript as your guide, or <strong>just save</strong> — the transcript alone is a perfectly good record. Transcript-only hands show a <strong>Dictated</strong> label in the hands list, and the full transcript appears in the hand's detail view, in shared hand histories, and in your session recap.</p>
+    <p>Transcripts stay editable forever: tap <strong>Edit</strong> on the Transcript section of any saved hand (or the pencil on the capture screen's transcript card) to correct the text later. Editing a transcript never changes the hand's logged actions or result.</p>
 
     <div class="callout callout-note">
       <span class="label">📝 Note</span> Transcription runs <strong>entirely on your device</strong> — audio never leaves your iPhone and is not recorded or stored. The first use downloads Apple's on-device speech model (one time, network required). Requires a device with Apple Intelligence support.
