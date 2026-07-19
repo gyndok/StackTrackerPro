@@ -26,8 +26,12 @@ final class TournamentManager {
     private(set) var lastSaveError: String?
     private(set) var notificationsDenied = false
 
-    // Players-remaining stepper debounce (10s coalescing into one FieldSnapshot)
+    // Players-remaining stepper debounce (10s coalescing into one FieldSnapshot).
+    // The pending snapshot is pinned to the tournament it was scheduled on
+    // (weak — never keeps a deleted model alive) so a stale task can never
+    // fire against whatever tournament happens to be active later.
     private var playersSnapshotTask: Task<Void, Never>?
+    private weak var playersSnapshotTournament: Tournament?
 
     init() {}
 
@@ -38,6 +42,7 @@ final class TournamentManager {
     // MARK: - State Machine
 
     func startTournament(_ tournament: Tournament) {
+        cancelPlayersSnapshot()
         tournament.status = .active
         if tournament.actualStartDate == nil {
             tournament.actualStartDate = .now
@@ -86,6 +91,7 @@ final class TournamentManager {
 
     func completeTournament(position: Int? = nil, payout: Int? = nil, endDate: Date = .now) {
         guard let tournament = activeTournament, tournament.status != .completed else { return }
+        cancelPlayersSnapshot()
         foldInPauseTime(for: tournament, until: endDate)
         tournament.status = .completed
         tournament.finishPosition = position
@@ -110,6 +116,7 @@ final class TournamentManager {
     }
 
     func dismissRecap() {
+        cancelPlayersSnapshot()
         showSessionRecap = false
         completedTournamentForRecap = nil
         activeTournament = nil
@@ -261,30 +268,47 @@ final class TournamentManager {
         guard newValue != tournament.playersRemaining else { return }
         tournament.playersRemaining = newValue
         save()
-        schedulePlayersSnapshot()
+        schedulePlayersSnapshot(for: tournament)
     }
 
-    /// Cancels any pending debounce and records the FieldSnapshot immediately.
+    /// Cancels any pending debounce and records the FieldSnapshot immediately
+    /// (still subject to the same stale-tournament guard as a timer fire).
     /// No-op when no step is pending.
     func settlePlayersSnapshotNow() {
         guard playersSnapshotTask != nil else { return }
-        playersSnapshotTask?.cancel()
-        playersSnapshotTask = nil
-        commitPlayersSnapshot()
-    }
-
-    private func schedulePlayersSnapshot() {
-        playersSnapshotTask?.cancel()
-        playersSnapshotTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(10))
-            guard !Task.isCancelled else { return }
-            self?.playersSnapshotTask = nil
-            self?.commitPlayersSnapshot()
+        let tournament = playersSnapshotTournament
+        cancelPlayersSnapshot()
+        if let tournament {
+            commitPlayersSnapshot(for: tournament)
         }
     }
 
-    private func commitPlayersSnapshot() {
-        guard let tournament = mutableTournament else { return }
+    /// Drops any pending debounced snapshot without recording it. Called on
+    /// every lifecycle transition that changes which tournament is "current"
+    /// so a stale task can never fire across a session boundary.
+    private func cancelPlayersSnapshot() {
+        playersSnapshotTask?.cancel()
+        playersSnapshotTask = nil
+        playersSnapshotTournament = nil
+    }
+
+    private func schedulePlayersSnapshot(for tournament: Tournament) {
+        playersSnapshotTask?.cancel()
+        playersSnapshotTournament = tournament
+        playersSnapshotTask = Task { [weak self, weak tournament] in
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled, let self else { return }
+            self.playersSnapshotTask = nil
+            self.playersSnapshotTournament = nil
+            guard let tournament else { return }
+            self.commitPlayersSnapshot(for: tournament)
+        }
+    }
+
+    /// Records the snapshot only if the tournament it was scheduled on is
+    /// still the active, non-completed tournament — otherwise drops silently.
+    private func commitPlayersSnapshot(for tournament: Tournament) {
+        guard tournament === activeTournament, tournament.status != .completed else { return }
         let avgStack = tournament.averageStack
         let snapshot = FieldSnapshot(
             totalEntries: tournament.fieldSize,

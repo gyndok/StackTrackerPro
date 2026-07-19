@@ -1283,6 +1283,34 @@ final class PlayersStepperTests: XCTestCase {
         manager.stepPlayersRemaining(-1)
         XCTAssertEqual(tournament.playersRemaining, 0)    // nothing to step from
     }
+
+    /// A debounced snapshot scheduled on tournament A must never land on
+    /// tournament B: step on A, complete A + dismiss the recap, start B —
+    /// all inside the debounce window — then force settlement. B must gain
+    /// zero snapshots and A none after completion.
+    @MainActor
+    func testStaleDebounceNeverSnapshotsNextTournament() throws {
+        let (manager, tournamentA, ctx) = try makeActiveTournament(fieldSize: 100, remaining: 50)
+
+        manager.stepPlayersRemaining(-1)                  // schedules debounce on A
+        let aSnapshotsAfterStep = tournamentA.fieldSnapshots?.count ?? 0
+
+        manager.completeTournament(position: 40, payout: 0)
+        manager.dismissRecap()                            // activeTournament = nil
+
+        let tournamentB = Tournament(name: "Next Event", buyIn: 100)
+        tournamentB.fieldSize = 200
+        tournamentB.playersRemaining = 200
+        ctx.insert(tournamentB)
+        manager.startTournament(tournamentB)
+
+        manager.settlePlayersSnapshotNow()                // stale debounce must drop, not fire
+
+        XCTAssertEqual(tournamentB.fieldSnapshots?.count ?? 0, 0,
+                       "stale debounce from A must never snapshot B")
+        XCTAssertEqual(tournamentA.fieldSnapshots?.count ?? 0, aSnapshotsAfterStep,
+                       "A must gain no snapshots after completion")
+    }
 }
 
 // MARK: - Structure library
