@@ -6,7 +6,12 @@ final class Tournament {
     // Basic info
     var name: String = ""
     var gameTypeRaw: String = "NLH"
+    /// TOTAL price of one entry — everything you hand over to sit down, i.e.
+    /// your prize-pool contribution plus the house's cut. Not just the
+    /// prize-pool share; see `entryFee` and `prizePoolContributionPerPlayer`.
     var buyIn: Int = 0
+    /// The house-kept portion of `buyIn` (the rake/juice). Should never
+    /// exceed `buyIn`.
     var entryFee: Int = 0
     var deductions: Int = 0
     var bountyAmount: Int = 0
@@ -246,6 +251,9 @@ final class Tournament {
         return totalChipsInPlay / playersRemaining
     }
 
+    /// Total money you've put into this tournament: `buyIn` (the TOTAL price
+    /// of one entry, not just your prize-pool share) for the original entry
+    /// plus each rebuy, plus any add-ons taken.
     var totalInvestment: Int {
         buyIn * (1 + rebuysUsed) + (addOnAvailable ? playerAddOnsUsed * addOnCost : 0)
     }
@@ -309,8 +317,9 @@ final class Tournament {
 
     // MARK: - Tournament Metrics
 
-    /// Per-player contribution to the prize pool (total buy-in minus rake,
-    /// bounty, and other deductions). Never negative.
+    /// Per-player contribution to the prize pool: `buyIn` (the TOTAL
+    /// per-entry price) minus `entryFee` (the house-kept portion of it),
+    /// minus bounty and other deductions. Never negative.
     var prizePoolContributionPerPlayer: Int {
         max(0, buyIn - entryFee - bountyAmount - deductions)
     }

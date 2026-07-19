@@ -1,11 +1,17 @@
 import SwiftUI
+import SwiftData
 
 struct TournamentMetricsView: View {
     @Environment(TournamentManager.self) private var tournamentManager
+    @Environment(\.modelContext) private var modelContext
     @Bindable var tournament: Tournament
 
     @State private var showStackEditor = false
     @State private var showPlayersEditor = false
+
+    // Buy-in editor state
+    @State private var showBuyInEditor = false
+    @State private var buyInSplit = BuyInSplit(total: 0, fee: 0)
 
     // Stack editor state
     @State private var editChipCount = ""
@@ -49,6 +55,9 @@ struct TournamentMetricsView: View {
         }
         .sheet(isPresented: $showStartingStackEditor) {
             startingStackEditorSheet
+        }
+        .sheet(isPresented: $showBuyInEditor) {
+            buyInEditorSheet
         }
     }
 
@@ -207,10 +216,18 @@ struct TournamentMetricsView: View {
                     : "---"
             )
 
-            // Total Investment
+            // Total Investment (editable — works even after the tournament is
+            // completed, since correcting a mis-recorded buy-in split is the
+            // whole point of this editor; see saveBuyInEdit for why this
+            // bypasses TournamentManager's usual live-session gating).
             StatBlockView(
                 label: "Total Investment",
-                value: formatCurrency(tournament.totalInvestment)
+                value: formatCurrency(tournament.totalInvestment),
+                isEditable: true,
+                onTap: {
+                    buyInSplit = BuyInSplit(total: tournament.buyIn, fee: tournament.entryFee)
+                    showBuyInEditor = true
+                }
             )
 
             // Starting Stack (editable — a wrong value poisons all chip math)
@@ -389,7 +406,30 @@ struct TournamentMetricsView: View {
         .presentationDetents([.medium])
     }
 
+    // MARK: - Buy-In Editor Sheet
+
+    private var buyInEditorSheet: some View {
+        BuyInEditSheet(
+            split: $buyInSplit,
+            tournament: tournament,
+            onCancel: { showBuyInEditor = false },
+            onSave: { saveBuyInEdit() }
+        )
+    }
+
     // MARK: - Save Actions
+
+    // Writes directly to the model (bypassing TournamentManager's
+    // mutableTournament gating, which no-ops on completed tournaments) because
+    // correcting a mis-recorded buy-in split after the fact — the exact bug
+    // this editor exists to fix — must work for completed sessions too.
+    private func saveBuyInEdit() {
+        tournament.buyIn = buyInSplit.total
+        tournament.entryFee = buyInSplit.fee
+        try? modelContext.save()
+        HapticFeedback.success()
+        showBuyInEditor = false
+    }
 
     private func saveStartingStackEdit() {
         guard let chips = Int(editStartingChips), chips > 0 else { return }
@@ -534,6 +574,146 @@ struct TournamentMetricsView: View {
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = ","
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+}
+
+// MARK: - BuyInSplit
+
+/// Pure rebalance rule for the buy-in editor. Total = prizePool + fee,
+/// maintained live as the user edits any one of the three fields. All Ints,
+/// never negative.
+struct BuyInSplit: Equatable {
+    var total: Int
+    var fee: Int
+
+    var prizePool: Int { max(0, total - fee) }
+
+    /// User edited the total: keep the fee (clamped to no more than the new
+    /// total), let the prize pool absorb the difference.
+    mutating func setTotal(_ v: Int) {
+        total = max(0, v)
+        fee = min(fee, total)
+    }
+
+    /// User edited the prize-pool share: keep the fee, total follows.
+    mutating func setPrizePool(_ v: Int) {
+        let clampedPrize = max(0, v)
+        total = clampedPrize + fee
+    }
+
+    /// User edited the house fee: keep the prize-pool share, total follows.
+    mutating func setFee(_ v: Int) {
+        let currentPrize = prizePool
+        fee = max(0, v)
+        total = currentPrize + fee
+    }
+}
+
+// MARK: - BuyInEditSheet
+
+/// Field being actively edited, so a programmatic rebalance of the other two
+/// fields never fights the user's own typing (which would otherwise ping-pong
+/// via onChange since all three fields are derived from the same struct).
+private enum BuyInField: Hashable {
+    case total, prizePool, fee
+}
+
+/// Three-field editor for `Tournament.buyIn` / `entryFee`, expressed as
+/// Total buy-in / To prize pool / House fee, live-rebalanced through
+/// `BuyInSplit`. `onSave` is expected to write `split.total`/`split.fee`
+/// back onto the tournament.
+private struct BuyInEditSheet: View {
+    @Binding var split: BuyInSplit
+    let tournament: Tournament
+    let onCancel: () -> Void
+    let onSave: () -> Void
+
+    @State private var totalText = ""
+    @State private var prizeText = ""
+    @State private var feeText = ""
+    @FocusState private var focusedField: BuyInField?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Total buy-in", text: $totalText)
+                        .keyboardType(.numberPad)
+                        .focused($focusedField, equals: .total)
+                        .onChange(of: totalText) { _, newValue in
+                            guard focusedField == .total else { return }
+                            split.setTotal(Int(newValue) ?? 0)
+                            syncOtherFields()
+                        }
+                } header: {
+                    Text("Total Buy-In")
+                } footer: {
+                    Text("What one entry costs you.")
+                }
+
+                Section {
+                    TextField("To prize pool", text: $prizeText)
+                        .keyboardType(.numberPad)
+                        .focused($focusedField, equals: .prizePool)
+                        .onChange(of: prizeText) { _, newValue in
+                            guard focusedField == .prizePool else { return }
+                            split.setPrizePool(Int(newValue) ?? 0)
+                            syncOtherFields()
+                        }
+                } header: {
+                    Text("To Prize Pool")
+                }
+
+                Section {
+                    TextField("House fee", text: $feeText)
+                        .keyboardType(.numberPad)
+                        .focused($focusedField, equals: .fee)
+                        .onChange(of: feeText) { _, newValue in
+                            guard focusedField == .fee else { return }
+                            split.setFee(Int(newValue) ?? 0)
+                            syncOtherFields()
+                        }
+                } header: {
+                    Text("House Fee")
+                } footer: {
+                    if tournament.bountyAmount > 0 || tournament.deductions > 0 {
+                        Text("Prize-pool math also subtracts your bounty (\(formatCurrency(tournament.bountyAmount))) and deductions (\(formatCurrency(tournament.deductions))).")
+                    }
+                }
+            }
+            .navigationTitle("Edit Buy-In")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", action: onSave)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .onAppear {
+            totalText = "\(split.total)"
+            prizeText = "\(split.prizePool)"
+            feeText = "\(split.fee)"
+        }
+    }
+
+    // Refreshes the display text of every field except the one currently
+    // focused, so the user's in-progress typing/cursor is never clobbered.
+    private func syncOtherFields() {
+        if focusedField != .total { totalText = "\(split.total)" }
+        if focusedField != .prizePool { prizeText = "\(split.prizePool)" }
+        if focusedField != .fee { feeText = "\(split.fee)" }
+    }
+
+    private func formatCurrency(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 0
+        formatter.currencySymbol = "$"
+        return formatter.string(from: NSNumber(value: value)) ?? "$\(value)"
     }
 }
 

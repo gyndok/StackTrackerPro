@@ -3616,3 +3616,40 @@ final class TranscriptEditingTests: XCTestCase {
             trimmedText: "I had aces", warnIfEmptiedWithoutStructure: true))
     }
 }
+
+// MARK: - BuyInSplit
+
+final class BuyInSplitTests: XCTestCase {
+    func testTodaysBugScenario() {          // $330 imported, user corrects total to $400
+        var s = BuyInSplit(total: 330, fee: 0)
+        s.setFee(70)                        // prize stays 330, total becomes 400
+        XCTAssertEqual(s.total, 400); XCTAssertEqual(s.prizePool, 330); XCTAssertEqual(s.fee, 70)
+    }
+
+    func testTotalDrivenRebalance() {
+        var s = BuyInSplit(total: 400, fee: 70)
+        s.setTotal(600)                     // fee kept, prize 530
+        XCTAssertEqual(s.prizePool, 530); XCTAssertEqual(s.fee, 70)
+        s.setTotal(50)                      // fee clamps to <= total
+        XCTAssertEqual(s.fee, 50); XCTAssertEqual(s.prizePool, 0)
+    }
+
+    func testPrizeDriven() {
+        var s = BuyInSplit(total: 400, fee: 70)
+        s.setPrizePool(500)
+        XCTAssertEqual(s.total, 570); XCTAssertEqual(s.fee, 70)
+    }
+
+    @MainActor
+    func testMetricsRecomputeAfterEdit() throws {
+        let container = try makeInMemoryContainer()
+        let t = Tournament(name: "T", buyIn: 330, entryFee: 0, startingChips: 50_000)
+        container.mainContext.insert(t)
+        t.payout = 1_000
+        XCTAssertEqual(t.totalInvestment, 330)
+        t.buyIn = 400; t.entryFee = 70      // what BuyInEditSheet.save writes
+        XCTAssertEqual(t.totalInvestment, 400)
+        XCTAssertEqual(t.profit, 600)
+        XCTAssertEqual(t.prizePoolContributionPerPlayer, 330)
+    }
+}
