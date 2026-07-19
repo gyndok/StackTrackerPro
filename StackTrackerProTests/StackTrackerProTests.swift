@@ -1229,6 +1229,62 @@ final class TournamentEventTests: XCTestCase {
     }
 }
 
+// MARK: - Players-remaining stepper
+
+final class PlayersStepperTests: XCTestCase {
+
+    // Keeps each in-memory ModelContainer alive for the life of the test —
+    // the tuple below only hands back its ModelContext (for `.fetch`), and
+    // without this the container can be deallocated mid-test, tearing down
+    // the store out from under the still-referenced context/manager.
+    private var containers: [ModelContainer] = []
+
+    @MainActor
+    private func makeActiveTournament(fieldSize: Int, remaining: Int) throws -> (TournamentManager, Tournament, ModelContext) {
+        let container = try makeInMemoryContainer()
+        containers.append(container)
+        let manager = TournamentManager()
+        manager.setContext(container.mainContext)
+        let t = Tournament(name: "Players Stepper Test", buyIn: 100)
+        t.fieldSize = fieldSize
+        t.playersRemaining = remaining
+        container.mainContext.insert(t)
+        manager.startTournament(t)
+        return (manager, t, container.mainContext)
+    }
+
+    @MainActor
+    func testStepClampsAndSettlesOneSnapshot() throws {
+        let (manager, tournament, ctx) = try makeActiveTournament(fieldSize: 100, remaining: 3)
+        manager.stepPlayersRemaining(-1)
+        manager.stepPlayersRemaining(-1)
+        XCTAssertEqual(tournament.playersRemaining, 1)
+        manager.stepPlayersRemaining(-1)                  // floor 1
+        XCTAssertEqual(tournament.playersRemaining, 1)
+        manager.stepPlayersRemaining(+1)
+        XCTAssertEqual(tournament.playersRemaining, 2)
+        let before = try ctx.fetch(FetchDescriptor<FieldSnapshot>()).count
+        manager.settlePlayersSnapshotNow()
+        let after = try ctx.fetch(FetchDescriptor<FieldSnapshot>()).count
+        XCTAssertEqual(after, before + 1)                 // burst → ONE snapshot
+        XCTAssertEqual(try XCTUnwrap(ctx.fetch(FetchDescriptor<FieldSnapshot>()).max(by: { $0.timestamp < $1.timestamp })).playersRemaining, 2)
+    }
+
+    @MainActor
+    func testStepCeilingAtFieldSize() throws {
+        let (manager, tournament, _) = try makeActiveTournament(fieldSize: 100, remaining: 100)
+        manager.stepPlayersRemaining(+1)
+        XCTAssertEqual(tournament.playersRemaining, 100)
+    }
+
+    @MainActor
+    func testStepNoOpWhenNeverSeeded() throws {
+        let (manager, tournament, _) = try makeActiveTournament(fieldSize: 100, remaining: 0)
+        manager.stepPlayersRemaining(-1)
+        XCTAssertEqual(tournament.playersRemaining, 0)    // nothing to step from
+    }
+}
+
 // MARK: - Structure library
 
 final class BlindStructureTemplateTests: XCTestCase {

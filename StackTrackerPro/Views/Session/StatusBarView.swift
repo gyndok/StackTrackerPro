@@ -21,6 +21,35 @@ struct StatusBarView: View {
 
             Spacer()
 
+            // Players-remaining stepper (active sessions only — nothing to
+            // step once the field has never been seeded or the tournament
+            // is paused/completed).
+            if tournament.status == .active && tournament.playersRemaining > 0 {
+                HStack(spacing: 6) {
+                    stepButton("minus.circle.fill", accessibilityLabel: "Decrement players remaining") {
+                        tournamentManager.stepPlayersRemaining(-1)
+                    }
+
+                    VStack(spacing: 0) {
+                        Text("\(tournament.playersRemaining)")
+                            .font(PokerTypography.statValue)
+                            .monospacedDigit()
+                            .foregroundColor(.textPrimary)
+                            .lineLimit(1)
+                            .fixedSize()
+                        Text("left")
+                            .font(PokerTypography.chatCaption)
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+
+                    stepButton("plus.circle.fill", accessibilityLabel: "Increment players remaining") {
+                        tournamentManager.stepPlayersRemaining(1)
+                    }
+                }
+            }
+
             // Break countdown or blind level
             if tournamentManager.isOnBreak, let endTime = tournamentManager.breakEndTime {
                 TimelineView(.periodic(from: .now, by: 1.0)) { context in
@@ -65,6 +94,25 @@ struct StatusBarView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.backgroundSecondary)
+    }
+
+    /// A 44×44 tappable stepper control showing a 20pt SF Symbol, sized
+    /// compactly so it doesn't blow out the status bar's height.
+    @ViewBuilder
+    private func stepButton(_ systemName: String, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
+        Button {
+            HapticFeedback.impact(.light)
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 20))
+                .foregroundColor(.textSecondary)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(width: 24, height: 24)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

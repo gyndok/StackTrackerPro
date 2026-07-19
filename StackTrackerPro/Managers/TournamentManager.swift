@@ -26,6 +26,9 @@ final class TournamentManager {
     private(set) var lastSaveError: String?
     private(set) var notificationsDenied = false
 
+    // Players-remaining stepper debounce (10s coalescing into one FieldSnapshot)
+    private var playersSnapshotTask: Task<Void, Never>?
+
     init() {}
 
     func setContext(_ context: ModelContext) {
@@ -241,6 +244,54 @@ final class TournamentManager {
         )
         tournament.fieldSnapshots?.append(snapshot)
 
+        save()
+    }
+
+    /// One-tap adjustment of the live players-remaining count from the status
+    /// bar. No-op without an active tournament, or once the field has never
+    /// been seeded (playersRemaining == 0 — nothing sensible to step from).
+    /// Clamped to [1, fieldSize] (or [1, .max] when fieldSize is unknown).
+    /// Bursts of taps are coalesced into a single FieldSnapshot 10s after the
+    /// last step via `schedulePlayersSnapshot`; `settlePlayersSnapshotNow()`
+    /// is the synchronous test/teardown seam.
+    func stepPlayersRemaining(_ delta: Int) {
+        guard let tournament = mutableTournament, tournament.playersRemaining > 0 else { return }
+        let ceiling = tournament.fieldSize > 0 ? tournament.fieldSize : Int.max
+        let newValue = min(ceiling, max(1, tournament.playersRemaining + delta))
+        guard newValue != tournament.playersRemaining else { return }
+        tournament.playersRemaining = newValue
+        save()
+        schedulePlayersSnapshot()
+    }
+
+    /// Cancels any pending debounce and records the FieldSnapshot immediately.
+    /// No-op when no step is pending.
+    func settlePlayersSnapshotNow() {
+        guard playersSnapshotTask != nil else { return }
+        playersSnapshotTask?.cancel()
+        playersSnapshotTask = nil
+        commitPlayersSnapshot()
+    }
+
+    private func schedulePlayersSnapshot() {
+        playersSnapshotTask?.cancel()
+        playersSnapshotTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled else { return }
+            self?.playersSnapshotTask = nil
+            self?.commitPlayersSnapshot()
+        }
+    }
+
+    private func commitPlayersSnapshot() {
+        guard let tournament = mutableTournament else { return }
+        let avgStack = tournament.averageStack
+        let snapshot = FieldSnapshot(
+            totalEntries: tournament.fieldSize,
+            playersRemaining: tournament.playersRemaining,
+            avgStack: avgStack > 0 ? avgStack : nil
+        )
+        tournament.fieldSnapshots?.append(snapshot)
         save()
     }
 
