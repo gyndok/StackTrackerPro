@@ -1,7 +1,20 @@
 import SwiftUI
 
+/// Spec 2026-07-21: after a real backgrounding of ≥ threshold during an
+/// active tournament, the app returns to the Play tab — brief app-switches
+/// and out-of-session browsing keep the user's place.
+enum ForegroundSnap {
+    static func shouldSnapToPlay(backgroundedAt: Date?, now: Date,
+                                 hasActiveTournament: Bool,
+                                 threshold: TimeInterval = 300) -> Bool {
+        guard let backgroundedAt, hasActiveTournament else { return false }
+        return now.timeIntervalSince(backgroundedAt) >= threshold
+    }
+}
+
 struct ContentView: View {
     @Environment(TournamentManager.self) private var tournamentManager
+    @Environment(\.scenePhase) private var scenePhase
 
     enum PlayMode: String, CaseIterable {
         case tournaments = "Tournaments"
@@ -10,6 +23,7 @@ struct ContentView: View {
 
     @State private var selectedPlayMode: PlayMode = .tournaments
     @State private var selectedTab = 0
+    @State private var backgroundedAt: Date?
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -43,6 +57,20 @@ struct ContentView: View {
                 selectedTab = 1
             }
             #endif
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background:
+                backgroundedAt = .now
+            case .active:
+                if ForegroundSnap.shouldSnapToPlay(backgroundedAt: backgroundedAt, now: .now,
+                                                   hasActiveTournament: tournamentManager.activeTournament != nil) {
+                    selectedTab = 0
+                }
+                backgroundedAt = nil
+            default:
+                break   // .inactive must not arm or clear the stamp
+            }
         }
     }
 

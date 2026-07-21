@@ -3737,3 +3737,21 @@ final class BuyInSplitTests: XCTestCase {
         XCTAssertEqual(t.prizePoolContributionPerPlayer, 330)
     }
 }
+
+// MARK: - ForegroundSnap
+
+final class ForegroundSnapTests: XCTestCase {
+    func testSnapDecisionTruthTable() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        // nil stamp → never
+        XCTAssertFalse(ForegroundSnap.shouldSnapToPlay(backgroundedAt: nil, now: now, hasActiveTournament: true))
+        // short absence → never
+        XCTAssertFalse(ForegroundSnap.shouldSnapToPlay(backgroundedAt: now.addingTimeInterval(-299), now: now, hasActiveTournament: true))
+        // long absence, no session → never
+        XCTAssertFalse(ForegroundSnap.shouldSnapToPlay(backgroundedAt: now.addingTimeInterval(-301), now: now, hasActiveTournament: false))
+        // long absence + active session → snap
+        XCTAssertTrue(ForegroundSnap.shouldSnapToPlay(backgroundedAt: now.addingTimeInterval(-301), now: now, hasActiveTournament: true))
+        // exact threshold boundary → snap
+        XCTAssertTrue(ForegroundSnap.shouldSnapToPlay(backgroundedAt: now.addingTimeInterval(-300), now: now, hasActiveTournament: true))
+    }
+}
