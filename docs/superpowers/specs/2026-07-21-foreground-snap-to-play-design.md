@@ -26,3 +26,5 @@
 
 - Decision-rule truth table: nil stamp → false; elapsed < threshold → false; elapsed ≥ threshold without tournament → false; elapsed ≥ threshold with tournament → true; exact-threshold boundary → true.
 - Manual: background > 5 min with an active session → returns to Play; < 5 min → returns to prior tab.
+
+> **STATUS: EXECUTED 2026-07-21** (commit c3c5c99; suite 182/182, Release clean, review approved first pass).

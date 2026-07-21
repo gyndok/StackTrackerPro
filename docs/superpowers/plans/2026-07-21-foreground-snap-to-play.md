@@ -81,3 +81,5 @@ Wiring in `ContentView`: add `@Environment(\.scenePhase) private var scenePhase`
 - [ ] **Step 4: Run — PASS.** Full suite + Release build.
 - [ ] **Step 5: Simulator check:** launch with `-DemoData` (active demo tournament), background the app (`xcrun simctl` can't background-foreground cleanly — use the Simulator: Home button via the control tool, wait, relaunch is a COLD start so it won't prove the timer; instead verify by temporarily reasoning the wiring compiles and the truth table covers logic; note in the report that the 5-minute path is user-verified on device).
 - [ ] **Step 6: Commit** `feat: snap to Play tab on foreground return after 5+ min during active session`.
+
+> **STATUS: EXECUTED 2026-07-21** (commit c3c5c99).
