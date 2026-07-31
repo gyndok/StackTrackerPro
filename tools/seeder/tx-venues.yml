@@ -75,3 +75,8 @@ venues:
     city: Dallas
     state: TX
     timezone: America/Chicago
+  - slug: texas-card-house-houston
+    display_name: Texas Card House Houston
+    city: Houston
+    state: TX
+    timezone: America/Chicago
