@@ -215,4 +215,29 @@ echo "$kg_out" | grep -q "^ERROR: zero parsed fields from" \
 echo "$kg_out" | grep -qF "1 page failure(s)" \
     || { echo "FAIL: expected the summary to report '1 page failure(s)', got: $kg_out"; exit 1; }
 
+echo "--- pokeratlas-fetch: name-column stack ranges are levels, not breaks (PLO Blitz 2026-08-08) ---"
+python3 -c "
+import importlib.util
+spec = importlib.util.spec_from_file_location('paf', 'pokeratlas-fetch.py')
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+table = '''
+| Name | Length | Small Blind | Big Blind | Ante |
+| --- | --- | --- | --- | --- |
+| 400-700 | 15 | 100 | 200 |  |
+| 800-1,400 | 15 | 200 | 400 | 400 |
+| RACE OFF 100's | 15 |  |  |  |
+| 6,000-10,500 | 15 | 1500 | 3000 | 3000 |
+| Break | 10 |  |  |  |
+'''
+levels = m.parse_structure_table(table, source='test-name-ranges')
+nb = [l for l in levels if not l['isBreak']]
+br = [l for l in levels if l['isBreak']]
+assert len(nb) == 3, f'expected 3 blind levels from name-range rows, got {len(nb)}'
+assert len(br) == 2, f'expected RACE OFF + Break rows to stay breaks, got {len(br)}'
+assert (nb[0]['smallBlind'], nb[0]['bigBlind'], nb[0]['ante']) == (100, 200, 0), nb[0]
+assert (nb[2]['smallBlind'], nb[2]['bigBlind'], nb[2]['ante']) == (1500, 3000, 3000), nb[2]
+assert br[0]['breakLabel'].startswith('RACE OFF'), br[0]
+print('name-range table: 3 levels + 2 breaks OK')
+"
+
 echo "PASS"

@@ -3755,3 +3755,69 @@ final class ForegroundSnapTests: XCTestCase {
         XCTAssertTrue(ForegroundSnap.shouldSnapToPlay(backgroundedAt: now.addingTimeInterval(-300), now: now, hasActiveTournament: true))
     }
 }
+
+// MARK: - Browse Dedup (stored deduplicationKey preference)
+
+@MainActor
+final class BrowseDedupTests: XCTestCase {
+    private func makeListing(
+        id: String,
+        venueName: String = "Champions Club Texas",
+        buyIn: Int = 800,
+        gameType: String = "NLH",
+        eventDate: Date = Date(timeIntervalSince1970: 1_786_204_800), // 2026-08-08 16:00Z
+        contributedAt: Date = Date(timeIntervalSince1970: 1_786_199_000),
+        deduplicationKey: String? = nil
+    ) -> SharedTournamentListing {
+        SharedTournamentListing(
+            id: id,
+            tournamentName: "Main Event",
+            venueName: venueName,
+            venueCity: "Houston",
+            venueState: "TX",
+            gameType: gameType,
+            buyIn: buyIn,
+            entryFee: 100,
+            bountyAmount: 0,
+            guarantee: 500_000,
+            startingChips: 40_000,
+            startingSB: 100,
+            startingBB: 100,
+            reentryPolicy: "Re-Entry",
+            eventDate: eventDate,
+            latitude: 29.78,
+            longitude: -95.56,
+            blindLevels: [],
+            contributedAt: contributedAt,
+            deduplicationKey: deduplicationKey
+        )
+    }
+
+    func testStoredSuffixedKeysKeepSameDayFlightsSeparate() {
+        // The Aug 8 SPO regression: flights E and F share venue/UTC-day/buy-in/
+        // game type; only the stored keys distinguish them.
+        let flightE = makeListing(id: "E", deduplicationKey: "Champions Club Texas|2026-08-08|800|NLH|E")
+        let flightF = makeListing(
+            id: "F",
+            eventDate: Date(timeIntervalSince1970: 1_786_226_400), // 22:00Z same UTC day
+            contributedAt: Date(timeIntervalSince1970: 1_786_198_000),
+            deduplicationKey: "Champions Club Texas|2026-08-08|800|NLH|F"
+        )
+        let result = CloudKitService.deduplicateListings([flightE, flightF])
+        XCTAssertEqual(Set(result.map(\.id)), ["E", "F"])
+    }
+
+    func testLegacyRecordsWithoutStoredKeyStillCollapseToNewest() {
+        let older = makeListing(id: "old", contributedAt: Date(timeIntervalSince1970: 1_786_100_000))
+        let newer = makeListing(id: "new", contributedAt: Date(timeIntervalSince1970: 1_786_199_000))
+        let result = CloudKitService.deduplicateListings([older, newer])
+        XCTAssertEqual(result.map(\.id), ["new"])
+    }
+
+    func testStoredKeyAndDistinctLegacyRecordBothSurvive() {
+        let seeded = makeListing(id: "seeded", deduplicationKey: "Champions Club Texas|2026-08-08|800|NLH|E")
+        let legacyOtherBuyIn = makeListing(id: "legacy", buyIn: 400)
+        let result = CloudKitService.deduplicateListings([seeded, legacyOtherBuyIn])
+        XCTAssertEqual(Set(result.map(\.id)), ["seeded", "legacy"])
+    }
+}

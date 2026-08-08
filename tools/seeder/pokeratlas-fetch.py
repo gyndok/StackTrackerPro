@@ -308,18 +308,27 @@ def parse_structure_table(text, source="<unknown>"):
                   f"(non-numeric minutes): {row_text}", file=sys.stderr)
             continue
 
+        def num(cell):
+            return cell.replace(",", "")
+
         level_m = LEVEL_NAME_RE.match(name)
-        if level_m:
-            if not all(INT_RE.match(v) for v in (sb, bb, ante) if v):
+        # Some venues put stack ranges in the Name column instead of
+        # "Level N" (TCH PLO Blitz: "400-700 | 15 | 100 | 200 | 200").
+        # A row with numeric small AND big blinds is a level no matter
+        # what its name says; break/race-off rows leave those cells blank.
+        blinds_numeric = bool(sb) and bool(bb) and \
+            bool(INT_RE.match(num(sb))) and bool(INT_RE.match(num(bb)))
+        if level_m or blinds_numeric:
+            if not all(INT_RE.match(num(v)) for v in (sb, bb, ante) if v):
                 print(f"WARNING: {source} — dropping unparseable structure row "
                       f"(non-numeric blinds/ante): {row_text}", file=sys.stderr)
                 continue
             n += 1
             levels.append({
                 "levelNumber": n,
-                "smallBlind": int(sb or 0),
-                "bigBlind": int(bb or 0),
-                "ante": int(ante or 0),
+                "smallBlind": int(num(sb)) if sb else 0,
+                "bigBlind": int(num(bb)) if bb else 0,
+                "ante": int(num(ante)) if ante else 0,
                 "durationMinutes": int(mins),
                 "isBreak": False,
             })

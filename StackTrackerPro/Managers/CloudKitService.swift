@@ -36,6 +36,10 @@ struct SharedTournamentListing: Identifiable {
     var longitude: Double
     var blindLevels: [BlindLevelCodable]
     var contributedAt: Date
+    /// Stored dedup key from the record. Seeded flights carry a suffix
+    /// ("…|NLH|F") that the recomputed key can't reproduce — nil only for
+    /// legacy records that predate the field.
+    var deduplicationKey: String? = nil
 
     func toScanResult() -> PokerAtlasScanResult {
         var result = PokerAtlasScanResult()
@@ -156,7 +160,7 @@ final class CloudKitService: @unchecked Sendable {
         venueCity: String,
         venueState: String
     ) async throws {
-        let dedupKey = buildDeduplicationKey(
+        let dedupKey = Self.buildDeduplicationKey(
             venueName: scanResult.venueName ?? "",
             eventDate: eventDate,
             buyIn: scanResult.buyIn ?? 0,
@@ -260,7 +264,7 @@ final class CloudKitService: @unchecked Sendable {
         }
 
         // Client-side deduplication: keep most recently contributed per dedup key
-        return deduplicateListings(listings)
+        return Self.deduplicateListings(listings)
     }
 
     // MARK: - Private Helpers
@@ -281,8 +285,8 @@ final class CloudKitService: @unchecked Sendable {
         return formatter
     }()
 
-    private func buildDeduplicationKey(venueName: String, eventDate: Date, buyIn: Int, gameType: String) -> String {
-        let dateStr = Self.utcDayFormatter.string(from: eventDate)
+    static func buildDeduplicationKey(venueName: String, eventDate: Date, buyIn: Int, gameType: String) -> String {
+        let dateStr = utcDayFormatter.string(from: eventDate)
         return "\(venueName)|\(dateStr)|\(buyIn)|\(gameType)"
     }
 
@@ -321,14 +325,19 @@ final class CloudKitService: @unchecked Sendable {
             latitude: latitude,
             longitude: longitude,
             blindLevels: blindLevels,
-            contributedAt: record[Fields.contributedAt] as? Date ?? Date()
+            contributedAt: record[Fields.contributedAt] as? Date ?? Date(),
+            deduplicationKey: record[Fields.deduplicationKey] as? String
         )
     }
 
-    private func deduplicateListings(_ listings: [SharedTournamentListing]) -> [SharedTournamentListing] {
+    // Internal (not private) so the dedup rule is unit-testable without CKContainer.
+    static func deduplicateListings(_ listings: [SharedTournamentListing]) -> [SharedTournamentListing] {
         var seen: [String: SharedTournamentListing] = [:]
         for listing in listings {
-            let key = buildDeduplicationKey(
+            // The stored key carries flight suffixes ("…|NLH|F") that the
+            // recomputed key can't — same-day same-price flights must not
+            // collapse into one row. Recompute only for legacy records.
+            let key = listing.deduplicationKey ?? buildDeduplicationKey(
                 venueName: listing.venueName,
                 eventDate: listing.eventDate,
                 buyIn: listing.buyIn,
