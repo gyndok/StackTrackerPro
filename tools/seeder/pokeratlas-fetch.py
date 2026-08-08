@@ -406,7 +406,7 @@ def parse_detail_page(text, source="<unknown>"):
 def firecrawl_scrape(url):
     try:
         result = subprocess.run(
-            ["firecrawl", "scrape", url, "markdown"],
+            ["firecrawl", "scrape", url, "markdown", "--wait-for", "3000"],
             capture_output=True, text=True, timeout=60,
         )
     except FileNotFoundError:
@@ -499,6 +499,17 @@ def main(argv=None):
 
     from_year = int(args.from_date[:4])
     rows = split_listing_rows(listing_text)
+    if not args.fixtures and not any(parse_listing_row(c, from_year) for c in rows):
+        # A listing page with zero parseable tournament rows is a JS-render
+        # failure, never reality (PokerAtlas always lists something) — retry
+        # once, then fail loudly rather than reporting a silent empty day.
+        print("WARNING: listing parsed to zero rows — re-fetching once", file=sys.stderr)
+        listing_text = firecrawl_scrape(listing_url)
+        rows = split_listing_rows(listing_text)
+        if not any(parse_listing_row(c, from_year) for c in rows):
+            print(f"ERROR: listing page yielded no tournament rows twice ({listing_url}) — "
+                  f"page markup may have changed; not writing an empty output", file=sys.stderr)
+            sys.exit(1)
 
     events = []
     errors = []
@@ -527,7 +538,7 @@ def main(argv=None):
                 detail_source = detail_path
             else:
                 if made_first_call:
-                    time.sleep(1)  # spec: <=1 request/second
+                    time.sleep(5)  # Firecrawl free-tier rate limit is ~14 req/min  # spec: <=1 request/second
                 made_first_call = True
                 detail_text = fetch_detail_cached(row["href"], DEFAULT_PAGECACHE_DIR)
                 detail_source = row["href"]
