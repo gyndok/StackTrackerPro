@@ -3865,3 +3865,51 @@ final class CaptureChipsTests: XCTestCase {
         XCTAssertEqual(partial.cards, "Q♠ +1")
     }
 }
+
+// MARK: - Min raise (engine read-only derivation)
+
+final class MinRaiseTests: XCTestCase {
+    /// Hero BTN, villain UTG, blinds 100/200 (no SB/BB seated → dead blinds;
+    /// UTG acts first on every street).
+    @MainActor private func makeModel() -> HandCaptureModel {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 50_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        return model
+    }
+
+    @MainActor func testUnopenedPreflopIsTwoBigBlinds() {
+        XCTAssertEqual(makeModel().minRaiseTotal, 400)
+    }
+
+    @MainActor func testFacingOpenThenThreeBet() {
+        let model = makeModel()
+        model.add(action: .raise, toAmount: 600)      // UTG opens 3bb (increment 400)
+        XCTAssertEqual(model.minRaiseTotal, 1_000)
+        model.add(action: .raise, toAmount: 2_000)    // hero 3-bets (increment 1,400)
+        XCTAssertEqual(model.minRaiseTotal, 3_400)
+    }
+
+    @MainActor func testPostflopUnopenedIsNilThenDoubleTheBet() {
+        let model = makeModel()
+        model.add(action: .raise, toAmount: 600)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("Jh 8h 4d") { XCTAssertTrue(model.addBoardCard(c)) }
+        XCTAssertNil(model.minRaiseTotal)             // nobody has bet the flop
+        model.add(action: .bet, toAmount: 500)        // UTG leads
+        XCTAssertEqual(model.minRaiseTotal, 1_000)
+    }
+
+    @MainActor func testAllInForLessDoesNotShrinkTheIncrement() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 100_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .shorter, approxStack: 700)
+        model.addVillain(position: .co, relative: .coversHero, approxStack: 0)
+        model.add(action: .raise, toAmount: 600)      // UTG opens (increment 400) → min re-raise 1,000
+        model.add(action: .allIn, toAmount: 700)      // CO jams for less than a full raise
+        // Level is 700 but the last FULL raise increment is still 400.
+        XCTAssertEqual(model.minRaiseTotal, 1_100)
+    }
+}

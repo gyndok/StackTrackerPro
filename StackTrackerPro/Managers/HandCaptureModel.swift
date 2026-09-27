@@ -492,6 +492,32 @@ final class HandCaptureModel {
         return actions
     }
 
+    /// Smallest legal raise-to total on the current street (spec §3, the
+    /// "Min" sizing chip). Read-only derivation over the ledger:
+    /// `currentBet + max(lastFullRaiseIncrement, bigBlind)`, where the last
+    /// full raise increment is the size of the most recent aggressive action
+    /// that raised the bet level by at least as much as the raise before it
+    /// (an all-in for less lifts the level but not the increment). Preflop
+    /// the base level is the big blind, so an unopened pot yields 2bb. `nil`
+    /// when `currentBet == 0` (nothing to raise — the Min chip is omitted).
+    var minRaiseTotal: Int? {
+        guard currentBet > 0 else { return nil }
+        var level = currentStreet == .preflop ? bigBlind : 0
+        var lastFullIncrement = 0
+        for entry in ledger where entry.street == currentStreet {
+            switch entry.action {
+            case .bet, .raise, .allIn:
+                guard entry.toAmount > level else { continue }
+                let increment = entry.toAmount - level
+                if increment >= lastFullIncrement { lastFullIncrement = increment }
+                level = entry.toAmount
+            default:
+                continue
+            }
+        }
+        return currentBet + max(lastFullIncrement, bigBlind)
+    }
+
     /// All cards known to be in play: hero, board, and any shown villain holdings.
     var dealtCards: Set<PlayingCard> {
         var set = Set(heroCards)
