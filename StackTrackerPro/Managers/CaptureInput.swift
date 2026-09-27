@@ -169,3 +169,22 @@ enum SizingPresets {
         }
     }
 }
+
+// MARK: - Cash stakes
+
+/// Blinds parsed from a cash session's free-form stakes string. Cash sessions
+/// store stakes only as text ("1/2", "2/5", "$1/$2", "2/3/5" with a straddle,
+/// "1/2 PLO"); the capture engine needs numbers or every bb/Pot preset is 0
+/// and disabled. The first two integers are the small and big blind; anything
+/// after them (a straddle, a game label) is ignored. Dollars map to chips 1:1,
+/// as the rest of cash tracking does. `nil` when there aren't two integers or
+/// the pair isn't a sane blind structure (sb must be > 0 and ≤ bb).
+enum Stakes {
+    static func parse(_ raw: String) -> (smallBlind: Int, bigBlind: Int)? {
+        let numbers = raw.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        guard numbers.count >= 2 else { return nil }
+        let sb = numbers[0], bb = numbers[1]
+        guard sb > 0, bb >= sb else { return nil }
+        return (sb, bb)
+    }
+}

@@ -4133,3 +4133,52 @@ final class ResultRowLogicTests: XCTestCase {
         XCTAssertTrue(model.isResolvable)
     }
 }
+
+// MARK: - Cash stakes parsing
+
+final class StakesParserTests: XCTestCase {
+    private func blinds(_ s: String) -> [Int]? {
+        Stakes.parse(s).map { [$0.smallBlind, $0.bigBlind] }
+    }
+
+    func testCommonFormats() {
+        XCTAssertEqual(blinds("1/2"), [1, 2])
+        XCTAssertEqual(blinds("1/3"), [1, 3])
+        XCTAssertEqual(blinds("2/5"), [2, 5])
+        XCTAssertEqual(blinds("5/10"), [5, 10])
+        XCTAssertEqual(blinds("$1/$2"), [1, 2])
+        XCTAssertEqual(blinds("1-2"), [1, 2])
+        XCTAssertEqual(blinds(" 2 / 5 "), [2, 5])
+        XCTAssertEqual(blinds("2/3/5"), [2, 3])        // straddle ignored
+        XCTAssertEqual(blinds("1/2 PLO"), [1, 2])      // trailing label ignored
+    }
+
+    func testRejectsUnparseable() {
+        XCTAssertNil(blinds(""))
+        XCTAssertNil(blinds("PLO"))
+        XCTAssertNil(blinds("0.50/1"))                 // sub-dollar blinds: not modelled
+        XCTAssertNil(blinds("5/2"))                    // bb below sb
+        XCTAssertNil(blinds("0/2"))
+    }
+
+    func testPresetsLightUpAtCashBlinds() {
+        // UTG opening at 1/2: 2bb = 4, 2.5bb = 5, 3bb = 6, Pot = currentBet 2 + pot 3.
+        let chips = SizingPresets.chips(street: .preflop, currentBet: 2, minRaiseTotal: 4,
+                                        pot: 3, bigBlind: 2, jamTotal: nil)
+        XCTAssertEqual(chips.map(\.toAmount), [4, 5, 6, 5])
+        XCTAssertTrue(chips.allSatisfy(\.isEnabled), "\(chips)")
+    }
+
+    @MainActor func testCashNarrationHeaderOmitsLevelZero() {
+        let cash = HandCaptureModel(levelNumber: 0, smallBlind: 1, bigBlind: 2, ante: 0,
+                                    heroCardCount: 2, heroStackBefore: 300)
+        XCTAssertTrue(cash.narration.hasPrefix("NLHE 1/2"), cash.narration)
+        XCTAssertFalse(cash.narration.contains("L0"), cash.narration)
+        let unset = HandCaptureModel(levelNumber: 0, smallBlind: 0, bigBlind: 0, ante: 0,
+                                     heroCardCount: 2, heroStackBefore: 300)
+        XCTAssertEqual(unset.narration, "NLHE")
+        let tourney = HandCaptureModel(levelNumber: 12, smallBlind: 1_500, bigBlind: 3_000, ante: 3_000,
+                                       heroCardCount: 2, heroStackBefore: 100_000)
+        XCTAssertTrue(tourney.narration.hasPrefix("NLHE L12 1,500/3,000(3,000)"), tourney.narration)
+    }
+}

@@ -68,6 +68,12 @@ struct HandCaptureView: View {
 
         let gameType = tournament?.gameType ?? cashSession?.gameType
         let cardCount = gameType == .plo ? 4 : 2
+        // Cash sessions carry their blinds only as a stakes string; without
+        // numbers every bb/Pot preset is 0 and disabled (device finding,
+        // 1.3.0 TestFlight). Parsed once, seeded onto whichever path builds
+        // the model — and on the edit/stub paths BEFORE any override restore,
+        // because setLevel replays the hand and clears overrides.
+        let cashBlinds = cashSession.flatMap { Stakes.parse($0.stakes) }
 
         if let editingHand {
             // Rebuild the whole capture from the saved hand (see
@@ -75,6 +81,7 @@ struct HandCaptureView: View {
             // re-prefilled only when the saved potSize diverges from the
             // recomputed pot — a computed pot is not re-frozen as an override.
             let m = HandCaptureModel(editing: editingHand, heroCardCount: cardCount)
+            Self.seedCashBlinds(m, cashBlinds)
             if editingHand.potSize > 0, editingHand.potSize != m.pot {
                 m.potOverride = editingHand.potSize
             }
@@ -90,8 +97,9 @@ struct HandCaptureView: View {
             // enrichment (stack unchanged) from a stale one (stack moved on) —
             // see HandCaptureModel.shouldPushStackUpdate.
             let trackerStack = tournament?.latestStack?.chipCount ?? cashSession?.latestStack?.chipCount
-            _model = State(initialValue: HandCaptureModel(stub: stub, heroCardCount: cardCount,
-                                                          trackerStackAtOpen: trackerStack))
+            let m = HandCaptureModel(stub: stub, heroCardCount: cardCount, trackerStackAtOpen: trackerStack)
+            Self.seedCashBlinds(m, cashBlinds)
+            _model = State(initialValue: m)
         } else if let tournament {
             let blinds = tournament.currentBlinds
             _model = State(initialValue: HandCaptureModel(
@@ -105,10 +113,24 @@ struct HandCaptureView: View {
                 heroStackBefore: tournament.latestStack?.chipCount ?? 0))
         } else {
             _model = State(initialValue: HandCaptureModel(
-                levelNumber: 0, smallBlind: 0, bigBlind: 0, ante: 0,
+                levelNumber: 0,
+                smallBlind: cashBlinds?.smallBlind ?? 0,
+                bigBlind: cashBlinds?.bigBlind ?? 0,
+                ante: 0,
                 heroCardCount: cardCount,
                 heroStackBefore: cashSession?.latestStack?.chipCount ?? 0))
         }
+    }
+
+    /// Seeds parsed cash blinds onto a model that was built without them
+    /// (stub and edit paths, whose sources predate numeric cash blinds).
+    /// No-op when there are no parsed blinds or the model already has a big
+    /// blind — never overrides real values.
+    @MainActor
+    private static func seedCashBlinds(_ model: HandCaptureModel,
+                                       _ blinds: (smallBlind: Int, bigBlind: Int)?) {
+        guard let blinds, model.bigBlind == 0 else { return }
+        model.setLevel(number: 0, smallBlind: blinds.smallBlind, bigBlind: blinds.bigBlind, ante: 0)
     }
 
     var body: some View {

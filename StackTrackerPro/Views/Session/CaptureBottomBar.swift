@@ -247,6 +247,14 @@ private struct SizingPanel: View {
                         .buttonStyle(.bordered)
                         .tint(.goldAccent)
                 }
+                // With no numeric blinds (a cash session whose stakes text
+                // didn't parse) every preset is 0 and disabled — say why,
+                // rather than show a row of dead chips.
+                if model.bigBlind == 0 {
+                    Text("Set numeric stakes on this session to use presets")
+                        .font(PokerTypography.chipLabel)
+                        .foregroundColor(.textSecondary)
+                }
             }
         }
     }

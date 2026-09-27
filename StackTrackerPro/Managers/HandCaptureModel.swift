@@ -551,7 +551,13 @@ final class HandCaptureModel {
         var parts: [String] = []
 
         let game = heroCardCount == 4 ? "PLO" : "NLHE"
-        var header = "\(game) L\(levelNumber) \(smallBlind.formatted())/\(bigBlind.formatted())"
+        // Cash hands carry no level (0) and may carry no numeric blinds at
+        // all — omit what isn't there rather than print "L0 0/0".
+        var header = game
+        if levelNumber > 0 { header += " L\(levelNumber)" }
+        if smallBlind > 0 || bigBlind > 0 {
+            header += " \(smallBlind.formatted())/\(bigBlind.formatted())"
+        }
         if ante > 0 { header += "(\(ante.formatted()))" }
         parts.append(header)
 

@@ -120,4 +120,4 @@ Save calls `onSaved(hand)` and dismisses immediately. The "Hand saved â€” Shareâ
 
 One-tap seat-to-add villains; "Check around" / "Fold to hero" macros; single-row position picker; typed-shorthand card entry on the capture screen.
 
-> **STATUS: EXECUTED 2026-09-27** (1.3.0 build 21; suite 206/206, Release clean; reference hand 19 taps, no keyboard, no scrolling for controls).
+> **STATUS: EXECUTED 2026-09-27** (1.3.0 build 22; suite 212/212, Release clean; cash sessions seed blinds from the stakes string (TestFlight finding); reference hand 19 taps, no keyboard, no scrolling for controls).
