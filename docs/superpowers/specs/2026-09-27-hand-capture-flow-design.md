@@ -88,7 +88,7 @@ Spot classification, exhaustive:
 
 ## 5. Collapsed setup
 
-- **Hero** renders as a chip row: `[BTN | Seat?] [A♥K♦ | Cards?] [42,500 ✎]`. Tapping the seat chip toggles the existing `PositionGrid` inline below the row; tapping the cards chip clears `heroCards` (engine already clears stale overrides) and re-enters `dealingHero`; the stack chip opens the existing stack alert. The tracker "Use current" hint stays.
+- **Hero** renders as a chip row: `[BTN | Seat?] [A♥K♦ | Cards?] [42,500 ✎]`. Tapping the seat chip toggles the existing `PositionGrid` inline below the row; tapping the cards chip clears `heroCards` (engine already clears stale overrides) and re-enters `dealingHero` on a fresh hand, or shows the grid inline in the Hero section once actions exist (the bar's `dealingHero` state is fresh-hand only — it must not displace a live betting round); the stack chip opens the existing stack alert. The tracker "Use current" hint stays.
 - **Villains** keep today's rows (chip + eye + minus) and the existing inline add/edit editor; only the visual weight changes (compact chips, section collapses to one line when empty: `+ Add villain`).
 - Text for the chips comes from a pure helper (`CaptureChips.heroChips(model)`), tested.
 
