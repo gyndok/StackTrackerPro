@@ -3913,3 +3913,81 @@ final class MinRaiseTests: XCTestCase {
         XCTAssertEqual(model.minRaiseTotal, 1_100)
     }
 }
+
+// MARK: - Sizing presets (pure)
+
+final class SizingPresetsTests: XCTestCase {
+    private func labels(_ chips: [SizingPresets.Chip]) -> [String] { chips.map(\.label) }
+    private func amount(_ chips: [SizingPresets.Chip], _ label: String) -> Int? { chips.first { $0.label == label }?.toAmount }
+    private func enabled(_ chips: [SizingPresets.Chip], _ label: String) -> Bool? { chips.first { $0.label == label }?.isEnabled }
+
+    func testRoundingUnits() {
+        XCTAssertEqual(SizingPresets.roundingUnit(bigBlind: 2), 1)
+        XCTAssertEqual(SizingPresets.roundingUnit(bigBlind: 50), 5)
+        XCTAssertEqual(SizingPresets.roundingUnit(bigBlind: 200), 100)
+        XCTAssertEqual(SizingPresets.roundingUnit(bigBlind: 3_000), 500)
+        XCTAssertEqual(SizingPresets.roundingUnit(bigBlind: 10_000), 1_000)
+        XCTAssertEqual(SizingPresets.rounded(375, bigBlind: 50), 375)
+        XCTAssertEqual(SizingPresets.rounded(1_750, bigBlind: 200), 1_800)
+        XCTAssertEqual(SizingPresets.rounded(40, bigBlind: 200), 100)     // floor at one unit
+    }
+
+    func testUnopenedPreflop() {
+        let chips = SizingPresets.chips(street: .preflop, currentBet: 200, minRaiseTotal: 400,
+                                        pot: 300, bigBlind: 200, jamTotal: nil)
+        XCTAssertEqual(labels(chips), ["2bb", "2.5bb", "3bb", "Pot"])
+        XCTAssertEqual(amount(chips, "2.5bb"), 500)
+        XCTAssertEqual(amount(chips, "Pot"), 500)          // currentBet 200 + pot 300
+        XCTAssertEqual(chips.filter(\.isEnabled).count, 4)
+    }
+
+    func testFacingPreflopOpen() {
+        // UTG opened to 600 at 100/200; pot 900 (dead blinds 300 + 600).
+        let chips = SizingPresets.chips(street: .preflop, currentBet: 600, minRaiseTotal: 1_000,
+                                        pot: 900, bigBlind: 200, jamTotal: nil)
+        XCTAssertEqual(labels(chips), ["Min", "2.5×", "3×", "4×", "Pot"])
+        XCTAssertEqual(amount(chips, "Min"), 1_000)
+        XCTAssertEqual(amount(chips, "2.5×"), 1_500)
+        XCTAssertEqual(amount(chips, "3×"), 1_800)
+        XCTAssertEqual(amount(chips, "4×"), 2_400)
+        XCTAssertEqual(amount(chips, "Pot"), 1_500)         // 600 + 900
+        XCTAssertTrue(chips.allSatisfy(\.isEnabled))
+    }
+
+    func testUnopenedPostflop() {
+        let chips = SizingPresets.chips(street: .flop, currentBet: 0, minRaiseTotal: nil,
+                                        pot: 12_000, bigBlind: 3_000, jamTotal: nil)
+        XCTAssertEqual(labels(chips), ["⅓", "½", "⅔", "Pot", "1.5×"])
+        XCTAssertEqual(amount(chips, "⅓"), 4_000)
+        XCTAssertEqual(amount(chips, "½"), 6_000)
+        XCTAssertEqual(amount(chips, "1.5×"), 18_000)
+    }
+
+    func testFacingPostflopBetUsesMultiples() {
+        let chips = SizingPresets.chips(street: .turn, currentBet: 5_000, minRaiseTotal: 10_000,
+                                        pot: 20_000, bigBlind: 1_000, jamTotal: nil)
+        XCTAssertEqual(labels(chips), ["Min", "2.5×", "3×", "4×", "Pot"])
+        XCTAssertEqual(amount(chips, "3×"), 15_000)
+        XCTAssertEqual(amount(chips, "Pot"), 25_000)
+    }
+
+    func testDisableRules() {
+        // Facing 600 with only 1,600 behind (jam total 1,600): 3× = 1,800 ≥ jam → disabled.
+        let chips = SizingPresets.chips(street: .preflop, currentBet: 600, minRaiseTotal: 1_000,
+                                        pot: 900, bigBlind: 200, jamTotal: 1_600)
+        XCTAssertEqual(enabled(chips, "Min"), true)
+        XCTAssertEqual(enabled(chips, "2.5×"), true)      // 1,500 < 1,600
+        XCTAssertEqual(enabled(chips, "3×"), false)
+        XCTAssertEqual(enabled(chips, "4×"), false)
+        // A preset at or below the current bet is never enabled.
+        let tiny = SizingPresets.chips(street: .flop, currentBet: 0, minRaiseTotal: nil,
+                                       pot: 100, bigBlind: 200, jamTotal: nil)
+        XCTAssertEqual(enabled(tiny, "⅓"), true)          // floors to 100 > 0
+    }
+
+    func testMinChipOmittedWhenUnknown() {
+        let chips = SizingPresets.chips(street: .preflop, currentBet: 600, minRaiseTotal: nil,
+                                        pot: 900, bigBlind: 200, jamTotal: nil)
+        XCTAssertEqual(labels(chips), ["2.5×", "3×", "4×", "Pot"])
+    }
+}
