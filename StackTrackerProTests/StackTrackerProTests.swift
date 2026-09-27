@@ -3991,3 +3991,51 @@ final class SizingPresetsTests: XCTestCase {
         XCTAssertEqual(labels(chips), ["2.5×", "3×", "4×", "Pot"])
     }
 }
+
+// MARK: - Result-first row logic
+
+final class ResultRowLogicTests: XCTestCase {
+    private let v = UUID()
+
+    func testTapMatchingComputedClearsOverride() {
+        XCTAssertNil(ResultRowLogic.overrideAfterTap([.hero], computed: [.hero]))
+    }
+
+    func testTapDifferingFromComputedSetsOverride() {
+        XCTAssertEqual(ResultRowLogic.overrideAfterTap([.villain(v)], computed: [.hero]), [.villain(v)])
+    }
+
+    func testTapWithNoComputedWinnersSetsOverride() {
+        XCTAssertEqual(ResultRowLogic.overrideAfterTap([.hero], computed: []), [.hero])
+        XCTAssertEqual(ResultRowLogic.overrideAfterTap([.hero, .villain(v)], computed: []), [.hero, .villain(v)])
+    }
+
+    func testBannerOnlyOnRealDisagreement() {
+        XCTAssertFalse(ResultRowLogic.showsMismatchBanner(override: nil, computed: [.hero]))
+        XCTAssertFalse(ResultRowLogic.showsMismatchBanner(override: [.hero], computed: []))      // no cards: normal case
+        XCTAssertFalse(ResultRowLogic.showsMismatchBanner(override: [.hero], computed: [.hero]))
+        XCTAssertTrue(ResultRowLogic.showsMismatchBanner(override: [.villain(v)], computed: [.hero]))
+    }
+
+    /// End to end on the engine: a showdown with no cards is saveable the
+    /// moment a result is tapped.
+    @MainActor func testResultTapMakesShowdownResolvable() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 50_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        model.add(action: .raise, toAmount: 600)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        XCTAssertTrue(model.needsShowdown)
+        XCTAssertFalse(model.isResolvable)
+        model.winnerOverride = ResultRowLogic.overrideAfterTap([.hero], computed: model.computedWinners)
+        XCTAssertTrue(model.isResolvable)
+        XCTAssertTrue(model.canSave)
+    }
+}
