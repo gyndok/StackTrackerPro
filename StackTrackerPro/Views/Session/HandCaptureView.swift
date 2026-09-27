@@ -45,6 +45,7 @@ struct HandCaptureView: View {
     @State private var shownCardsTarget: UUID?
     @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
+    @State private var heroCardsDeferred = false
     @State private var showDictation = false
     /// The just-recorded transcript, held while confirming a replace of an
     /// existing one (`onResult` never writes straight to `model.transcript`
@@ -117,76 +118,50 @@ struct HandCaptureView: View {
         NavigationStack {
             ZStack {
                 Color.backgroundPrimary.ignoresSafeArea()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        NarrationBar(model: model, showPotPad: $showPotPad, potPadText: $potPadText,
-                                     canPickLevel: !levelOptions.isEmpty,
-                                     onPickLevel: { showLevelPicker = true })
-                        if !model.transcript.isEmpty {
-                            TranscriptCard(transcript: model.transcript,
-                                          warnIfEmptiedWithoutStructure: !model.isResolvable) {
-                                model.transcript = $0
+                VStack(spacing: 0) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            NarrationBar(model: model, showPotPad: $showPotPad, potPadText: $potPadText,
+                                         canPickLevel: !levelOptions.isEmpty,
+                                         onPickLevel: { showLevelPicker = true })
+                            if !model.transcript.isEmpty {
+                                TranscriptCard(transcript: model.transcript,
+                                              warnIfEmptiedWithoutStructure: !model.isResolvable) {
+                                    model.transcript = $0
+                                }
+                            }
+                            HeroStrip(model: model, stubHint: stubHint,
+                                     showStackPad: $showStackPad, stackPadText: $stackPadText)
+                            villainSection
+                            LedgerList(model: model, truncateIndex: $truncateIndex)
+                            // Board stays in the scroll ONLY until Task 6 moves it into the bar.
+                            if !model.board.isEmpty || model.boardCardsNeeded > 0 {
+                                BoardEntry(model: model)
+                            }
+                            if model.isHandOver {
+                                ResultBlock(model: model)
+                                tagRow
+                                saveButton
+                            } else if !model.transcript.isEmpty {
+                                // Transcript-only capture: the ledger never
+                                // started (no showdown/result to show), but a
+                                // dictated transcript alone is savable —
+                                // `canSave` is true off `!transcript.isEmpty`
+                                // even though `isResolvable` requires
+                                // `isHandOver`. Surface tags + Save without the
+                                // (meaningless, pre-hand) Result block.
+                                tagRow
+                                saveButton
                             }
                         }
-                        HeroStrip(model: model, stubHint: stubHint,
-                                 showStackPad: $showStackPad, stackPadText: $stackPadText)
-                        villainSection
-                        LedgerList(model: model, truncateIndex: $truncateIndex)
-
-                        if model.participantToAct != nil {
-                            // With zero committed villains the hero is the only
-                            // participant, so the engine (correctly) ends the
-                            // hand after a single action — "Hero wins" out of
-                            // nowhere. Gate action entry behind having an
-                            // opponent instead of rendering that footgun. Only
-                            // for pristine hands (empty ledger); a hand already
-                            // in flight is never blocked. Committed villains
-                            // only: an open-but-uncommitted editor still shows
-                            // the hint.
-                            if model.villains.isEmpty && model.ledger.isEmpty {
-                                Text("Add at least one villain first — the hand needs an opponent")
-                                    .font(PokerTypography.chipLabel)
-                                    .foregroundColor(.textSecondary)
-                            } else {
-                                ActionRow(model: model, pendingActionType: $pendingActionType)
-                            }
-                        }
-                        if let type = pendingActionType {
-                            SizingRow(model: model, actionType: type,
-                                     onCommit: commitSizedAction, onCancel: { pendingActionType = nil })
-                        }
-                        // Mounted whenever any board exists, not just while
-                        // cards are owed: addBoardCard rebuilds synchronously,
-                        // so a street-closing card drops boardCardsNeeded to 0
-                        // in the same call — gating on `needed > 0` alone would
-                        // unmount the section (and the last card's inline
-                        // delete) the instant the flop's 3rd / turn / river
-                        // card is picked.
-                        if !model.board.isEmpty || model.boardCardsNeeded > 0 {
-                            BoardEntry(model: model)
-                        }
-                        if model.isHandOver {
-                            ResultBlock(model: model)
-                            tagRow
-                            saveButton
-                        } else if !model.transcript.isEmpty {
-                            // Transcript-only capture: the ledger never
-                            // started (no showdown/result to show), but a
-                            // dictated transcript alone is savable —
-                            // `canSave` is true off `!transcript.isEmpty`
-                            // even though `isResolvable` requires
-                            // `isHandOver`. Surface tags + Save without the
-                            // (meaningless, pre-hand) Result block.
-                            tagRow
-                            saveButton
-                        }
+                        .padding(16)
                     }
-                    .padding(16)
+                    .scrollDismissesKeyboard(.interactively)
+                    CaptureBottomBar(model: model,
+                                     pendingActionType: $pendingActionType,
+                                     heroCardsDeferred: $heroCardsDeferred,
+                                     onCommitSized: commitSizedAction)
                 }
-                // Inline number fields (sizing "#", villain approx stack) open
-                // the keyboard mid-scroll; dragging the capture surface should
-                // put it away (F18).
-                .scrollDismissesKeyboard(.interactively)
             }
             .navigationTitle("Log Hand")
             .navigationBarTitleDisplayMode(.inline)
@@ -907,10 +882,10 @@ private struct VillainInlineEditor: View {
                 .keyboardType(.numbersAndPunctuation)
                 .focused($approxFocused)
                 // Keyboard Done: no return key on this layout either (F18).
-                // Content is gated on THIS field's focus: this editor and
-                // SizingRow's "#" pad can be mounted simultaneously, and
-                // SwiftUI concatenates every mounted keyboard toolbar into
-                // one accessory bar — ungated, two Done buttons would appear.
+                // Content is gated on THIS field's focus: another inline
+                // TextField mounted alongside this editor would have its
+                // keyboard toolbar concatenated onto this one by SwiftUI —
+                // ungated, two Done buttons would appear.
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         if approxFocused {
@@ -1053,217 +1028,6 @@ private struct LedgerList: View {
         case .raise: return "\(prefix) raises to \(entry.toAmount.formatted())"
         case .allIn: return "\(prefix) all-in \(entry.toAmount.formatted())"
         }
-    }
-}
-
-// MARK: - Action entry row
-
-private struct ActionRow: View {
-    let model: HandCaptureModel
-    @Binding var pendingActionType: HandActionType?
-
-    var body: some View {
-        if let actor = model.participantToAct {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(model.label(for: actor)) to act")
-                    .font(PokerTypography.sectionHeader)
-                    .foregroundColor(.goldAccent)
-                HStack(spacing: 8) {
-                    ForEach(model.legalActions, id: \.self) { action in
-                        Button {
-                            handle(action)
-                        } label: {
-                            Text(buttonLabel(action))
-                                .font(PokerTypography.statValue)
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(Color.cardSurface)
-                                .foregroundColor(.textPrimary)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func buttonLabel(_ action: HandActionType) -> String {
-        switch action {
-        case .call: return "Call \(model.currentBet.formatted())"
-        case .bet, .raise: return "Bet/Raise"
-        default: return action.rawValue
-        }
-    }
-
-    private func handle(_ action: HandActionType) {
-        switch action {
-        case .fold, .check:
-            model.add(action: action, toAmount: 0)
-            HapticFeedback.impact(.light)
-        case .call:
-            model.add(action: .call, toAmount: 0)
-            HapticFeedback.impact(.light)
-        case .bet, .raise:
-            pendingActionType = action
-        case .allIn:
-            guard let actor = model.participantToAct else { return }
-            if let jam = model.jamTotal(for: actor) {
-                model.add(action: .allIn, toAmount: jam)
-                HapticFeedback.impact(.light)
-            } else {
-                // Stack unknown (unset villain approxStack) — fall back to the
-                // same number-pad flow bet/raise use, committing as `.allIn`
-                // with whatever total the user types.
-                pendingActionType = .allIn
-            }
-        }
-    }
-}
-
-// MARK: - Sizing row
-
-private struct SizingRow: View {
-    let model: HandCaptureModel
-    let actionType: HandActionType
-    let onCommit: (HandActionType, Int) -> Void
-    let onCancel: () -> Void
-
-    @State private var showNumberPad = false
-    @State private var numberPadText = ""
-    @FocusState private var numberPadFocused: Bool
-
-    private let fractionChips: [(String, Double)] = [
-        ("⅓", 1.0 / 3), ("½", 0.5), ("⅔", 2.0 / 3), ("Pot", 1.0), ("1.5x", 1.5),
-    ]
-
-    /// Preset chips with their fully-resolved raise-to totals. Preflop thinks
-    /// in big blinds (2bb / 2.5bb / 3bb / Pot — device finding 13A), computed
-    /// through `SizingInput.parse` so the chip labels ARE the parser inputs
-    /// (one tested source of truth); postflop keeps the pot-fraction presets.
-    private var presetChips: [(label: String, toAmount: Int)] {
-        if model.currentStreet == .preflop {
-            var chips: [(String, Int)] = ["2bb", "2.5bb", "3bb"].map {
-                ($0, SizingInput.parse($0, bigBlind: model.bigBlind) ?? 0)
-            }
-            chips.append(("Pot", normalizedTotal(roundedChip(Double(model.pot)))))
-            return chips
-        }
-        return fractionChips.map {
-            ($0.0, normalizedTotal(roundedChip(Double(model.pot) * $0.1)))
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Size").font(PokerTypography.sectionHeader).foregroundColor(.goldAccent)
-                Spacer()
-                Button("Cancel", action: onCancel)
-                    .font(.caption)
-                    .foregroundColor(.textSecondary)
-            }
-            HStack(spacing: 6) {
-                ForEach(presetChips, id: \.label) { chip in
-                    Button(chip.label) { onCommit(actionType, chip.toAmount) }
-                        .buttonStyle(.bordered)
-                        .tint(.secondary)
-                        // An aggressive total at or below the amount to match
-                        // is nonsense (a "raise to 2.5bb" facing 5bb); gray it
-                        // out rather than let the engine book it.
-                        .disabled(chip.toAmount <= model.currentBet)
-                }
-                Button("Jam") { commitJam() }
-                    .buttonStyle(.bordered)
-                    .tint(.chipRed)
-                Button("#") {
-                    numberPadText = ""
-                    showNumberPad = true
-                }
-                .buttonStyle(.bordered)
-                .tint(.goldAccent)
-            }
-            // Inline literal-amount entry (not an alert: the confirm label
-            // previews the resolved total live, and alert action buttons
-            // don't reliably re-render while typing).
-            if showNumberPad {
-                HStack(spacing: 8) {
-                    TextField("e.g. 2300, 4bb or 42.5k", text: $numberPadText)
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.numbersAndPunctuation)
-                        .focused($numberPadFocused)
-                        // Keyboard Done: numbers-and-punctuation has no return
-                        // key to lean on, so give the keyboard an explicit
-                        // dismiss (F18). Gated on focus for the same co-mount
-                        // reason as the villain editor's approx field — both
-                        // toolbars concatenate when both views are mounted.
-                        .toolbar {
-                            ToolbarItemGroup(placement: .keyboard) {
-                                if numberPadFocused {
-                                    Spacer()
-                                    Button("Done") { numberPadFocused = false }
-                                }
-                            }
-                        }
-                    Button(confirmLabel) {
-                        if let amount = resolvedAmount {
-                            onCommit(actionType, amount)
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.goldAccent)
-                    .disabled(resolvedAmount == nil)
-                }
-            }
-        }
-        .pokerCard()
-    }
-
-    /// The typed amount, resolved LITERALLY by `SizingInput` — no additions,
-    /// no big-blind heuristics (finding 13B).
-    private var resolvedAmount: Int? {
-        SizingInput.parse(numberPadText, bigBlind: model.bigBlind)
-    }
-
-    /// Live preview of exactly what will be committed, e.g. "Raise to 2,300".
-    private var confirmLabel: String {
-        let verb: String
-        switch actionType {
-        case .raise: verb = "Raise to"
-        case .allIn: verb = "All-in"
-        default: verb = "Bet"
-        }
-        guard let amount = resolvedAmount else { return verb }
-        return "\(verb) \(amount.formatted())"
-    }
-
-    /// Rounds a raw pot-fraction amount to a clean chip size: nearest 500
-    /// below a 10K big blind, nearest 1000 at or above it (spec 5.1 #7).
-    private func roundedChip(_ raw: Double) -> Int {
-        guard raw > 0 else { return 0 }
-        let unit = model.bigBlind >= 10_000 ? 1000 : 500
-        return max(unit, Int((raw / Double(unit)).rounded()) * unit)
-    }
-
-    /// A pot-fraction preset is the *additional* amount being put in; against
-    /// an existing bet that becomes a raise-to total, otherwise it is the
-    /// opening bet itself. (Preset math only — the "#" pad is literal.)
-    private func normalizedTotal(_ sizeAmount: Int) -> Int {
-        model.currentBet > 0 ? model.currentBet + sizeAmount : sizeAmount
-    }
-
-    private func commitJam() {
-        guard let actor = model.participantToAct else { return }
-        if let amount = jamAmount(for: actor) {
-            onCommit(.allIn, amount)
-        } else {
-            numberPadText = ""
-            showNumberPad = true
-        }
-    }
-
-    /// One source of truth with `HandCaptureModel.convertingToAllInIfNeeded`
-    /// and the action row's All-in button — see `jamTotal(for:)`.
-    private func jamAmount(for participant: HandCaptureModel.Participant) -> Int? {
-        model.jamTotal(for: participant)
     }
 }
 
