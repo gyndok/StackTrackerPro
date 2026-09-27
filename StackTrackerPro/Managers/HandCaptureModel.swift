@@ -715,6 +715,25 @@ final class HandCaptureModel {
         return Set(computedWinners)
     }
 
+    /// True when every still-live villain has resolved their showdown
+    /// (mucked, or showed exactly two cards). Until then a Hold'em
+    /// `computedWinners` built from the hero's cards alone is partial
+    /// evidence, not a verdict — the result-first row (spec §4) must not
+    /// treat it as one.
+    var showdownEvidenceComplete: Bool {
+        villains.allSatisfy { villain in
+            foldedParticipants.contains(.villain(villain.id))
+                || villain.mucked || villain.shownHolding.count == 2
+        }
+    }
+
+    /// `computedWinners`, but empty while a showdown's evidence is still
+    /// incomplete. Non-showdown endings (fold-outs) are always conclusive.
+    var conclusiveWinners: [Participant] {
+        if needsShowdown && !showdownEvidenceComplete { return [] }
+        return computedWinners
+    }
+
     /// True when the hand can be saved without booking a silently-wrong
     /// result. Gates the Save button:
     /// - the hand must be over;
@@ -729,11 +748,7 @@ final class HandCaptureModel {
         guard isHandOver else { return false }
         if !needsShowdown { return true }
         if winnerOverride != nil { return true }
-        let villainsResolved = villains.allSatisfy { villain in
-            foldedParticipants.contains(.villain(villain.id))
-                || villain.mucked || villain.shownHolding.count == 2
-        }
-        return villainsResolved && !computedWinners.isEmpty
+        return showdownEvidenceComplete && !computedWinners.isEmpty
     }
 
     /// True when the hand can be saved at all: either the ledger resolves

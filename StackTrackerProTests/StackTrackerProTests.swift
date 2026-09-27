@@ -4017,13 +4017,18 @@ final class ResultRowLogicTests: XCTestCase {
         XCTAssertTrue(ResultRowLogic.showsMismatchBanner(override: [.villain(v)], computed: [.hero]))
     }
 
-    /// End to end on the engine: a showdown with no cards is saveable the
-    /// moment a result is tapped.
+    /// End to end on the engine, realistic case: hero's cards ARE known, but
+    /// the lone villain has neither shown nor mucked. `computedWinners`
+    /// resolves to the hero from the hero's holding alone (partial
+    /// evidence) — that must NOT read as a verdict, so `conclusiveWinners`
+    /// stays empty and Save stays locked until an explicit tap resolves it.
     @MainActor func testResultTapMakesShowdownResolvable() {
         let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
                                      ante: 0, heroCardCount: 2, heroStackBefore: 50_000)
         model.heroPosition = .btn
         model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        model.addCard(PlayingCard("Ah")!)
+        model.addCard(PlayingCard("Kd")!)
         model.add(action: .raise, toAmount: 600)
         model.add(action: .call, toAmount: 0)
         for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
@@ -4033,9 +4038,51 @@ final class ResultRowLogicTests: XCTestCase {
         _ = model.addBoardCard(PlayingCard("3s")!)
         model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
         XCTAssertTrue(model.needsShowdown)
+        XCTAssertFalse(model.showdownEvidenceComplete)
+        XCTAssertEqual(model.computedWinners, [.hero])
+        XCTAssertTrue(model.conclusiveWinners.isEmpty)
         XCTAssertFalse(model.isResolvable)
-        model.winnerOverride = ResultRowLogic.overrideAfterTap([.hero], computed: model.computedWinners)
+        model.winnerOverride = ResultRowLogic.overrideAfterTap([.hero], computed: model.conclusiveWinners)
+        XCTAssertEqual(model.winnerOverride, [.hero])
         XCTAssertTrue(model.isResolvable)
         XCTAssertTrue(model.canSave)
+    }
+
+    /// Once the lone villain mucks, evidence is complete and the (correct)
+    /// computed winner is trusted without a manual tap.
+    @MainActor func testConclusiveWinnersAfterVillainMucks() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 50_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        model.addCard(PlayingCard("Ah")!)
+        model.addCard(PlayingCard("Kd")!)
+        model.add(action: .raise, toAmount: 600)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        model.setMucked(model.villains[0].id)
+        XCTAssertTrue(model.showdownEvidenceComplete)
+        XCTAssertEqual(model.conclusiveWinners, [.hero])
+        XCTAssertNil(ResultRowLogic.overrideAfterTap([.hero], computed: model.conclusiveWinners))
+        XCTAssertTrue(model.isResolvable)
+    }
+
+    /// A fold-out never needs showdown evidence at all — `conclusiveWinners`
+    /// matches `computedWinners` (the last aggressor) immediately.
+    @MainActor func testFoldOutIsConclusive() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 50_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        model.add(action: .raise, toAmount: 600)
+        model.add(action: .fold, toAmount: 0)
+        XCTAssertFalse(model.needsShowdown)
+        XCTAssertEqual(model.conclusiveWinners, model.computedWinners)
+        XCTAssertFalse(model.conclusiveWinners.isEmpty)
     }
 }

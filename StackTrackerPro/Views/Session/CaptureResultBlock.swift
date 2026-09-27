@@ -33,7 +33,7 @@ struct ResultBlock: View {
     }
 
     private var selected: Set<HandCaptureModel.Participant> {
-        model.winnerOverride ?? Set(model.computedWinners)
+        model.winnerOverride ?? Set(model.conclusiveWinners)
     }
 
     var body: some View {
@@ -43,9 +43,9 @@ struct ResultBlock: View {
             if model.needsShowdown {
                 resultRow
                 if ResultRowLogic.showsMismatchBanner(override: model.winnerOverride,
-                                                      computed: model.computedWinners) {
+                                                      computed: model.conclusiveWinners) {
                     HStack(spacing: 8) {
-                        Label("Cards say \(describe(Set(model.computedWinners))) — result overridden",
+                        Label("Cards say \(describe(Set(model.conclusiveWinners))) — result overridden",
                               systemImage: "flag.fill")
                             .font(PokerTypography.chipLabel)
                             .foregroundColor(.chipRed)
@@ -89,7 +89,7 @@ struct ResultBlock: View {
     private func resultButton(title: String, set: Set<HandCaptureModel.Participant>) -> some View {
         let isOn = selected == set
         return Button {
-            model.winnerOverride = ResultRowLogic.overrideAfterTap(set, computed: model.computedWinners)
+            model.winnerOverride = ResultRowLogic.overrideAfterTap(set, computed: model.conclusiveWinners)
             HapticFeedback.impact(.medium)
         } label: {
             Text(title)
@@ -102,6 +102,7 @@ struct ResultBlock: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private func describe(_ set: Set<HandCaptureModel.Participant>) -> String {
@@ -109,7 +110,7 @@ struct ResultBlock: View {
     }
 
     private var resultLine: String {
-        if model.needsShowdown, model.effectiveWinners.isEmpty {
+        if model.needsShowdown, model.winnerOverride == nil, !model.showdownEvidenceComplete {
             return "Tap who won, or add shown cards."
         }
         let net = model.heroNet
