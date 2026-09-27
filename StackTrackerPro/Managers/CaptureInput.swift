@@ -133,10 +133,11 @@ enum SizingPresets {
         }
     }
 
-    /// Nearest multiple of the unit, never below one unit.
+    /// Nearest multiple of the unit — never below one unit for a positive
+    /// amount; zero for a non-positive one.
     static func rounded(_ raw: Double, bigBlind: Int) -> Int {
         let unit = roundingUnit(bigBlind: bigBlind)
-        guard raw > 0 else { return unit }
+        guard raw > 0 else { return 0 }
         return max(unit, Int((raw / Double(unit)).rounded()) * unit)
     }
 

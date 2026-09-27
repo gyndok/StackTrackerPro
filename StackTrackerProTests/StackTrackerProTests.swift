@@ -3990,6 +3990,27 @@ final class SizingPresetsTests: XCTestCase {
                                         pot: 900, bigBlind: 200, jamTotal: nil)
         XCTAssertEqual(labels(chips), ["2.5×", "3×", "4×", "Pot"])
     }
+
+    func testZeroBlindZeroPotChipsDisabled() {
+        // Cash session: no blinds configured, nothing in the pot yet.
+        let preflop = SizingPresets.chips(street: .preflop, currentBet: 0, minRaiseTotal: nil,
+                                          pot: 0, bigBlind: 0, jamTotal: nil)
+        XCTAssertFalse(preflop.contains(where: \.isEnabled), "\(preflop)")
+        let flop = SizingPresets.chips(street: .flop, currentBet: 0, minRaiseTotal: nil,
+                                       pot: 0, bigBlind: 0, jamTotal: nil)
+        XCTAssertFalse(flop.contains(where: \.isEnabled), "\(flop)")
+        XCTAssertEqual(SizingPresets.rounded(0, bigBlind: 200), 0)
+    }
+
+    func testFacingThreeBetMultiples() {
+        // Hero 3-bet to 2,000 over a 600 open at 100/200; villain now faces it.
+        let chips = SizingPresets.chips(street: .preflop, currentBet: 2_000, minRaiseTotal: 3_400,
+                                        pot: 2_900, bigBlind: 200, jamTotal: nil)
+        XCTAssertEqual(chips.map(\.label), ["Min", "2.5×", "3×", "4×", "Pot"])
+        XCTAssertEqual(chips.first { $0.label == "Min" }?.toAmount, 3_400)
+        XCTAssertEqual(chips.first { $0.label == "3×" }?.toAmount, 6_000)
+        XCTAssertEqual(chips.first { $0.label == "Pot" }?.toAmount, 4_900)
+    }
 }
 
 // MARK: - Result-first row logic

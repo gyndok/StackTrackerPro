@@ -95,6 +95,7 @@ struct HeroSetupSection: View {
                     .quickChip()
                     .accessibilityLabel("Hero seat \(chips.seat), change")
                 Button {
+                    guard !model.heroCards.isEmpty else { return }
                     // Mirror addCard's invalidation: card evidence changed.
                     model.heroCards.removeAll()
                     model.winnerOverride = nil
@@ -229,6 +230,7 @@ struct VillainSection: View {
                         Image(systemName: "minus.circle")
                     }
                     .foregroundColor(.chipRed)
+                    .accessibilityLabel("Remove villain")
                 }
                 if shownCardsTarget == villain.id {
                     VillainShownCardsEditor(model: model, villainID: villain.id) {

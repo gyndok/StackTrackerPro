@@ -67,7 +67,7 @@ Spot classification, exhaustive:
 - **Facing a bet or raise** — `street == .preflop && currentBet > bigBlind`, or postflop with `currentBet > 0`: `Min · 2.5× · 3× · 4× · Pot`. Multiples are of `currentBet`, as raise-to totals. `Min` = `minRaiseTotal`.
 - **Unopened postflop** — postflop with `currentBet == 0`: `⅓ · ½ · ⅔ · Pot · 1.5×` of `pot`, as bet totals. Same as today.
 - `Pot` when facing action keeps today's definition: `currentBet + pot`, rounded.
-- **Rounding** (replaces today's 500/1000 rule so small-blind cash games don't over-round): unit = 100 when `bigBlind < 1_000`, 500 when `< 10_000`, else 1_000; round to nearest, floor at one unit.
+- **Rounding**: unit by big blind — 1 below 20, 5 below 100, 100 below 1,000, 500 below 10,000, else 1,000; nearest multiple, floored at one unit for positive amounts; a non-positive amount rounds to 0 (so zero-pot chips are disabled).
 - A chip is disabled when its total `<= currentBet`; when the actor's `jamTotal` is known and the total `>= jamTotal`, the chip is also disabled (Jam covers it).
 - `Jam` and `#` chips are always present, as today.
 

@@ -372,7 +372,7 @@ final class HandCaptureModel {
     /// the actor's stack isn't known — a villain with `approxStack == 0` —
     /// mirroring `convertingToAllInIfNeeded`'s refusal to guess. Single source
     /// of truth for that conversion math and for the UI's All-in/Jam
-    /// affordances (`HandCaptureView`'s action row and `SizingRow`).
+    /// affordances (`CaptureBottomBar`'s action buttons and sizing panel).
     func jamTotal(for participant: Participant) -> Int? {
         let base: Int
         switch participant {

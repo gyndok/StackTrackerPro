@@ -1,9 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Full hand-capture screen (Hand Logging v2, Phase C). A single scrolling
-/// surface driven entirely by `HandCaptureModel` — pot, turn order, street,
-/// legal actions, and winners are all read from the engine. This view only
+/// Full hand-capture screen (Hand Logging v2, Phase C). A scrolling surface
+/// over a pinned `CaptureBottomBar`, both driven entirely by
+/// `HandCaptureModel` — pot, turn order, street, legal actions, and winners
+/// are all read from the engine. This view only
 /// renders that state and forwards taps; it derives nothing about the hand
 /// itself (the only local math is chip-input parsing and bet-sizing presets,
 /// which are UI conveniences, not hand state).
@@ -198,6 +199,11 @@ struct HandCaptureView: View {
             }
             #endif
         }
+        // Any replay-altering input (undo, truncate, strip-card delete, villain
+        // removal) invalidates an in-progress sizing choice — the actor and the
+        // legal options may both have changed.
+        .onChange(of: model.ledger.count) { _, _ in pendingActionType = nil }
+        .onChange(of: model.board.count) { _, _ in pendingActionType = nil }
         .sheet(isPresented: $showDictation) {
             DictationSheet { transcript in
                 if model.transcript.isEmpty {
