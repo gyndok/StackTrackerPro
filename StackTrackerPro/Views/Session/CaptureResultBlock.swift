@@ -110,7 +110,7 @@ struct ResultBlock: View {
     }
 
     private var resultLine: String {
-        if model.needsShowdown, model.winnerOverride == nil, !model.showdownEvidenceComplete {
+        if model.needsShowdown, model.winnerOverride == nil, model.conclusiveWinners.isEmpty {
             return "Tap who won, or add shown cards."
         }
         let net = model.heroNet

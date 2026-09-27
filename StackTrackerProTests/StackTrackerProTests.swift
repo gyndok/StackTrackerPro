@@ -4085,4 +4085,30 @@ final class ResultRowLogicTests: XCTestCase {
         XCTAssertEqual(model.conclusiveWinners, model.computedWinners)
         XCTAssertFalse(model.conclusiveWinners.isEmpty)
     }
+
+    /// Evidence can be COMPLETE (villain mucked) while the showdown is still
+    /// unevaluable (hero never entered hole cards) — `computedWinners` stays
+    /// empty, and so must `conclusiveWinners`; the result-first prompt must
+    /// key off the latter, not off `showdownEvidenceComplete` alone.
+    @MainActor func testUnevaluableShowdownStaysUnresolvedUntilTapped() {
+        let model = HandCaptureModel(levelNumber: 1, smallBlind: 100, bigBlind: 200,
+                                     ante: 0, heroCardCount: 2, heroStackBefore: 50_000)
+        model.heroPosition = .btn
+        model.addVillain(position: .utg, relative: .similar, approxStack: 0)
+        model.add(action: .raise, toAmount: 600)
+        model.add(action: .call, toAmount: 0)
+        for c in PlayingCard.parseList("Jh 8h 4d") { _ = model.addBoardCard(c) }
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("2c")!)
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        _ = model.addBoardCard(PlayingCard("3s")!)
+        model.add(action: .check, toAmount: 0); model.add(action: .check, toAmount: 0)
+        model.setMucked(model.villains[0].id)
+        XCTAssertTrue(model.showdownEvidenceComplete)
+        XCTAssertTrue(model.computedWinners.isEmpty)
+        XCTAssertTrue(model.conclusiveWinners.isEmpty)
+        XCTAssertFalse(model.isResolvable)
+        model.winnerOverride = ResultRowLogic.overrideAfterTap([.hero], computed: model.conclusiveWinners)
+        XCTAssertTrue(model.isResolvable)
+    }
 }
