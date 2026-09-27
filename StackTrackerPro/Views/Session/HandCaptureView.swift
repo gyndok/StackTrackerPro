@@ -36,14 +36,13 @@ struct HandCaptureView: View {
     @State private var stackPadText = ""
     @State private var villainEditorTarget: VillainEditorTarget?
     /// Villain currently showing the "Shown cards" editor, opened from the
-    /// villain row's always-enabled "eye" button (see `villainSection`).
+    /// villain row's always-enabled "eye" button (see `VillainSection`).
     /// Deliberately separate from `villainEditorTarget`: that editor's chip
     /// disables once the villain has acted (editing is remove-and-re-add,
     /// which would drop their ledger entries), but shown cards are not a
     /// replay input — they must stay settable regardless of `hasActed`
     /// (all-in hands routinely reveal cards before the runout finishes).
     @State private var shownCardsTarget: UUID?
-    @State private var pendingRemovalID: UUID?
     @State private var pendingActionType: HandActionType?
     @State private var heroCardsDeferred = false
     @State private var showDictation = false
@@ -52,7 +51,7 @@ struct HandCaptureView: View {
     /// when one is already present). Non-nil presents the replace-confirm
     /// dialog; the dialog's derived binding clears it on ANY dismissal —
     /// Cancel or tap-outside — so a discarded transcript never lingers
-    /// (same pattern as `truncateIndex` / `pendingRemovalID`).
+    /// (same pattern as `truncateIndex`).
     @State private var pendingTranscript: String?
     @State private var showLevelPicker = false
     @State private var showSavedDialog = false
@@ -130,10 +129,11 @@ struct HandCaptureView: View {
                                     model.transcript = $0
                                 }
                             }
-                            HeroStrip(model: model, stubHint: stubHint,
-                                     showStackPad: $showStackPad, stackPadText: $stackPadText,
-                                     heroCardsDeferred: heroCardsDeferred)
-                            villainSection
+                            HeroSetupSection(model: model, stubHint: stubHint,
+                                            heroCardsDeferred: $heroCardsDeferred,
+                                            showStackPad: $showStackPad, stackPadText: $stackPadText)
+                            VillainSection(model: model, villainEditorTarget: $villainEditorTarget,
+                                          shownCardsTarget: $shownCardsTarget)
                             LedgerList(model: model, truncateIndex: $truncateIndex)
                             if model.isHandOver {
                                 ResultBlock(model: model)
@@ -248,17 +248,6 @@ struct HandCaptureView: View {
             }
             Button("Cancel", role: .cancel) { pendingTranscript = nil }
         }
-        .confirmationDialog(
-            removalDialogTitle,
-            isPresented: Binding(get: { pendingRemovalID != nil }, set: { if !$0 { pendingRemovalID = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("Remove Villain", role: .destructive) {
-                if let id = pendingRemovalID { removeVillain(id) }
-                pendingRemovalID = nil
-            }
-            Button("Cancel", role: .cancel) { pendingRemovalID = nil }
-        }
         .alert("Set Pot", isPresented: $showPotPad) {
             TextField("e.g. 390k", text: $potPadText).keyboardType(.numbersAndPunctuation)
             Button("Set") { model.potOverride = ChipInput.parse(potPadText) }
@@ -279,120 +268,6 @@ struct HandCaptureView: View {
         .sheet(isPresented: $showSavedShare, onDismiss: { dismiss() }) {
             if let savedHand { HandSharePreview(hand: savedHand) }
         }
-    }
-
-    // MARK: - Villain section
-
-    private var villainSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Villains").font(PokerTypography.sectionHeader).foregroundColor(.goldAccent)
-            ForEach(model.villains) { villain in
-                let hasActed = model.hasActed(.villain(villain.id))
-                HStack(spacing: 8) {
-                    // Editing is remove-and-re-add under a new id, which would
-                    // silently strip the villain's recorded ledger actions —
-                    // so the edit affordance locks once they have acted.
-                    Button {
-                        villainEditorTarget = villainEditorTarget == .editing(villain.id)
-                            ? nil : .editing(villain.id)
-                    } label: {
-                        Text(villainChipText(villain))
-                    }
-                    .quickChip()
-                    .disabled(hasActed)
-                    // Always enabled — unlike the chip above, setting a shown
-                    // holding is never a replay input, so it must stay
-                    // reachable even after the villain has acted (all-ins
-                    // routinely show cards before the runout completes).
-                    Button {
-                        shownCardsTarget = shownCardsTarget == villain.id ? nil : villain.id
-                    } label: {
-                        Image(systemName: shownCardsTarget == villain.id ? "eye.fill" : "eye")
-                    }
-                    .foregroundColor(.goldAccent)
-                    .accessibilityLabel("Shown cards")
-                    Spacer()
-                    Button {
-                        // Confirm (never silently) when removal drops recorded
-                        // actions OR collapses the hand: removing the only
-                        // committed villain mid-hand leaves the hero as the
-                        // sole participant, so the replay ends the hand on
-                        // the first hero action — "Hero wins" out of nowhere
-                        // (device finding 10). That case needs a warning even
-                        // when the villain themselves never acted.
-                        if hasActed || isLastVillainMidHand {
-                            pendingRemovalID = villain.id
-                        } else {
-                            removeVillain(villain.id)
-                        }
-                    } label: {
-                        Image(systemName: "minus.circle")
-                    }
-                    .foregroundColor(.chipRed)
-                }
-                if shownCardsTarget == villain.id {
-                    VillainShownCardsEditor(model: model, villainID: villain.id) {
-                        shownCardsTarget = nil
-                    }
-                }
-            }
-            Button {
-                villainEditorTarget = villainEditorTarget == .adding ? nil : .adding
-            } label: {
-                Label("Add Villain", systemImage: "plus.circle")
-                    .font(PokerTypography.chipLabel)
-                    .foregroundColor(.goldAccent)
-            }
-
-            if let target = villainEditorTarget {
-                // Per-target identity: without .id, SwiftUI reuses the editor's
-                // @State when switching directly between targets (edit A → edit
-                // B, or edit → add), leaking A's position/stack into B.
-                VillainInlineEditor(model: model, editing: editing(for: target)) {
-                    villainEditorTarget = nil
-                }
-                .id(target)
-            }
-        }
-        .pokerCard()
-    }
-
-    private func editing(for target: VillainEditorTarget) -> HandCaptureModel.VillainDraft? {
-        guard case .editing(let id) = target else { return nil }
-        return model.villains.first { $0.id == id }
-    }
-
-    /// True when the hand is in flight and only one committed villain remains —
-    /// removing them collapses the replay to hero-only and ends the hand.
-    private var isLastVillainMidHand: Bool {
-        model.villains.count == 1 && !model.ledger.isEmpty
-    }
-
-    private var removalDialogTitle: String {
-        if isLastVillainMidHand {
-            return "Removing the only opponent ends the hand — its actions will be removed too."
-        }
-        return "Remove this villain? Their recorded actions will be removed and the hand replayed without them."
-    }
-
-    /// Single removal path: closes any editor still pointed at the villain
-    /// before dropping them, so a stale open editor can't later resurrect the
-    /// removed villain with old values (device finding 11).
-    private func removeVillain(_ id: UUID) {
-        if villainEditorTarget == .editing(id) { villainEditorTarget = nil }
-        if shownCardsTarget == id { shownCardsTarget = nil }
-        model.removeVillain(id: id)
-    }
-
-    private func villainChipText(_ villain: HandCaptureModel.VillainDraft) -> String {
-        var text = model.label(for: .villain(villain.id))
-        if villain.approxStack > 0 { text += " ≈\(villain.approxStack.formatted())" }
-        if villain.shownHolding.count == 2 {
-            text += " " + villain.shownHolding.map(\.display).joined(separator: " ")
-        } else if villain.mucked {
-            text += " (mucked)"
-        }
-        return text
     }
 
     // MARK: - Manual level selection (F15)
@@ -481,38 +356,6 @@ struct HandCaptureView: View {
         onSaved(hand)
         savedHand = hand
         showSavedDialog = true
-    }
-}
-
-// MARK: - Position grid
-
-/// Shared 3-column, 9-seat position picker used for both the hero's seat
-/// (`HeroStrip`) and a villain's seat (`VillainInlineEditor`, which disables
-/// whichever seat the hero already occupies).
-private struct PositionGrid: View {
-    let selected: HeroPosition?
-    var disabled: (HeroPosition) -> Bool = { _ in false }
-    let onSelect: (HeroPosition) -> Void
-
-    var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-            ForEach(HeroPosition.allCases, id: \.self) { position in
-                let isDisabled = disabled(position)
-                let isSelected = selected == position
-                Button {
-                    onSelect(position)
-                } label: {
-                    Text(position.rawValue)
-                        .font(PokerTypography.chipLabel)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(isSelected ? Color.goldAccent : Color.backgroundPrimary)
-                        .foregroundColor(isSelected ? .backgroundPrimary : .textPrimary)
-                        .opacity(isDisabled ? 0.35 : 1)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .disabled(isDisabled)
-            }
-        }
     }
 }
 
@@ -693,295 +536,6 @@ private struct LevelPickerSheet: View {
             }
         }
         .preferredColorScheme(.dark)
-    }
-}
-
-// MARK: - Card chip
-
-/// A single dealt/held card rendered as a chip — the shared look used for the
-/// hero's hole cards and a villain's shown holding. An optional trailing "x"
-/// removes the card via `onRemove` when the caller allows it. (The board row
-/// now lives in the bar as `ContextStrip`/`MiniCard` — see
-/// `CaptureBottomBar.swift`.)
-private struct CardChip: View {
-    let card: PlayingCard
-    var onRemove: (() -> Void)?
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Text(card.display)
-                .font(PokerTypography.statValue)
-                .foregroundColor(card.isRed ? .red : .textPrimary)
-                .frame(width: 48, height: 60)
-                .background(Color.backgroundPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            if let onRemove {
-                Button(action: onRemove) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.caption)
-                        .foregroundColor(.chipRed)
-                        .background(Circle().fill(Color.backgroundPrimary))
-                }
-                .buttonStyle(.plain)
-                .offset(x: 8, y: -8)
-            }
-        }
-    }
-}
-
-// MARK: - Hero strip
-
-private struct HeroStrip: View {
-    let model: HandCaptureModel
-    let stubHint: String?
-    @Binding var showStackPad: Bool
-    @Binding var stackPadText: String
-    let heroCardsDeferred: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Hero").font(PokerTypography.sectionHeader).foregroundColor(.goldAccent)
-
-            PositionGrid(selected: model.heroPosition) { position in
-                model.heroPosition = position
-                HapticFeedback.impact(.light)
-            }
-
-            HStack(spacing: 8) {
-                ForEach(model.heroCards, id: \.self) { card in
-                    CardChip(card: card)
-                }
-                if model.heroCards.count < model.heroCardCount, let stubHint {
-                    Text("Stub: \(stubHint)")
-                        .font(PokerTypography.chipLabel)
-                        .foregroundColor(.textSecondary)
-                }
-                Spacer()
-            }
-
-            // The bar owns hero-card entry on a fresh hand; inline only once
-            // actions exist or the user tapped "Later" (complement of
-            // CaptureBarState.dealingHero).
-            if model.heroCards.count < model.heroCardCount && (!model.ledger.isEmpty || heroCardsDeferred) {
-                CardGrid(dealt: model.dealtCards) { card in
-                    if model.addCard(card) { HapticFeedback.impact(.light) }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Stack at start of hand").foregroundColor(.textSecondary)
-                    Spacer()
-                    // Styled as an obvious input (field chrome + pencil):
-                    // the bare-label version read as static text and users
-                    // never realized it was editable (device finding 9).
-                    Button {
-                        stackPadText = String(model.heroStackBefore)
-                        showStackPad = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(model.heroStackBefore.formatted())
-                                .font(PokerTypography.statValue)
-                                .foregroundColor(.textPrimary)
-                            Image(systemName: "pencil")
-                                .font(.caption)
-                                .foregroundColor(.goldAccent)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.backgroundPrimary)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.goldAccent.opacity(0.4), lineWidth: 1)
-                        )
-                    }
-                    .accessibilityLabel("Stack at start of hand, \(model.heroStackBefore.formatted()), edit")
-                }
-                // Enrich-at-break staleness: when the tracker's stack at open
-                // differs from the (stub-snapshotted) starting stack, offer
-                // the current tracker value as a one-tap correction.
-                if let tracker = model.trackerStackAtOpen, tracker != model.heroStackBefore {
-                    HStack(spacing: 8) {
-                        Text("Tracker now: \(tracker.formatted())")
-                            .font(PokerTypography.chipLabel)
-                            .foregroundColor(.textSecondary)
-                        Button("Use current") { model.heroStackBefore = tracker }
-                            .font(.caption)
-                            .foregroundColor(.goldAccent)
-                    }
-                }
-            }
-        }
-        .pokerCard()
-    }
-}
-
-// MARK: - Villain editor
-
-/// Which inline villain editor is expanded, if any: a fresh add, or an
-/// existing villain re-opened for editing.
-private enum VillainEditorTarget: Hashable {
-    case adding
-    case editing(UUID)
-}
-
-/// Inline villain add/edit form. Every control SELECTS (position, relative
-/// stack, optional approx stack) and nothing commits until the explicit
-/// primary button ("Add Villain" / "Done") — the earlier tap-a-stack-chip-to-
-/// commit flow stranded anyone who typed the stack amount first and left no
-/// discoverable way to finish (device finding 6).
-private struct VillainInlineEditor: View {
-    let model: HandCaptureModel
-    let editing: HandCaptureModel.VillainDraft?
-    let onDone: () -> Void
-
-    @State private var position: HeroPosition
-    @State private var relative: RelativeStack
-    @State private var approxText: String
-    @FocusState private var approxFocused: Bool
-
-    init(model: HandCaptureModel, editing: HandCaptureModel.VillainDraft?, onDone: @escaping () -> Void) {
-        self.model = model
-        self.editing = editing
-        self.onDone = onDone
-        _position = State(initialValue: editing?.position
-            ?? HeroPosition.allCases.first { seat in
-                seat != model.heroPosition && !model.villains.contains { $0.position == seat }
-            } ?? .utg)
-        // "Covers me" preselected: the most common read, and it means the
-        // primary button is always one tap away even if the user skips the
-        // relative-stack row entirely.
-        _relative = State(initialValue: editing?.relative ?? .coversHero)
-        _approxText = State(initialValue: (editing?.approxStack).map { $0 > 0 ? String($0) : "" } ?? "")
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Position").font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
-            // A seat can hold one player: the hero's seat and every seat taken
-            // by another villain are disabled (the villain being edited keeps
-            // its own seat selectable).
-            PositionGrid(selected: position, disabled: { seat in
-                seat == model.heroPosition
-                    || model.villains.contains { $0.id != editing?.id && $0.position == seat }
-            }) { candidate in
-                position = candidate
-            }
-
-            Text("Relative Stack").font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
-            HStack(spacing: 8) {
-                ForEach(RelativeStack.allCases, id: \.self) { option in
-                    Button(option.rawValue) { relative = option }
-                        .buttonStyle(.bordered)
-                        .tint(relative == option ? .goldAccent : .secondary)
-                }
-            }
-
-            TextField("≈ stack (optional, e.g. 300k)", text: $approxText)
-                .textFieldStyle(.roundedBorder)
-                .keyboardType(.numbersAndPunctuation)
-                .focused($approxFocused)
-                // Keyboard Done: no return key on this layout either (F18).
-                // Content is gated on THIS field's focus: another inline
-                // TextField mounted alongside this editor would have its
-                // keyboard toolbar concatenated onto this one by SwiftUI —
-                // ungated, two Done buttons would appear.
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        if approxFocused {
-                            Spacer()
-                            Button("Done") { approxFocused = false }
-                        }
-                    }
-                }
-
-            HStack {
-                Button(editing == nil ? "Add Villain" : "Done", action: commit)
-                    .buttonStyle(.borderedProminent)
-                    .tint(.goldAccent)
-                Button("Cancel", action: onDone)
-                    .font(.caption)
-                    .foregroundColor(.textSecondary)
-            }
-        }
-        .padding(.top, 4)
-    }
-
-    /// Explicit commit from the primary button. Editing an existing villain
-    /// replaces it (remove + re-add) — safe before the villain has acted, and
-    /// the engine already drops any of their recorded actions on removal.
-    private func commit() {
-        if let editing {
-            // Stale-editor guard: the villain may have been removed while
-            // this editor stayed open (minus button, or a dictation-applied
-            // draft replacing the roster). Committing then would resurrect
-            // them with stale values — bail instead, same pattern as the
-            // hasActed race guard below.
-            guard model.villains.contains(where: { $0.id == editing.id }) else { onDone(); return }
-            // Race guard: the chip locks once a villain has acted, but the
-            // editor may already be open when their first action is recorded
-            // below — committing then would strip that action. Bail instead.
-            guard !model.hasActed(.villain(editing.id)) else { onDone(); return }
-            model.removeVillain(id: editing.id)
-        }
-        let approxStack = ChipInput.parse(approxText) ?? 0
-        model.addVillain(position: position, relative: relative, approxStack: approxStack)
-        HapticFeedback.impact(.light)
-        onDone()
-    }
-}
-
-/// Lets a villain's shown holding be entered (or cleared) at any point in the
-/// hand — including mid-runout all-ins, where cards get shown before the
-/// board finishes — regardless of whether the villain has already acted.
-/// Opened from the always-enabled "eye" button next to the villain chip
-/// (see `HandCaptureView.villainSection`), not the position/stack editor,
-/// which locks after `hasActed` since it replaces the villain's identity.
-private struct VillainShownCardsEditor: View {
-    let model: HandCaptureModel
-    let villainID: UUID
-    let onDone: () -> Void
-
-    private var villain: HandCaptureModel.VillainDraft? {
-        model.villains.first { $0.id == villainID }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Shown Cards").font(PokerTypography.chipLabel).foregroundColor(.textSecondary)
-                Spacer()
-                Button("Done", action: onDone)
-                    .font(.caption)
-                    .foregroundColor(.textSecondary)
-            }
-            if let villain, !villain.shownHolding.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(villain.shownHolding, id: \.self) { card in
-                        CardChip(card: card) {
-                            model.setShownHolding(villain.shownHolding.filter { $0 != card }, for: villainID)
-                        }
-                    }
-                    Spacer()
-                    // With a single card the chip's own remove badge already
-                    // covers clearing; the bulk Clear only earns its spot
-                    // once there are 2+ cards to wipe in one tap.
-                    if villain.shownHolding.count > 1 {
-                        Button("Clear") { model.setShownHolding([], for: villainID) }
-                            .font(.caption)
-                            .foregroundColor(.chipRed)
-                    }
-                }
-            }
-            if let villain, villain.shownHolding.count < model.heroCardCount {
-                CardGrid(dealt: model.dealtCards) { card in
-                    guard let current = self.villain else { return }
-                    model.setShownHolding(current.shownHolding + [card], for: villainID)
-                }
-            }
-        }
-        .padding(.top, 4)
     }
 }
 
