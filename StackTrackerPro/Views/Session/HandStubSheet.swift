@@ -40,7 +40,7 @@ struct HandStubSheet: View {
                     }
                 }
 
-                CardPickerGrid(dealt: Set(pickedCards)) { card in
+                CardGrid(dealt: Set(pickedCards)) { card in
                     guard pickedCards.count < 2 else { return }
                     pickedCards.append(card)
                 }

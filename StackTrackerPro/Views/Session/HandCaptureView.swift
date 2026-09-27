@@ -787,7 +787,7 @@ private struct HeroStrip: View {
             }
 
             if model.heroCards.count < model.heroCardCount {
-                CardPickerGrid(dealt: model.dealtCards) { card in
+                CardGrid(dealt: model.dealtCards) { card in
                     if model.addCard(card) { HapticFeedback.impact(.light) }
                 }
             }
@@ -999,7 +999,7 @@ private struct VillainShownCardsEditor: View {
                 }
             }
             if let villain, villain.shownHolding.count < model.heroCardCount {
-                CardPickerGrid(dealt: model.dealtCards) { card in
+                CardGrid(dealt: model.dealtCards) { card in
                     guard let current = self.villain else { return }
                     model.setShownHolding(current.shownHolding + [card], for: villainID)
                 }
@@ -1291,7 +1291,7 @@ private struct BoardEntry: View {
                 }
             }
             if model.boardCardsNeeded > 0 {
-                CardPickerGrid(dealt: model.dealtCards) { card in
+                CardGrid(dealt: model.dealtCards) { card in
                     if model.addBoardCard(card) { HapticFeedback.impact(.light) }
                 }
             }
@@ -1423,7 +1423,7 @@ private struct VillainShowdownRow: View {
                 }
             }
             if !isResolved || forceEditing {
-                CardPickerGrid(dealt: model.dealtCards) { card in
+                CardGrid(dealt: model.dealtCards) { card in
                     var cards = villain.shownHolding
                     guard cards.count < 2 else { return }
                     cards.append(card)
