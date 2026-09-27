@@ -9,12 +9,15 @@ struct SavedHandToast: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill").foregroundColor(.mZoneGreen)
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.mZoneGreen)
+                .accessibilityHidden(true)
             Text("Hand saved").font(PokerTypography.chipLabel).foregroundColor(.textPrimary)
             Spacer()
             Button("Share", action: onShare)
                 .font(PokerTypography.chipLabel.weight(.semibold))
                 .foregroundColor(.goldAccent)
+                .accessibilityLabel("Share saved hand")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -22,7 +25,7 @@ struct SavedHandToast: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
         .padding(.horizontal, 16)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -45,7 +48,11 @@ private struct SavedHandToastModifier: ViewModifier {
             .animation(.easeInOut(duration: 0.25), value: hand?.persistentModelID)
             .task(id: hand?.persistentModelID) {
                 guard hand != nil else { return }
-                try? await Task.sleep(for: .seconds(4))
+                do {
+                    try await Task.sleep(for: .seconds(4))
+                } catch {
+                    return // cancelled: a newer toast owns the binding now
+                }
                 hand = nil
             }
     }
