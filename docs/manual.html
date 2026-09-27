@@ -735,34 +735,38 @@
 
   <!-- HAND CAPTURE SCREEN -->
   <div class="manual-section" id="hand-capture">
+    <div class="section-badge">Redesigned in 1.3</div>
     <h2>The Hand Capture Screen</h2>
-    <p>Tap <strong>Log Hand</strong> on the Hands pane to enter a complete hand — designed for fast, tap-only entry with no typing required.</p>
+    <p>Tap <strong>Log Hand</strong> on the Hands pane to enter a complete hand. The screen is built around a <strong>control bar pinned to the bottom</strong>: whatever the hand needs next — your cards, the action, a bet size, the next board card — is always right there. You never scroll to find a control, and the keyboard never appears.</p>
 
     <h3>Setup</h3>
     <ul>
-      <li><strong>Level</strong> — defaults to the current blind level; tap it to pick any level from your structure.</li>
+      <li><strong>Level</strong> — defaults to the current blind level; tap the header to pick any level from your structure.</li>
+      <li><strong>Your seat & cards</strong> — pick your seat, then the bar asks for your hole cards on a <strong>one-tap card grid</strong> (13 ranks × 4 suits, plus an <strong>x</strong> row for unknown suits — every card is a single tap). Tap <strong>Later</strong> if you'd rather add them afterwards.</li>
       <li><strong>Your stack</strong> — defaults to your tracked stack with a <strong>Use current</strong> shortcut; editable if the hand started from a different count.</li>
-      <li><strong>Position & hole cards</strong> — tap to select.</li>
-      <li><strong>Villains</strong> — tap <strong>Add Villain</strong> for each opponent: position, relative stack (covers you / you cover), and later their shown cards if they table a hand.</li>
+      <li>Once set, the Hero section collapses to a chip row — <strong>seat · cards · stack</strong>. Tap any chip to change it.</li>
+      <li><strong>Villains</strong> — tap <strong>Add villain</strong> for each opponent: position and relative stack (covers you / you cover). The bar prompts you until the hand has at least one opponent.</li>
     </ul>
 
     <h3>Actions</h3>
-    <p>Enter actions street by street — fold, check, call, bet, raise, all-in. The app tracks the pot live, advances streets automatically when action closes, and narrates the hand as you build it.</p>
+    <p>The bar shows <strong>who's to act</strong> with their legal options — fold, check or call, bet or raise, all-in. A strip above the buttons always shows the <strong>street, the board so far, and the pot</strong>. The app advances streets automatically when action closes and narrates the hand as you build it.</p>
     <ul>
-      <li><strong>Preflop sizing</strong> — one-tap presets in big blinds (2bb, 2.5bb, 3bb…).</li>
-      <li><strong>Postflop sizing</strong> — pot-fraction presets (⅓, ½, ⅔ pot…).</li>
-      <li><strong>Custom amounts</strong> — type any number; it's taken as the total bet. Add <code>bb</code> (e.g. <code>4bb</code>) to enter big blinds instead of chips.</li>
-      <li><strong>All-In</strong> — a dedicated button that fills the player's remaining stack in one tap. Shoves are also detected automatically: any bet, raise, or call that commits a player's last chip is recorded as all-in, even if you entered it as a raise.</li>
-      <li><strong>Board cards</strong> — pick the flop, turn, and river as they're dealt; mis-taps can be deleted.</li>
+      <li><strong>Bet sizing</strong> — tap <strong>Bet/Raise</strong> and preset chips take over the bar, sized to the spot: opening preflop offers <strong>2bb · 2.5bb · 3bb · Pot</strong>; facing a bet or raise on any street offers <strong>Min · 2.5× · 3× · 4× · Pot</strong> (multiples of the bet you're facing); opening postflop offers <strong>⅓ · ½ · ⅔ · Pot · 1.5×</strong>. <strong>Jam</strong> is always there.</li>
+      <li><strong>Exact amounts</strong> — tap <strong>#</strong> for an inline keypad (digits, <code>k</code>, <code>bb</code>, delete) with a live preview of exactly what you'll commit — "Raise to 27,000". It's part of the bar, not the system keyboard.</li>
+      <li><strong>All-In</strong> — fills the player's remaining stack in one tap. Shoves are also detected automatically: any bet, raise, or call that commits a player's last chip is recorded as all-in.</li>
+      <li><strong>Board cards</strong> — when a street closes, the bar switches to the card grid ("Flop cards (3)", "Turn card", "River card"). Picked cards appear in the strip; the last one can be removed until the next action.</li>
+      <li><strong>Undo</strong> — the arrow in the toolbar steps back one input; tapping any earlier action in the list rewinds the hand to that point.</li>
     </ul>
-    <p>Once an all-in is called and at most one player has chips behind, the betting prompts stop — the app collects just the remaining board cards straight through to showdown. In multiway pots, betting continues normally while two or more players still have chips (side pots).</p>
+    <p>Once an all-in is called and at most one player has chips behind, the betting prompts stop — the bar collects just the remaining board cards straight through to showdown. In multiway pots, betting continues normally while two or more players still have chips (side pots).</p>
 
     <h3>Unknown suits</h3>
-    <p>Didn't catch a suit? The card picker includes a fifth option — <strong>x</strong> — for any card whose suit you don't know. <code>A♣Kx</code> is a legal holding, and it works for your cards, villain hands, and the board.</p>
+    <p>Didn't catch a suit? The grid's <strong>x</strong> row is for any card whose suit you don't know. <code>A♣Kx</code> is a legal holding, and it works for your cards, villain hands, and the board.</p>
 
     <h3>Showdown & result</h3>
-    <p>Enter shown cards at showdown and the app <strong>evaluates the hands and determines the winner automatically</strong> — pot size and your net win/loss are computed from the action. You can override the winner or pot if the hand played out unusually. Then tap <strong>Save</strong>.</p>
-    <p>One honest exception: if any card at showdown has an unknown suit, the app won't guess (a possible flush can't be proven) — you pick the winner with the override control before saving.</p>
+    <p>When a hand reaches showdown, <strong>tap who won</strong> — <strong>Hero won</strong>, <strong>[villain] won</strong>, or <strong>Chop</strong> — and <strong>Save</strong> lights up immediately. That's the whole requirement: you don't have to enter anyone's cards.</p>
+    <p>If a villain tables a hand and you want it on record, open <strong>Add shown cards</strong>. Once every live opponent's cards (or a <strong>Mucked</strong> mark) are in, the app evaluates the hands itself; if the cards disagree with the result you tapped, a banner says so with a one-tap <strong>Use cards</strong>. Entering cards after tapping a result replaces your tap — the cards are the better evidence. Hands that end when everyone folds need no tap at all.</p>
+    <p>One honest exception stays: if any showdown card has an unknown suit, the app won't guess (a possible flush can't be proven) — your tapped result stands.</p>
+    <p><strong>Save</strong> closes the screen at once. A <strong>Hand saved</strong> toast appears on the Hands pane for a few seconds with a <strong>Share</strong> button if you want to send the hand right away.</p>
 
     <div class="callout callout-tip">
       <span class="label">💡 Tip</span> If your final stack from the hand matches the math, saving the hand also updates your tracked stack — no separate chat update needed.
