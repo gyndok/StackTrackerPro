@@ -3821,3 +3821,47 @@ final class BrowseDedupTests: XCTestCase {
         XCTAssertEqual(Set(result.map(\.id)), ["seeded", "legacy"])
     }
 }
+
+// MARK: - Capture bar state + chips (pure)
+
+final class CaptureBarStateTests: XCTestCase {
+    private func derive(handOver: Bool = false, needed: Int = 0, street: HandStreet = .flop,
+                        pending: HandActionType? = nil, heroMissing: Bool = false,
+                        deferred: Bool = false, ledgerEmpty: Bool = false,
+                        villainsEmpty: Bool = false) -> CaptureBarState {
+        CaptureBarState.derive(isHandOver: handOver, boardCardsNeeded: needed, streetBeingDealt: street,
+                               pendingAction: pending, heroCardsMissing: heroMissing,
+                               heroCardsDeferred: deferred, ledgerIsEmpty: ledgerEmpty,
+                               villainsIsEmpty: villainsEmpty)
+    }
+
+    func testPriorityTable() {
+        XCTAssertEqual(derive(handOver: true, needed: 3, pending: .bet), .done)
+        XCTAssertEqual(derive(needed: 1, street: .turn, pending: .bet), .dealingBoard(street: .turn, needed: 1))
+        XCTAssertEqual(derive(pending: .raise, heroMissing: true, ledgerEmpty: true), .sizing(.raise))
+        XCTAssertEqual(derive(heroMissing: true, ledgerEmpty: true, villainsEmpty: true), .dealingHero)
+        XCTAssertEqual(derive(heroMissing: true, deferred: true, ledgerEmpty: true, villainsEmpty: true), .needsVillain)
+        XCTAssertEqual(derive(heroMissing: true, ledgerEmpty: false), .acting)   // mid-hand: cards edit is inline, not the bar
+        XCTAssertEqual(derive(ledgerEmpty: true, villainsEmpty: true), .needsVillain)
+        XCTAssertEqual(derive(ledgerEmpty: true, villainsEmpty: false), .acting)
+        XCTAssertEqual(derive(), .acting)
+    }
+}
+
+final class CaptureChipsTests: XCTestCase {
+    func testHeroChipsSetAndUnset() throws {
+        let cards = PlayingCard.parseList("Ah Kd")
+        let set = CaptureChips.hero(position: .btn, cards: cards, cardCount: 2, stack: 42_500)
+        XCTAssertEqual(set.seat, "BTN")
+        XCTAssertEqual(set.cards, "A♥ K♦")
+        XCTAssertEqual(set.stack, "42,500")
+
+        let unset = CaptureChips.hero(position: nil, cards: [], cardCount: 2, stack: 0)
+        XCTAssertEqual(unset.seat, "Seat?")
+        XCTAssertEqual(unset.cards, "Cards?")
+        XCTAssertEqual(unset.stack, "0")
+
+        let partial = CaptureChips.hero(position: .co, cards: [try XCTUnwrap(PlayingCard("Qs"))], cardCount: 2, stack: 100)
+        XCTAssertEqual(partial.cards, "Q♠ +1")
+    }
+}
