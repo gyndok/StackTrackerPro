@@ -44,8 +44,28 @@ struct CaptureBottomBar: View {
                             onCommit: onCommitSized,
                             onCancel: { pendingActionType = nil })
             }
-        case .dealingBoard, .dealingHero:
-            barChrome { Text("cards…").foregroundColor(.textSecondary) }   // Task 6
+        case .dealingBoard(let street, let needed):
+            barChrome {
+                DealingPanel(
+                    title: "\(street.label) card\(needed > 1 ? "s (\(needed))" : "")",
+                    cards: model.board,
+                    removableLast: model.lastInputWasBoardCard,
+                    dealt: model.dealtCards,
+                    onPick: { if model.addBoardCard($0) { HapticFeedback.impact(.light) } },
+                    onRemoveLast: { model.undoLast() },
+                    trailing: nil)
+            }
+        case .dealingHero:
+            barChrome {
+                DealingPanel(
+                    title: "Your cards",
+                    cards: model.heroCards,
+                    removableLast: !model.heroCards.isEmpty,
+                    dealt: model.dealtCards,
+                    onPick: { if model.addCard($0) { HapticFeedback.impact(.light) } },
+                    onRemoveLast: { model.heroCards.removeLast() },
+                    trailing: ("Later", { heroCardsDeferred = true }))
+            }
         }
     }
 
@@ -335,6 +355,42 @@ private struct SizingKeypad: View {
             // Typing a digit after a suffix means a fresh number.
             if text.hasSuffix("k") || text.hasSuffix("bb") { text = "" }
             text.append(key)
+        }
+    }
+}
+
+// MARK: - Dealing panel
+
+/// Card entry inside the bar (spec §1 dealing states): the cards so far as
+/// mini chips (last one removable when the caller allows), then the grid.
+/// `trailing` is an optional header action — the hero-cards "Later" link.
+private struct DealingPanel: View {
+    let title: String
+    let cards: [PlayingCard]
+    let removableLast: Bool
+    let dealt: Set<PlayingCard>
+    let onPick: (PlayingCard) -> Void
+    let onRemoveLast: () -> Void
+    let trailing: (String, () -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title).font(PokerTypography.sectionHeader).foregroundColor(.goldAccent)
+                if !cards.isEmpty {
+                    ForEach(Array(cards.enumerated()), id: \.offset) { index, card in
+                        MiniCard(card: card,
+                                 onRemove: (index == cards.count - 1 && removableLast) ? onRemoveLast : nil)
+                    }
+                }
+                Spacer()
+                if let trailing {
+                    Button(trailing.0, action: trailing.1)
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            CardGrid(dealt: dealt, onPick: onPick)
         }
     }
 }

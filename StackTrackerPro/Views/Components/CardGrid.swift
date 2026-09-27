@@ -39,7 +39,7 @@ struct CardGrid: View {
             Text(rank == "T" ? "10" : String(rank))
                 .font(.system(size: 13, weight: .semibold))
                 .frame(maxWidth: .infinity, minHeight: 30)
-                .background(isUnknown ? Color.clear : Color.cardSurface)
+                .background(isUnknown ? Color.clear : Color.backgroundPrimary)
                 .foregroundColor(suitColor(suit))
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)

@@ -131,13 +131,10 @@ struct HandCaptureView: View {
                                 }
                             }
                             HeroStrip(model: model, stubHint: stubHint,
-                                     showStackPad: $showStackPad, stackPadText: $stackPadText)
+                                     showStackPad: $showStackPad, stackPadText: $stackPadText,
+                                     heroCardsDeferred: heroCardsDeferred)
                             villainSection
                             LedgerList(model: model, truncateIndex: $truncateIndex)
-                            // Board stays in the scroll ONLY until Task 6 moves it into the bar.
-                            if !model.board.isEmpty || model.boardCardsNeeded > 0 {
-                                BoardEntry(model: model)
-                            }
                             if model.isHandOver {
                                 ResultBlock(model: model)
                                 tagRow
@@ -702,10 +699,10 @@ private struct LevelPickerSheet: View {
 // MARK: - Card chip
 
 /// A single dealt/held card rendered as a chip — the shared look used for the
-/// hero's hole cards, the board-so-far row, and a villain's shown holding. An
-/// optional trailing "x" removes the card via `onRemove` when the caller
-/// allows it (the board row only wires this up for the last card, and only
-/// when `HandCaptureModel.lastInputWasBoardCard` — see `BoardEntry`).
+/// hero's hole cards and a villain's shown holding. An optional trailing "x"
+/// removes the card via `onRemove` when the caller allows it. (The board row
+/// now lives in the bar as `ContextStrip`/`MiniCard` — see
+/// `CaptureBottomBar.swift`.)
 private struct CardChip: View {
     let card: PlayingCard
     var onRemove: (() -> Void)?
@@ -739,6 +736,7 @@ private struct HeroStrip: View {
     let stubHint: String?
     @Binding var showStackPad: Bool
     @Binding var stackPadText: String
+    let heroCardsDeferred: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -761,7 +759,10 @@ private struct HeroStrip: View {
                 Spacer()
             }
 
-            if model.heroCards.count < model.heroCardCount {
+            // The bar owns hero-card entry on a fresh hand; inline only once
+            // actions exist or the user tapped "Later" (complement of
+            // CaptureBarState.dealingHero).
+            if model.heroCards.count < model.heroCardCount && (!model.ledger.isEmpty || heroCardsDeferred) {
                 CardGrid(dealt: model.dealtCards) { card in
                     if model.addCard(card) { HapticFeedback.impact(.light) }
                 }
@@ -1028,46 +1029,6 @@ private struct LedgerList: View {
         case .raise: return "\(prefix) raises to \(entry.toAmount.formatted())"
         case .allIn: return "\(prefix) all-in \(entry.toAmount.formatted())"
         }
-    }
-}
-
-// MARK: - Board entry
-
-private struct BoardEntry: View {
-    let model: HandCaptureModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Street header only while cards are owed; once a street's cards
-            // complete this section stays mounted (see the mount condition in
-            // HandCaptureView.body) so the board — and the last card's inline
-            // delete — remains visible through the following betting round.
-            Text(model.boardCardsNeeded > 0
-                 ? "\(model.streetBeingDealt.label) card\(model.boardCardsNeeded > 1 ? "s (\(model.boardCardsNeeded))" : "")"
-                 : "Board")
-                .font(PokerTypography.sectionHeader)
-                .foregroundColor(.goldAccent)
-            if !model.board.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(model.board, id: \.self) { card in
-                        CardChip(card: card, onRemove: isLastPick(card) ? { model.undoLast() } : nil)
-                    }
-                }
-            }
-            if model.boardCardsNeeded > 0 {
-                CardGrid(dealt: model.dealtCards) { card in
-                    if model.addBoardCard(card) { HapticFeedback.impact(.light) }
-                }
-            }
-        }
-        .pokerCard()
-    }
-
-    /// Only the very last dealt board card is removable, and only while it is
-    /// genuinely the last thing entered (see `lastInputWasBoardCard`) — never
-    /// an earlier street's card, which would corrupt the replay.
-    private func isLastPick(_ card: PlayingCard) -> Bool {
-        card == model.board.last && model.lastInputWasBoardCard
     }
 }
 
