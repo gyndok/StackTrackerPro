@@ -15,6 +15,7 @@ struct HandsPane: View {
     @State private var capturePresentation: CapturePresentation?
     @State private var pendingDeleteHand: Hand?
     @State private var shareHand: Hand?
+    @State private var toastHand: Hand?
     #if DEBUG
     @State private var demoShowDictation = false
     /// Re-entrancy guard for the demo-route onAppear below: this pane sits
@@ -152,16 +153,17 @@ struct HandsPane: View {
             }
         }
         .fullScreenCover(isPresented: $showEntry) {
-            HandCaptureView(tournament: tournament, cashSession: cashSession, stub: nil) { _ in }
+            HandCaptureView(tournament: tournament, cashSession: cashSession, stub: nil) { hand in toastHand = hand }
         }
         .fullScreenCover(item: $capturePresentation) { presentation in
             HandCaptureView(tournament: tournament, cashSession: cashSession, stub: presentation.stub,
                             autoStartDictation: presentation.autoDictate,
-                            editingHand: presentation.editHand) { _ in }
+                            editingHand: presentation.editHand) { hand in toastHand = hand }
         }
         .sheet(item: $shareHand) { hand in
             HandSharePreview(hand: hand)
         }
+        .savedHandToast(hand: $toastHand) { shareHand = $0 }
         #if DEBUG
         .onAppear {
             guard DemoData.isActive, !demoRouted else { return }

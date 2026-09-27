@@ -50,6 +50,7 @@
 		7E5700000000000000000134 /* HandSharePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000133 /* HandSharePreview.swift */; };
 		7E5700000000000000000136 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000135 /* DemoData.swift */; };
 		7E5700000000000000000138 /* TranscriptEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000137 /* TranscriptEditorSheet.swift */; };
+		7E5700000000000000000144 /* SavedHandToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700000000000000000143 /* SavedHandToast.swift */; };
 		7E570000000000000000013C /* CardGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E570000000000000000013B /* CardGrid.swift */; };
 		853E6DDF14FA5B7AF4FC1138 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01CF7122D121AD978C3265B6 /* ContentView.swift */; };
 		8932D8A99EFAF680F806C867 /* BlindLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F833F36634C2BED53572E0D /* BlindLevel.swift */; };
@@ -186,6 +187,7 @@
 		7E5700000000000000000133 /* HandSharePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandSharePreview.swift; sourceTree = "<group>"; };
 		7E5700000000000000000135 /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		7E5700000000000000000137 /* TranscriptEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptEditorSheet.swift; sourceTree = "<group>"; };
+		7E5700000000000000000143 /* SavedHandToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedHandToast.swift; sourceTree = "<group>"; };
 		7E570000000000000000013B /* CardGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardGrid.swift; sourceTree = "<group>"; };
 		7F833F36634C2BED53572E0D /* BlindLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlindLevel.swift; sourceTree = "<group>"; };
 		83F3C1776D635D75B2A93692 /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
@@ -420,6 +422,7 @@
 				1A2B3C4D5E6F7A8B9C0D1E2F /* CameraView.swift */,
 				CA5H00000000000000000F /* GameTypePickerView.swift */,
 				7E5700000000000000000137 /* TranscriptEditorSheet.swift */,
+				7E5700000000000000000143 /* SavedHandToast.swift */,
 				7E570000000000000000013B /* CardGrid.swift */,
 			);
 			path = Components;
@@ -612,6 +615,7 @@
 				7E5700000000000000000116 /* FadeNote.swift in Sources */,
 				7E5700000000000000000118 /* HoleCardShorthand.swift in Sources */,
 				7E5700000000000000000138 /* TranscriptEditorSheet.swift in Sources */,
+				7E5700000000000000000144 /* SavedHandToast.swift in Sources */,
 				7E570000000000000000013C /* CardGrid.swift in Sources */,
 				7E570000000000000000011C /* HandStubSheet.swift in Sources */,
 				7E570000000000000000011E /* SwingDetector.swift in Sources */,

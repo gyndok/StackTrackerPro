@@ -25,6 +25,8 @@ struct ActiveSessionView: View {
     /// milestone-sheet chaining in SessionRecapSheet, commit df350d8).
     @State private var pendingVoiceCapture = false
     @State private var showVoiceCapture = false
+    @State private var toastHand: Hand?
+    @State private var toastShareHand: Hand?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -295,8 +297,10 @@ struct ActiveSessionView: View {
         }
         .fullScreenCover(isPresented: $showVoiceCapture) {
             HandCaptureView(tournament: tournament, cashSession: nil, stub: nil,
-                            autoStartDictation: true, onSaved: { _ in })
+                            autoStartDictation: true, onSaved: { toastHand = $0 })
         }
+        .savedHandToast(hand: $toastHand) { toastShareHand = $0 }
+        .sheet(item: $toastShareHand) { hand in HandSharePreview(hand: hand) }
     }
 
     // MARK: - Page Indicator

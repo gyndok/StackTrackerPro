@@ -54,9 +54,6 @@ struct HandCaptureView: View {
     /// (same pattern as `truncateIndex`).
     @State private var pendingTranscript: String?
     @State private var showLevelPicker = false
-    @State private var showSavedDialog = false
-    @State private var showSavedShare = false
-    @State private var savedHand: Hand?
 
     init(tournament: Tournament?, cashSession: CashSession?, stub: HandStub?,
          autoStartDictation: Bool = false, editingHand: Hand? = nil,
@@ -261,13 +258,6 @@ struct HandCaptureView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .confirmationDialog("Hand saved", isPresented: $showSavedDialog, titleVisibility: .visible) {
-            Button("Share…") { showSavedShare = true }
-            Button("Done", role: .cancel) { dismiss() }
-        } message: { Text("Share it or head back to the table.") }
-        .sheet(isPresented: $showSavedShare, onDismiss: { dismiss() }) {
-            if let savedHand { HandSharePreview(hand: savedHand) }
-        }
     }
 
     // MARK: - Manual level selection (F15)
@@ -354,8 +344,7 @@ struct HandCaptureView: View {
         }
         HapticFeedback.success()
         onSaved(hand)
-        savedHand = hand
-        showSavedDialog = true
+        dismiss()
     }
 }
 
